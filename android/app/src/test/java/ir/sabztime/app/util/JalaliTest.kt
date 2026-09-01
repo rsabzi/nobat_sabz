@@ -24,7 +24,7 @@ class JalaliTest {
     }
 
     @Test
-    fun `2025-02-10 is 1403-11-22`() {
+    fun `2025-02-10 is 1403-11-22 (bahman 22, 1403)`() {
         val (y, m, d) = Jalali.toJalali(2025, 2, 10)
         assertEquals(1403, y)
         assertEquals(11, m)

@@ -103,7 +103,8 @@ class RepositoryTest {
                 {"status":"success",
                  "user": {"app_user_id": 1, "name": "علی", "phone": "09123456789", "telegram_id": -9000000000000000000},
                  "credit": {"current_credit": 10, "total_earned": 10, "total_deducted": 0},
-                 "businesses": [{"id": 1, "name": "آرایشگاه", "services_count": 2, "bookings_count": 5}],
+                 "businesses": [{"id": 1, "name": "آرایشگاه", "services_count": 2, "bookings_count": 5},
+                                {"id": 2, "name": "کلینیک دندانپزشکی", "services_count": 1, "bookings_count": 3}],
                  "marketer": {"id": 1, "marketer_code": "SAMPLE8181", "total_businesses": 2,
                               "total_bookings": 5, "commission_rate": 15, "total_commission": 250},
                  "booking_stats": {"total": 3, "upcoming": 2, "cancelled": 1, "completed": 0}}
@@ -113,7 +114,7 @@ class RepositoryTest {
         val p = repo.me()
         assertEquals("علی", p.user.name)
         assertEquals(10, p.credit?.currentCredit)
-        assertEquals(1, p.businesses.size)
+        assertEquals(2, p.businesses.size)
         assertEquals("SAMPLE8181", p.marketer?.marketerCode)
     }
 

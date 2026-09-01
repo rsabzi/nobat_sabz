@@ -28,6 +28,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,7 +49,6 @@ import ir.sabztime.app.ui.components.ErrorState
 import ir.sabztime.app.ui.components.InfoRow
 import ir.sabztime.app.ui.components.SectionCard
 import ir.sabztime.app.ui.components.StatusChip
-import ir.sabztime.app.ui.components.collectAsStateSafe
 import ir.sabztime.app.util.Jalali
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -132,7 +132,7 @@ class OwnerBusinessViewModel(private val graph: AppGraph, private val businessId
 @Composable
 fun OwnerBusinessScreen(graph: AppGraph, businessId: Int, navController: NavHostController) {
     val viewModel: OwnerBusinessViewModel = viewModel(key = "own-$businessId") { OwnerBusinessViewModel(graph, businessId) }
-    val state by viewModel.state.collectAsStateSafe()
+    val state by viewModel.state.collectAsState()
 
     Scaffold(
         topBar = {
@@ -192,7 +192,10 @@ fun OwnerBusinessScreen(graph: AppGraph, businessId: Int, navController: NavHost
 
             when (val q = state.queue) {
                 is UiState.Loading -> item {
-                    Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         CircularProgressIndicator()
                     }
                 }

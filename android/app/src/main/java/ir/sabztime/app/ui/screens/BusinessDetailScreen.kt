@@ -62,6 +62,7 @@ import ir.sabztime.app.data.DateSlot
 import ir.sabztime.app.data.Service
 import ir.sabztime.app.data.TimeSlot
 import ir.sabztime.app.ui.Routes
+import ir.sabztime.app.ui.components.EmptyState
 import ir.sabztime.app.ui.components.ErrorState
 import ir.sabztime.app.ui.components.InfoRow
 import ir.sabztime.app.ui.components.SectionCard
@@ -218,7 +219,13 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
                     CircularProgressIndicator()
                 }
             }
-            is UiState.Error -> ErrorState(bState.message, bState.kind, onRetry = { viewModel.load() })
+            is UiState.Error -> ErrorState(bState.message, bState.kind, onRetry = viewModel::load)
+            UiState.Empty -> EmptyState(
+                icon = "🏪",
+                title = "کسب‌وکار پیدا نشد",
+                subtitle = "ممکن است این کسب‌وکار حذف یا غیرفعال شده باشد.",
+                modifier = Modifier.padding(padding)
+            )
             is UiState.Success -> {
                 val b = bState.data
                 LazyColumn(
@@ -341,7 +348,6 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
                     item { Spacer(Modifier.height(8.dp)) }
                 }
             }
-            else -> {}
         }
     }
 

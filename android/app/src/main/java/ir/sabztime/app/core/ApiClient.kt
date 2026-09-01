@@ -114,7 +114,8 @@ class ApiClient(
 
     private fun buildHttpError(message: String, code: String?, httpCode: Int): SabzException =
         when {
-            code == "AUTH_REQUIRED" || message.contains("نشست", ignoreCase = false) && code != null ->
+            // نشست منقضی: کد AUTH_REQUIRED یا اشاره به «نشست» در پیام همراه با کد خطا
+            code == "AUTH_REQUIRED" || (message.contains("نشست") && code != null) ->
                 SabzException.SessionExpired()
             httpCode == 401 -> SabzException.Auth(message, code)
             else -> SabzException.Server(message, code, httpCode)

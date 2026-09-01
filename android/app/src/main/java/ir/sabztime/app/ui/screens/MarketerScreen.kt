@@ -26,6 +26,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,7 +44,6 @@ import ir.sabztime.app.ui.components.EmptyState
 import ir.sabztime.app.ui.components.ErrorState
 import ir.sabztime.app.ui.components.InfoRow
 import ir.sabztime.app.ui.components.SectionCard
-import ir.sabztime.app.ui.components.collectAsStateSafe
 import ir.sabztime.app.util.Jalali
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -74,7 +74,7 @@ class MarketerViewModel(private val graph: AppGraph) : ViewModel() {
 @Composable
 fun MarketerScreen(graph: AppGraph, navController: NavHostController) {
     val viewModel: MarketerViewModel = viewModel { MarketerViewModel(graph) }
-    val state by viewModel.state.collectAsStateSafe()
+    val state by viewModel.state.collectAsState()
 
     Scaffold(
         topBar = {
@@ -92,10 +92,19 @@ fun MarketerScreen(graph: AppGraph, navController: NavHostController) {
         }
     ) { padding ->
         when (val s = state) {
-            is UiState.Loading -> Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+            is UiState.Loading -> Box(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
                 CircularProgressIndicator()
             }
             is UiState.Error -> ErrorState(s.message, s.kind, onRetry = viewModel::load)
+            UiState.Empty -> EmptyState(
+                icon = "📣",
+                title = "داده‌ای برای نمایش وجود ندارد",
+                subtitle = "از ربات نوبت‌سبز (منوی بازاریابی) لینک اختصاصی خود را دریافت کنید.",
+                modifier = Modifier.padding(padding)
+            )
             is UiState.Success -> {
                 val d = s.data
                 LazyColumn(
@@ -155,7 +164,6 @@ fun MarketerScreen(graph: AppGraph, navController: NavHostController) {
                     }
                 }
             }
-            else -> {}
         }
     }
 }

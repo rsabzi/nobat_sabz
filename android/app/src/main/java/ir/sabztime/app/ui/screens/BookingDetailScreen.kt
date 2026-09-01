@@ -28,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,12 +46,12 @@ import ir.sabztime.app.core.SabzException
 import ir.sabztime.app.core.UiState
 import ir.sabztime.app.data.BookingSummary
 import ir.sabztime.app.data.CustomerQueueInfoResponse
+import ir.sabztime.app.ui.components.EmptyState
 import ir.sabztime.app.ui.components.ErrorState
 import ir.sabztime.app.ui.components.InfoRow
 import ir.sabztime.app.ui.components.LoadingState
 import ir.sabztime.app.ui.components.SectionCard
 import ir.sabztime.app.ui.components.StatusChip
-import ir.sabztime.app.ui.components.collectAsStateSafe
 import ir.sabztime.app.util.Jalali
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -122,7 +123,7 @@ class BookingDetailViewModel(private val graph: AppGraph, private val bookingId:
 @Composable
 fun BookingDetailScreen(graph: AppGraph, bookingId: Int, navController: NavHostController) {
     val viewModel: BookingDetailViewModel = viewModel(key = "bk-$bookingId") { BookingDetailViewModel(graph, bookingId) }
-    val state by viewModel.state.collectAsStateSafe()
+    val state by viewModel.state.collectAsState()
     var confirmCancel by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -145,6 +146,11 @@ fun BookingDetailScreen(graph: AppGraph, bookingId: Int, navController: NavHostC
         when (val b = state.booking) {
             is UiState.Loading -> LoadingState(Modifier.padding(padding))
             is UiState.Error -> ErrorState(b.message, b.kind, onRetry = viewModel::load, modifier = Modifier.padding(padding))
+            UiState.Empty -> EmptyState(
+                icon = "📅",
+                title = "این نوبت ثبت نشده است",
+                modifier = Modifier.padding(padding)
+            )
             is UiState.Success -> {
                 val booking = b.data
                 Column(

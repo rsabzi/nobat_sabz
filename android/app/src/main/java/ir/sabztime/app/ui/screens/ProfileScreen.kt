@@ -15,9 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Campaign
-import androidx.compose.material.icons.filled.EventNote
 import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Notifications
@@ -36,6 +34,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,10 +53,9 @@ import ir.sabztime.app.core.SabzException
 import ir.sabztime.app.core.UiState
 import ir.sabztime.app.data.ProfileData
 import ir.sabztime.app.ui.Routes
+import ir.sabztime.app.ui.components.EmptyState
 import ir.sabztime.app.ui.components.ErrorState
-import ir.sabztime.app.ui.components.InfoRow
 import ir.sabztime.app.ui.components.SectionCard
-import ir.sabztime.app.ui.components.collectAsStateSafe
 import ir.sabztime.app.util.Jalali
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -107,7 +105,7 @@ private data class MenuItem(val label: String, val icon: ImageVector, val route:
 @Composable
 fun ProfileScreen(graph: AppGraph, navController: NavHostController) {
     val viewModel: ProfileViewModel = viewModel { ProfileViewModel(graph) }
-    val state by viewModel.state.collectAsStateSafe()
+    val state by viewModel.state.collectAsState()
     var showLogoutDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { if (state.data !is UiState.Success) viewModel.refresh() }
@@ -121,10 +119,19 @@ fun ProfileScreen(graph: AppGraph, navController: NavHostController) {
         }
     ) { padding ->
         when (val d = state.data) {
-            is UiState.Loading -> Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+            is UiState.Loading -> Box(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
                 CircularProgressIndicator()
             }
             is UiState.Error -> ErrorState(d.message, d.kind, onRetry = viewModel::refresh)
+            UiState.Empty -> EmptyState(
+                icon = "👤",
+                title = "پروفایلی یافت نشد",
+                modifier = Modifier.padding(padding),
+                action = { androidx.compose.material3.Button(onClick = viewModel::refresh) { Text("تلاش دوباره") } }
+            )
             is UiState.Success -> {
                 val profile = d.data
                 Column(
@@ -200,7 +207,6 @@ fun ProfileScreen(graph: AppGraph, navController: NavHostController) {
                     )
                 }
             }
-            else -> {}
         }
     }
 
