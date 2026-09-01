@@ -21,6 +21,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,13 +43,14 @@ import ir.sabztime.app.core.UiState
 import ir.sabztime.app.data.AuthResponse
 import ir.sabztime.app.ui.Routes
 import ir.sabztime.app.util.Jalali
+import ir.sabztime.app.util.TextUtil
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class LoginViewModel(private val graph: AppGraph) : ViewModel() {
-    private val _state = MutableStateFlow<UiState<AuthResponse>>(UiState.Loading)
+    private val _state = MutableStateFlow<UiState<AuthResponse>>(UiState.Empty)
     val state: StateFlow<UiState<AuthResponse>> = _state.asStateFlow()
 
     var busy = false
@@ -103,7 +105,7 @@ class LoginViewModel(private val graph: AppGraph) : ViewModel() {
     }
 
     fun resetError() {
-        if (_state.value is UiState.Error) _state.value = UiState.Loading
+        if (_state.value is UiState.Error) _state.value = UiState.Empty
     }
 }
 
@@ -111,7 +113,7 @@ class LoginViewModel(private val graph: AppGraph) : ViewModel() {
 @Composable
 fun LoginScreen(graph: AppGraph, navController: NavHostController) {
     val viewModel: LoginViewModel = viewModel { LoginViewModel(graph) }
-    val state by viewModel.state.collectAsStateSafe()
+    val state by viewModel.state.collectAsState()
 
     var tab by rememberSaveable { mutableStateOf(0) }
     var phone by rememberSaveable { mutableStateOf("") }
@@ -123,7 +125,7 @@ fun LoginScreen(graph: AppGraph, navController: NavHostController) {
 
     // ورود موفق → صفحه اصلی
     androidx.compose.runtime.LaunchedEffect(state) {
-        if (state is UiState.Success) {
+        if (state is UiState.Success<*>) {
             navController.navigate(Routes.MAIN) {
                 popUpTo(Routes.LOGIN) { inclusive = true }
                 launchSingleTop = true
@@ -133,7 +135,12 @@ fun LoginScreen(graph: AppGraph, navController: NavHostController) {
 
     fun validate(): Boolean {
         phoneError = null; passwordError = null; nameError = null
-        if (!Regex("^09\\d{9}$").matches(phone)) phoneError = "شماره موبایل معتبر نیست (مثال: 09123456789)"
+        val normalizedPhone = TextUtil.normalizeMobile(phone)
+        if (normalizedPhone == null) {
+            phoneError = "شماره موبایل معتبر نیست (مثال: 09123456789)"
+        } else {
+            phone = normalizedPhone
+        }
         if (password.length < 6) passwordError = "رمز عبور حداقل ۶ کاراکتر"
         if (tab == 1 && name.trim().length < 2) nameError = "نام و نام خانوادگی را وارد کنید"
         return phoneError == null && passwordError == null && nameError == null
@@ -184,7 +191,10 @@ fun LoginScreen(graph: AppGraph, navController: NavHostController) {
 
         OutlinedTextField(
             value = phone,
-            onValueChange = { phone = it.filter { c -> c.isDigit() || c == '+' }; phoneError = null },
+            onValueChange = {
+                phone = TextUtil.latinDigits(it).filter { c -> c.isDigit() || c == '+' }
+                phoneError = null
+            },
             label = { Text("شماره موبایل") },
             singleLine = true,
             isError = phoneError != null,

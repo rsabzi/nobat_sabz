@@ -67,6 +67,7 @@ import ir.sabztime.app.ui.components.InfoRow
 import ir.sabztime.app.ui.components.SectionCard
 import ir.sabztime.app.ui.components.StatusChip
 import ir.sabztime.app.util.Jalali
+import ir.sabztime.app.util.TextUtil
 import kotlinx.coroutines.launch
 
 data class BusinessDetailState(
@@ -394,7 +395,10 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
                             Spacer(Modifier.height(10.dp))
                             OutlinedTextField(
                                 value = phone,
-                                onValueChange = { phone = it.filter { c -> c.isDigit() }; phoneErr = null },
+                                onValueChange = {
+                                    phone = TextUtil.latinDigits(it).filter { c -> c.isDigit() || c == '+' }
+                                    phoneErr = null
+                                },
                                 label = { Text("شماره موبایل *") },
                                 singleLine = true,
                                 isError = phoneErr != null,
@@ -418,10 +422,12 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
                             Spacer(Modifier.height(16.dp))
                             Button(
                                 onClick = {
-                                    phoneErr = if (!Regex("^09\\d{9}$").matches(phone)) "شماره موبایل معتبر نیست" else null
+                                    val normalizedPhone = TextUtil.normalizeMobile(phone)
+                                    phoneErr = if (normalizedPhone == null) "شماره موبایل معتبر نیست" else null
                                     nameErr = if (name.trim().length < 2) "نام را وارد کنید" else null
                                     if (nameErr == null && phoneErr == null) {
-                                        viewModel.submitBooking(name.trim(), phone.trim(), notes.trim())
+                                        phone = normalizedPhone!!
+                                        viewModel.submitBooking(name.trim(), phone, notes.trim())
                                     }
                                 },
                                 enabled = submitState !is UiState.Loading,
