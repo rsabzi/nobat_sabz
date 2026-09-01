@@ -232,10 +232,10 @@ private fun ProfileContent(
         // --- آمار ---
         GlassCard(contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                StatTile("کل رزرو", profile.bookingStats.total)
-                StatTile("پیش رو", profile.bookingStats.upcoming)
-                StatTile("انجام‌شده", profile.bookingStats.completed)
-                StatTile("کسب امتیاز", profile.credit?.totalEarned ?: 0)
+                StatTile("کل رزرو", profile.bookingStats.total, Modifier.weight(1f))
+                StatTile("پیش رو", profile.bookingStats.upcoming, Modifier.weight(1f))
+                StatTile("انجام‌شده", profile.bookingStats.completed, Modifier.weight(1f))
+                StatTile("کسب امتیاز", profile.credit?.totalEarned ?: 0, Modifier.weight(1f))
             }
         }
 
@@ -286,10 +286,10 @@ private fun ProfileContent(
 }
 
 @Composable
-private fun StatTile(label: String, value: Int) {
+private fun StatTile(label: String, value: Int, modifier: Modifier = Modifier) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.weight(1f)
+        modifier = modifier
     ) {
         Text(
             Jalali.persianDigits(value),
