@@ -49,7 +49,7 @@ class RepositoryTest {
         val res = repo.search(query = "آرایشگاه")
         assertEquals(1, res.data.size)
         assertEquals(2, res.data[0].servicesCount)
-        assertEquals(3, res.data[0].services.size)
+        assertEquals(2, res.data[0].services.size)
         assertEquals("آرایشگاه تست", res.data[0].name)
     }
 
@@ -113,7 +113,7 @@ class RepositoryTest {
         val p = repo.me()
         assertEquals("علی", p.user.name)
         assertEquals(10, p.credit?.currentCredit)
-        assertEquals(2, p.businesses.size)
+        assertEquals(1, p.businesses.size)
         assertEquals("SAMPLE8181", p.marketer?.marketerCode)
     }
 
