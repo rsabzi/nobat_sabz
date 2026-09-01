@@ -1,6 +1,3 @@
-import java.io.File
-import java.io.FileWriter
-
 import java.util.Properties
 
 plugins {
@@ -110,50 +107,36 @@ dependencies {
 }
 
 // ---------------------------------------------------------------------------
-// CI diagnostics: mirror gradle stderr (kotlin compile errors) and junit
-// failures into $GITHUB_STEP_SUMMARY so they are readable via the check-run
-// API even when runner logs are not downloadable.
+// CI diagnostics: surface kotlin-compile errors and junit failures through
+// $GITHUB_STEP_SUMMARY (readable via check-run API).
 // ---------------------------------------------------------------------------
-val ciSummaryPath: String? = System.getenv("GITHUB_STEP_SUMMARY")
-val ciStderrFile = File(buildDir, "ci-stderr.log")
+val ciSummaryFile: java.io.File? = System.getenv("GITHUB_STEP_SUMMARY")?.let { java.io.File(it) }
 
-if (ciSummaryPath != null) {
-    val tee = FileWriter(ciStderrFile, true)
+if (ciSummaryFile != null) {
     logging.addStandardErrorListener { msg ->
-        tee.append(msg); tee.flush()
-    }
-    gradle.buildFinished {
-        val summary = File(ciSummaryPath)
-        val failure = it.failure
-        if (failure != null) {
-            summary.appendText("\n## gradle failure\n```\n$failure\n```\n")
-        }
-        if (ciStderrFile.exists() && ciStderrFile.length() > 0) {
-            val lines = ciStderrFile.readLines().filter {
-                it.startsWith("e: ") || it.contains("error:") || it.contains("FAILED")
-            }.distinct()
-            if (lines.isNotEmpty()) {
-                summary.appendText("\n## captured errors\n```\n" + lines.take(80).joinToString("\n") + "\n```\n")
+        runCatching {
+            val s = msg.toString()
+            if (s.startsWith("e: ") || s.contains("error:") || s.contains("FAILED")) {
+                ciSummaryFile.appendText(s.trimEnd() + "\n")
             }
         }
-        tee.close()
     }
 }
 
-tasks.withType<Test>().configureEach {
+tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
     finalizedBy("ciExportTestResults")
 }
 
 tasks.register("ciExportTestResults") {
     doLast {
-        val summary = ciSummaryPath?.let(::File) ?: return@doLast
-        val dir = File(buildDir, "test-results/testDebugUnitTest")
-        val files = dir.listFiles { f -> f.name.endsWith(".xml") } ?: return@doLast
-        summary.appendText("\n## junit results\n")
-        files.forEach { fx ->
-            val t = fx.readText()
-            Regex("<failure[^>]*message=\"([^\"]*)\"").findAll(t).forEach { m ->
-                summary.appendText("- FAIL: " + m.groupValues[1].take(300) + "\n")
+        val s = ciSummaryFile ?: return@doLast
+        runCatching {
+            val dir = java.io.File(buildDir, "test-results/testDebugUnitTest")
+            dir.listFiles { f -> f.name.endsWith(".xml") }?.forEach { fx ->
+                val t = fx.readText()
+                Regex("<failure[^>]*message=\"([^\"]*)\"").findAll(t).forEach { m ->
+                    s.appendText("- FAIL: " + m.groupValues[1].take(300) + "\n")
+                }
             }
         }
     }
