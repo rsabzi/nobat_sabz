@@ -40,9 +40,6 @@ class ApiClient(
         explicitNulls = false
         coerceInputValues = true
         encodeDefaults = true
-        // PDO/PHP اعداد را گاهی داخل کوتیشن برمی‌گرداند ("services_count": "2")؛
-        // بدون isLenient این مقادیر کرش decode می‌دهند.
-        isLenient = true
     }
 ) {
     val serializer: Json get() = json

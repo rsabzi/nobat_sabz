@@ -61,24 +61,3 @@ inline fun <T> runApi(block: () -> T): Result<T> = try {
     if (e is SabzException) Result.failure(e)
     else Result.failure(SabzException.Network(e))
 }
-
-/**
- * طبقه‌بندی صادقانه‌ی خطاها:
- * - SabzException همان‌طور که هست
- * - زنجیره‌ی cause شامل IOException (قطع DNS/سوکت/تایم‌اوت) → NETWORK
- * - بقیه (مثل خطای decode/serialization) → SERVER، نه NETWORK
- * تا هرگز خطای غیرمرتبط، «قطع اینترنت» جلوه داده نشود.
- */
-fun Throwable.toSabzException(): SabzException {
-    if (this is SabzException) return this
-    var t: Throwable? = this
-    while (t != null) {
-        if (t is IOException) return SabzException.Network(t)
-        t = t.cause
-    }
-    return SabzException.Server(
-        message?.takeIf { it.isNotBlank() } ?: "خطای غیرمنتظره رخ داد. لطفاً دوباره تلاش کنید.",
-        "UNEXPECTED",
-        0
-    )
-}
