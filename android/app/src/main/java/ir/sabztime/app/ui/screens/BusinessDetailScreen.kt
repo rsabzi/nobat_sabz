@@ -56,7 +56,6 @@ import androidx.navigation.NavHostController
 import ir.sabztime.app.core.AppGraph
 import ir.sabztime.app.core.SabzException
 import ir.sabztime.app.core.UiState
-import ir.sabztime.app.core.toSabzException
 import ir.sabztime.app.data.BookingCreatedResponse
 import ir.sabztime.app.data.BusinessDetails
 import ir.sabztime.app.data.DateSlot
@@ -110,7 +109,7 @@ class BusinessDetailViewModel(private val graph: AppGraph, private val businessI
                 state = state.copy(business = UiState.Success(b))
                 loadDates()
             } catch (e: Exception) {
-                val sabz = e.toSabzException()
+                val sabz = e as? SabzException ?: SabzException.Network(e)
                 state = state.copy(business = UiState.Error(sabz.toFriendlyMessage(), sabz.kind))
             }
         }
@@ -175,7 +174,7 @@ class BusinessDetailViewModel(private val graph: AppGraph, private val businessI
                 )
                 state = state.copy(submit = UiState.Success(resp))
             } catch (e: Exception) {
-                val sabz = e.toSabzException()
+                val sabz = e as? SabzException ?: SabzException.Network(e)
                 state = state.copy(submit = UiState.Error(sabz.toFriendlyMessage(), sabz.kind))
             }
         }
