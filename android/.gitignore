@@ -1,0 +1,21 @@
+# Gradle
+.gradle/
+build/
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+
+# IDE
+.idea/
+*.iml
+
+# Keystores and signing secrets — NEVER commit real release keys
+keystore/
+*.jks
+*.keystore
+keystore.properties
+local.properties
+
+# Built APKs (committed copies live under android/release/ if needed)
+app/build/

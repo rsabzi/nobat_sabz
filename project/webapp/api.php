@@ -11,6 +11,9 @@ debug_log('شروع پردازش درخواست API', 'INFO');
 try {
     require_once __DIR__ . '/../config.php';
     debug_log('فایل config.php بارگذاری شد', 'INFO');
+    // احراز هویت اپلیکیشن موبایل (توکن‌دار) — فقط مسیر افزوده، منطق موجود تغییر نکرده است
+    require_once __DIR__ . '/mobile_auth.php';
+    debug_log('فایل mobile_auth.php بارگذاری شد', 'INFO');
     //require_once __DIR__ . '/includes/auth.php';
     debug_log('فایل auth.php بارگذاری شد', 'INFO');
     
@@ -352,6 +355,22 @@ function validateTelegramData($initData) {
 function authenticate_user() {
     error_log("🔐 === شروع احراز هویت کاربر ===");
     
+    // --- احراز هویت اپلیکیشن موبایل (X-App-Token) — فقط برای اندروید ---
+    if (function_exists('mobile_auth_from_request')) {
+        $mobileUser = mobile_auth_from_request();
+        if ($mobileUser) {
+            $GLOBALS['MOBILE_APP_USER'] = $mobileUser;
+            error_log("📱 احراز هویت موبایل موفق - telegram_id: " . $mobileUser['telegram_id']);
+            return [
+                'id' => $mobileUser['telegram_id'],
+                'first_name' => $mobileUser['first_name'],
+                'last_name' => $mobileUser['last_name'] ?? '',
+                'username' => $mobileUser['username'] ?? '',
+                'is_mobile' => true
+            ];
+        }
+    }
+    
     // شروع session اگر شروع نشده باشد
     if (session_status() == PHP_SESSION_NONE) {
         session_start();
@@ -539,6 +558,12 @@ function handle_get_request($pdo, $internal_user_id) {
     $action = $_GET['action'] ?? '';
     // برای سازگاری با درخواست‌های مختلف، هم id و هم business_id را بررسی می‌کنیم
     $business_id = $_GET['id'] ?? $_GET['business_id'] ?? null;
+    
+    // موبایل: در صف‌ها، از شناسه کاربر احرازشده استفاده کن (نه پارامتر کلاینت)
+    if (!empty($GLOBALS['MOBILE_APP_USER']['telegram_id']) &&
+        in_array($action, ['get_active_queue', 'get_customer_queue_info'], true)) {
+        $_GET['user_id'] = $GLOBALS['MOBILE_APP_USER']['telegram_id'];
+    }
     
     error_log("🎯 Action: " . ($action ?: 'خالی'));
     error_log("🏢 Business ID: " . ($business_id ?: 'خالی'));
@@ -1430,6 +1455,40 @@ function handle_get_request($pdo, $internal_user_id) {
         ]);
     }
     
+    // لیست کسب‌وکارهای کاربر احرازشده (برای پنل مالک در اپلیکیشن موبایل)
+    if ($action === 'get_my_businesses') {
+        if (!$pdo) {
+            send_json_response('error', 'Database connection required for this operation.', [], 500);
+        }
+        if (empty($internal_user_id)) {
+            send_json_response('error', 'احراز هویت الزامی است.', [], 401);
+        }
+        try {
+            $stmt = $pdo->prepare("
+                SELECT b.id, b.name, b.business_type, b.province, b.city, b.address, b.phone,
+                       b.is_active, b.slot_duration_minutes, b.advance_booking_days,
+                       b.link_alias, b.subscription_plan_id, b.subscription_expiry_date,
+                       b.free_reservation_tokens,
+                       (SELECT COUNT(*) FROM services s WHERE s.business_id = b.id AND s.is_active = 1) AS services_count,
+                       (SELECT COUNT(*) FROM bookings bk WHERE bk.business_id = b.id AND bk.status != 'cancelled') AS bookings_count,
+                       sp.name AS subscription_plan_name
+                FROM businesses b
+                LEFT JOIN SubscriptionPlans sp ON sp.id = b.subscription_plan_id
+                WHERE b.owner_id = ?
+                ORDER BY b.created_at DESC
+            ");
+            $stmt->execute([$internal_user_id]);
+            $businesses = $stmt->fetchAll();
+            send_json_response('success', 'لیست کسب‌وکارها دریافت شد.', [
+                'businesses' => $businesses,
+                'total_count' => count($businesses)
+            ]);
+        } catch (PDOException $e) {
+            error_log('Error in get_my_businesses: ' . $e->getMessage());
+            send_json_response('error', 'خطا در دریافت لیست کسب‌وکارها.', [], 500);
+        }
+    }
+    
     send_json_response('error', 'Invalid GET action.', [], 400);
 } 
 
@@ -1464,6 +1523,12 @@ function handle_post_request($pdo, $internal_user_id) {
 
     // *** تعیین اکشن - ابتدا از formData، سپس از URL parameter ***
     $action = $formData['action'] ?? $_GET['action'] ?? 'update_business';
+    
+    // موبایل: شناسه کاربر همیشه از نشست احرازشده گرفته می‌شود — هرگز از بدنه درخواست
+    if (!empty($GLOBALS['MOBILE_APP_USER']['telegram_id'])) {
+        $formData['user_id'] = $GLOBALS['MOBILE_APP_USER']['telegram_id'];
+        $_GET['user_id'] = $GLOBALS['MOBILE_APP_USER']['telegram_id'];
+    }
     
     error_log("🎯 Action تعیین شده: " . $action);
     error_log("📦 formData['action']: " . ($formData['action'] ?? 'NULL'));
@@ -3452,7 +3517,8 @@ function handle_post_request($pdo, $internal_user_id) {
          }
          
          try {
-             // دریافت رزروهای فعال کاربر (غیر لغو شده و آینده)
+             // دریافت رزروهای کاربر؛ پیش‌فرض: رزروهای فعال/آینده، با include_history: همه (برای سابقه)
+             $includeHistory = !empty($formData['include_history']);
              $bookingsStmt = $pdo->prepare("
                  SELECT 
                      b.id,
@@ -3472,9 +3538,12 @@ function handle_post_request($pdo, $internal_user_id) {
                  JOIN users u ON b.user_id = u.id
                  JOIN businesses bus ON b.business_id = bus.id
                  WHERE u.telegram_id = ? 
-                     AND b.status != 'cancelled'
-                     AND (b.booking_date > CURDATE() OR (b.booking_date = CURDATE() AND b.start_time > CURTIME()))
-                 ORDER BY b.booking_date ASC, b.start_time ASC
+                 " . ($includeHistory
+                     ? ""
+                     : "AND b.status != 'cancelled'
+                     AND (b.booking_date > CURDATE() OR (b.booking_date = CURDATE() AND b.start_time > CURTIME()))"
+                 ) . "
+                 ORDER BY b.booking_date " . ($includeHistory ? "DESC" : "ASC") . ", b.start_time " . ($includeHistory ? "DESC" : "ASC") . "
              ");
              $bookingsStmt->execute([$user_id]);
              $bookings = $bookingsStmt->fetchAll();
