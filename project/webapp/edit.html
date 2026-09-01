@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ویرایش سالن</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+    :root{
+        --ink:#241B22;--ink-soft:#7A6A72;
+        --brand:#7A2E43;--brand-dark:#5C2233;--brand-light:#F3E4E8;
+        --gold:#C9A15C;--gold-soft:#F3EAD6;
+        --bg:#FBF7F4;--surface:#FFFFFF;--surface-soft:#F7F0EC;
+        --sage:#5B7F5E;--sage-soft:#E7EFE7;
+        --danger:#B3453F;--danger-soft:#F7E7E5;
+        --border:#EDE2DC;
+        --shadow-sm:0 2px 8px -4px rgba(36,27,34,.14);--shadow-md:0 10px 30px -14px rgba(36,27,34,.28);
+        --radius-lg:20px;--radius-md:14px;--radius-sm:10px;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    body{font-family:'Vazirmatn',system-ui,sans-serif;background:var(--bg);color:var(--ink);
+        min-height:100vh;padding-bottom:104px;opacity:0;transition:opacity .4s ease}
+    body.loaded{opacity:1}
+    button,input,select,textarea{font-family:inherit}
+    :focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:6px}
+    @media (prefers-reduced-motion: reduce){*{animation-duration:.001ms !important;transition-duration:.001ms !important}}
+
+    .page-loader{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;flex-direction:column;
+        align-items:center;justify-content:center;gap:14px;transition:opacity .4s ease}
+    .page-loader.hidden{opacity:0;pointer-events:none}
+    .spinner{width:34px;height:34px;border:3px solid var(--brand-light);border-top-color:var(--brand);
+        border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .page-loader p{font-size:.85rem;color:var(--ink-soft);font-weight:600}
+
+    .error-screen{display:none;padding:60px 24px;text-align:center}
+    .error-screen .glyph{font-size:2.2rem;margin-bottom:14px}
+    .error-screen h2{font-size:1.05rem;font-weight:800;margin-bottom:10px}
+    .error-screen p{font-size:.83rem;color:var(--ink-soft);line-height:1.7;max-width:340px;margin:0 auto}
+
+    main{max-width:560px;margin:0 auto;padding:24px 18px 0;display:none}
+    .intro{text-align:center;margin-bottom:22px}
+    .intro .eyebrow{font-size:.72rem;font-weight:700;color:var(--brand);letter-spacing:.04em;margin-bottom:6px}
+    .intro h1{font-size:1.3rem;font-weight:800}
+
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+        padding:20px;box-shadow:var(--shadow-sm);margin-bottom:16px}
+    .card-head{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+    .card-head .num{flex:none;width:26px;height:26px;border-radius:50%;background:var(--brand);color:#fff;
+        font-size:.78rem;font-weight:800;display:flex;align-items:center;justify-content:center}
+    .card-head h2{font-size:.95rem;font-weight:800}
+
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .form-group{margin-bottom:14px}
+    .form-group:last-child{margin-bottom:0}
+    .form-group label{display:block;font-size:.8rem;font-weight:700;margin-bottom:6px}
+    .form-group .req{color:var(--danger)}
+    .form-group .opt{color:var(--ink-soft);font-weight:500}
+    .input-wrap{position:relative}
+    .form-group input,.form-group select,.form-group textarea{
+        width:100%;border:1.5px solid var(--border);border-radius:var(--radius-sm);
+        padding:12px 14px;font-size:.88rem;background:var(--surface);color:var(--ink);transition:border-color .15s;
+    }
+    .form-group select{
+        appearance:none;-webkit-appearance:none;
+        background-image:url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%237A6A72" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>');
+        background-repeat:no-repeat;background-position:left 12px center;background-size:16px;
+    }
+    .form-group select:disabled{background-color:var(--surface-soft);color:var(--ink-soft)}
+    .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--brand)}
+    .form-group textarea{resize:vertical;min-height:70px}
+    .form-group.invalid input,.form-group.invalid select{border-color:var(--danger)}
+    .valid-badge{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:.9rem;display:none;pointer-events:none}
+    .valid-badge.show{display:block}
+    .error-text{display:none;font-size:.75rem;color:var(--danger);margin-top:5px;font-weight:600}
+    .form-group.invalid .error-text{display:block}
+
+    /* invitation link card */
+    .link-active{background:var(--sage-soft);border:1.5px solid var(--sage);border-radius:var(--radius-md);padding:16px}
+    .link-active .top-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .link-active .top-row b{font-size:.82rem;color:#3D5940}
+    .badge-live{font-size:.68rem;font-weight:700;color:#fff;background:var(--sage);padding:3px 10px;border-radius:999px}
+    .link-value-row{display:flex;gap:8px;align-items:center}
+    .link-value-row input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);
+        padding:10px 12px;font-size:.78rem;direction:ltr;text-align:left;color:var(--ink)}
+    .icon-btn{flex:none;width:38px;height:38px;border-radius:var(--radius-sm);border:none;cursor:pointer;
+        display:flex;align-items:center;justify-content:center;font-size:1rem;transition:transform .1s}
+    .icon-btn:active{transform:scale(.92)}
+    .icon-btn.copy{background:var(--sage);color:#fff}
+    .icon-btn.share{background:var(--brand);color:#fff}
+    .link-feedback{font-size:.76rem;font-weight:700;margin-top:8px;min-height:16px;color:var(--sage)}
+    .link-hint{font-size:.74rem;color:#4B6B4E;margin-top:8px;line-height:1.6}
+
+    .link-empty{text-align:center;padding:8px 4px}
+    .link-empty p{font-size:.8rem;color:var(--ink-soft);margin-bottom:12px;line-height:1.6}
+    .link-empty a{display:inline-block;background:var(--brand);color:#fff;font-weight:700;font-size:.82rem;
+        padding:10px 20px;border-radius:999px;text-decoration:none}
+
+    .banner{border-radius:var(--radius-sm);padding:13px 14px;font-size:.83rem;font-weight:600;
+        display:flex;align-items:flex-start;gap:8px;margin-bottom:16px;line-height:1.6}
+    .banner.error{background:var(--danger-soft);color:var(--danger)}
+
+    .cta-bar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--border);
+        padding:14px 18px calc(14px + env(safe-area-inset-bottom));box-shadow:0 -6px 24px rgba(36,27,34,.08);z-index:30}
+    .cta-inner{max-width:560px;margin:0 auto}
+    .cta-btn{width:100%;background:linear-gradient(135deg,var(--brand),var(--brand-dark));color:#fff;border:none;
+        border-radius:999px;padding:15px;font-size:.92rem;font-weight:800;cursor:pointer;
+        display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .1s,filter .15s}
+    .cta-btn:active{transform:scale(.98)}
+    .cta-btn:disabled{opacity:.6;cursor:not-allowed}
+    .cta-btn .spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;
+        border-radius:50%;animation:spin .7s linear infinite;display:none}
+    .cta-btn.loading .spin{display:block}
+    .cta-btn.loading .label{display:none}
+
+    .success-screen{display:none;text-align:center;padding:40px 10px 10px}
+    .success-badge{width:70px;height:70px;border-radius:50%;background:var(--sage-soft);
+        display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 18px;
+        animation:pop .4s cubic-bezier(.34,1.56,.64,1) both}
+    @keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+    .success-screen h2{font-size:1.15rem;font-weight:800;margin-bottom:8px}
+    .success-screen p{font-size:.85rem;color:var(--ink-soft);line-height:1.7}
+</style>
+</head>
+<body>
+
+<div class="page-loader" id="pageLoader">
+    <div class="spinner"></div>
+    <p>در حال بارگذاری اطلاعات سالن...</p>
+</div>
+
+<div class="error-screen" id="errorScreen">
+    <div class="glyph">⚠️</div>
+    <h2 id="errorTitle">خطا در بارگذاری</h2>
+    <p id="errorText">لطفاً دوباره از داخل ربات تلاش کن.</p>
+</div>
+
+<main id="app">
+    <div class="intro">
+        <div class="eyebrow">تنظیمات سالن</div>
+        <h1>اطلاعات سالنت رو ویرایش کن</h1>
+    </div>
+
+    <div id="messageZone"></div>
+
+    <form id="business-form" novalidate>
+        <input type="hidden" id="business_id" name="business_id">
+
+        <div class="card">
+            <div class="card-head"><span class="num">1</span><h2>اطلاعات سالن</h2></div>
+            <div class="form-group" data-field="business_name">
+                <label for="business_name">نام سالن <span class="req">*</span></label>
+                <input type="text" id="business_name" name="name" required>
+                <div class="error-text">نام سالن الزامیه</div>
+            </div>
+            <div class="form-group" data-field="phone">
+                <label for="phone">شماره موبایل <span class="req">*</span></label>
+                <div class="input-wrap">
+                    <input type="tel" id="phone" name="phone" required placeholder="09123456789" pattern="^09[0-9]{9}$">
+                    <span class="valid-badge" id="phoneValidBadge">✅</span>
+                </div>
+                <div class="error-text">شمارهٔ موبایل باید ۱۱ رقم و با 09 شروع بشه</div>
+            </div>
+            <div class="form-group" data-field="category">
+                <label for="category">دسته‌بندی <span class="req">*</span></label>
+                <select id="category" name="type" required><option value="" disabled selected>یک دسته انتخاب کن</option></select>
+                <div class="error-text">انتخاب دسته‌بندی الزامیه</div>
+            </div>
+            <div class="grid2">
+                <div class="form-group" data-field="province">
+                    <label for="province">استان <span class="req">*</span></label>
+                    <select id="province" name="province" required><option value="" disabled selected>انتخاب کن</option></select>
+                    <div class="error-text">انتخاب استان الزامیه</div>
+                </div>
+                <div class="form-group" data-field="city">
+                    <label for="city">شهر <span class="req">*</span></label>
+                    <select id="city" name="city" required disabled><option value="" disabled selected>اول استان</option></select>
+                    <div class="error-text">انتخاب شهر الزامیه</div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="address">آدرس دقیق <span class="opt">(اختیاری)</span></label>
+                <textarea id="address" name="address" rows="3"></textarea>
+            </div>
+        </div>
+
+        <div class="card" id="invitationCard">
+            <div class="card-head"><span class="num">2</span><h2>لینک اختصاصی رزرو</h2></div>
+            <div id="invitationContent"></div>
+        </div>
+    </form>
+
+    <div class="success-screen" id="successScreen"></div>
+</main>
+
+<div class="cta-bar" id="ctaBar">
+    <div class="cta-inner">
+        <button type="submit" id="submit-button" form="business-form" class="cta-btn">
+            <span class="spin"></span><span class="label">💾 ذخیرهٔ تغییرات</span>
+        </button>
+    </div>
+</div>
+
+<script>
+let tg = null;
+const BOT_USERNAME = 'sabztime_bot';
+
+function haptic(style){ try{ tg?.HapticFeedback?.impactOccurred(style || 'light'); }catch(e){} }
+
+function hidePageLoader(){
+    const loader = document.getElementById('pageLoader');
+    loader.classList.add('hidden');
+    setTimeout(() => { loader.style.display = 'none'; }, 400);
+    document.body.classList.add('loaded');
+}
+
+function showFatalError(title, text){
+    hidePageLoader();
+    document.getElementById('errorTitle').textContent = title || 'خطا در بارگذاری';
+    document.getElementById('errorText').textContent = text || 'لطفاً دوباره از داخل ربات تلاش کن.';
+    document.getElementById('errorScreen').style.display = 'block';
+}
+
+/* ---------- Telegram WebApp detection (simplified) ---------- */
+function getMockFromHash(){
+    const hash = window.location.hash;
+    if (!hash || !hash.includes('tgWebAppData=')) return null;
+    try {
+        const match = hash.match(/tgWebAppData=([^&]+)/);
+        if (!match) return null;
+        const raw = decodeURIComponent(match[1]);
+        const params = new URLSearchParams(raw);
+        const userParam = params.get('user');
+        let user = {};
+        if (userParam) { try { user = JSON.parse(decodeURIComponent(userParam)); } catch(e) {} }
+        return {
+            initData: raw, initDataUnsafe: { user },
+            ready(){}, expand(){}, close(){}, HapticFeedback: { impactOccurred(){} },
+            MainButton: { setText(){ return this; }, show(){ return this; }, hide(){ return this; } }
+        };
+    } catch(e) { return null; }
+}
+function resolveTelegramApp(){
+    if (window.Telegram?.WebApp?.initData) return window.Telegram.WebApp;
+    const fromHash = getMockFromHash();
+    if (fromHash) return fromHash;
+    if (window.Telegram?.WebApp) return window.Telegram.WebApp;
+    return null;
+}
+function startApp(){
+    tg = resolveTelegramApp();
+    if (!tg) {
+        setTimeout(() => {
+            tg = resolveTelegramApp();
+            if (tg) initializeApp(tg);
+            else showFatalError('اتصال به تلگرام برقرار نشد', 'لطفاً از داخل ربات وارد شو و اتصال اینترنتت رو بررسی کن.');
+        }, 600);
+        return;
+    }
+    initializeApp(tg);
+}
+
+/* ---------- Data (kept identical to the salon registration form for consistency) ---------- */
+const provincesAndCities = {"آذربایجان شرقی":["تبریز","مراغه","مرند","اهر","میانه","بناب","سراب","آذرشهر","هادیشهر","عجب شیر","ملکان","شبستر","بستان آباد","هشترود","اسکو","ایلخچی","جلفا","صوفیان","کلیبر","گوگان","ممقان","هریس","یامچی","کشکسرای","ورزقان","تسوج","خاروانا","سیه رود"],"آذربایجان غربی":["ارومیه","خوی","بوکان","مهاباد","میاندوآب","سلماس","پیرانشهر","نقده","تکاب","ماکو","سردشت","شاهین دژ","اشنویه","شوط","قره ضیاءالدین","ربط","محمدیار","سیلوانا","بازرگان","نالوس","تازه شهر","پلدشت","دیزج دیز","سرو","فیرورق","قطور","ایواوغلی","نوشین"],"اردبیل":["اردبیل","پارس آباد","مشگین شهر","خلخال","گرمی","بیله سوار","نمین","جعفرآباد","گیوی","نیر","اصلاندوز","سرعین","آبی بیگلو","عنبران","تازه کند انگوت","اسلام اباد"],"اصفهان":["اصفهان","کاشان","خمینی شهر","نجف آباد","شاهین شهر","شهرضا","فولادشهر","مبارکه","آران و بیدگل","گلپایگان","زرین شهر","درچه","فلاورجان","لنجان","خوراسگان","تیران","نطنز","سمیرم","نائین","دهاقان","قهدریجان","گزبرخوار","اردستان","ورزنه","بادرود","هرند","دیزیچه","عسگران","داران","فریدونشهر"],"البرز":["کرج","فردیس","کمال شهر","نظرآباد","محمدشهر","ماهدشت","مشکین دشت","هشتگرد","چهارباغ","اشتهارد","گرمدره","گلسار","طالقان","آسارا","کوهسار"],"ایلام":["ایلام","دهلران","ایوان","آبدانان","دره شهر","مهران","سرابله","ارکواز","بدره","لومار","موسیان","پهله","توحید"],"بوشهر":["بوشهر","برازجان","گناوه","خورموج","جم","کنگان","دیر","عسلویه","کاکی","اهرم","دیلم","آب پخش","وحدتیه","شبانکاره","ریز","دلوار","سیراف","نخل تقی","چغادک","جزیره خارک"],"تهران":["تهران","اسلام شهر","شهریار","قدس","ملارد","صالحیه","پاکدشت","قرچک","ورامین","گلستان","ری","اندیشه","رباط کریم","پرند","باقرشهر","پیشوا","نسیم شهر","صباشهر","چهاردانگه","دماوند","حسن آباد","کهریزک","فردوسیه","رودهن","بومهن","پردیس","لواسان","تجریش","فشم","آبعلی","شاهدشهر","صفادشت","جوادآباد","فرون آباد","قیامدشت"],"چهارمحال و بختیاری":["شهرکرد","بروجن","فرخ شهر","فارسان","لردگان","هفشجان","جونقان","سامان","فرادنبه","بن","شهر کیان","سورشجان","بلداجی","باباحیدر","اردل","نقنه","پردنجان","شلمزار","گندمان","گهرو","کاج","کوهرنگ","آلونی","مال خلیفه"],"خراسان جنوبی":["بیرجند","قائن","فردوس","طبس","نهبندان","سربیشه","سرایان","بشرویه","خوسف","درمیان","مود","اسلامیه","عشق آباد","آرین شهر"],"خراسان رضوی":["مشهد","سبزوار","نیشابور","تربت حیدریه","کاشمر","قوچان","تربت جام","تایباد","چناران","سرخس","گناباد","فریمان","درگز","بردسکن","خواف","طرقبه","گلبهار","فیض آباد","نقاب","شاندیز","خلیل آباد","بجستان","سنگان","کلات","جغتای"],"خراسان شمالی":["بجنورد","شیروان","اسفراین","آشخانه","جاجرم","فاروج","گرمه","درق","راز","شوقان"],"خوزستان":["اهواز","دزفول","آبادان","بندر ماهشهر","اندیمشک","خرمشهر","ایذه","شوشتر","مسجد سلیمان","بهبهان","رامهرمز","شادگان","شوش","سوسنگرد","هندیجان","لالی","باغ ملک","امیدیه","گتوند","حمیدیه","رامشیر","هویزه","ویس"],"زنجان":["زنجان","ابهر","خرمدره","قیدار","هیدج","صائین قلعه","آب بر","سلطانیه","سجاس","زرین رود","ارمغانخانه","ماهنشان"],"سمنان":["سمنان","شاهرود","دامغان","گرمسار","مهدی شهر","ایوانکی","شهمیرزاد","بسطام","کلاته خیج","آرادان","سرخه"],"سیستان و بلوچستان":["زاهدان","زابل","ایرانشهر","چابهار","سراوان","خاش","کنارک","جالق","نیک شهر","پیشین","بمپور","فنوج","قصرقند","میرجاوه","دوست محمد"],"فارس":["شیراز","کازرون","جهرم","مرودشت","فسا","داراب","فیروزآباد","لار","آباده","نورآباد","نی ریز","اقلید","استهبان","گراش","زرقان","کوار","لامرد","صفاشهر","قائمیه","فراشبند","اوز","ارسنجان","بوانات","سروستان","سعادت شهر","ایزدخواست"],"قزوین":["قزوین","تاکستان","الوند","اقبالیه","محمدیه","آبیک","بوئین زهرا","شال","اسفرورین","محمودآباد نمونه","بیدستان","ضیاءآباد"],"قم":["قم","جعفریه","کهک","قنوات","سلفچگان"],"کردستان":["سنندج","سقز","مریوان","بانه","کامیاران","قروه","دیواندره","بیجار","دهگلان","سروآباد","آرمرده","دلبران"],"کرمان":["کرمان","سیرجان","رفسنجان","جیرفت","بم","زرند","کهنوج","شهر بابک","بافت","بردسیر","محمدآباد","راور","ماهان","کوهبنان","انار","منوجان","قلعه گنج","رودبار"],"کرمانشاه":["کرمانشاه","اسلام آباد غرب","جوانرود","کنگاور","سرپل ذهاب","سنقر","هرسین","صحنه","پاوه","روانسر","گیلانغرب","قصر شیرین","ثلاث باباجانی","کرند غرب"],"کهگیلویه و بویراحمد":["یاسوج","دوگنبدان","دهدشت","لیکک","چرام","لنده","باشت","سی سخت","سوق"],"گلستان":["گرگان","گنبد کاووس","بندر ترکمن","علی آباد کتول","آق قلا","کردکوی","بندر گز","مینودشت","گالیکش","کلاله","آزادشهر","رامیان","خان ببین"],"گیلان":["رشت","بندر انزلی","لاهیجان","لنگرود","تالش","آستارا","صومعه سرا","آستانه اشرفیه","رودسر","فومن","خمام","سیاهکل","رضوانشهر","ماسال","رودبار","املش","منجیل","لوشان"],"لرستان":["خرم آباد","بروجرد","دورود","کوهدشت","الیگودرز","نورآباد","ازنا","الشتر","پلدختر","کونانی","چقابل"],"مازندران":["ساری","بابل","آمل","قائم شهر","بهشهر","چالوس","نکا","بابلسر","نوشهر","تنکابن","جویبار","فریدون کنار","رامسر","محمودآباد","زیرآب","پل سفید","کیاکلا","نور","گلوگاه"],"مرکزی":["اراک","ساوه","خمین","محلات","دلیجان","کرهرود","شازند","مأمونیه","تفرش","آشتیان","کمیجان","خنداب","فرمهین"],"هرمزگان":["بندرعباس","میناب","دهبارز","بندر لنگه","کیش","قشم","بستک","حاجی آباد","کنگ","بندر جاسک","بندر خمیر","پارسیان","درگهان"],"همدان":["همدان","ملایر","نهاوند","اسدآباد","تویسرکان","بهار","کبودرآهنگ","رزن","لالجین","فامنین","مریانج","ازندریان"],"یزد":["یزد","میبد","اردکان","بافق","مهریز","ابرکوه","تفت","اشکذر","هرات","زارچ","حمیدیا"]};
+const categories = ["سلامت و زیبایی","آموزش و مهارت","خدمات فنی و تعمیرات","خدمات منزل","رستوران و خوراکی","مالی و حقوقی","ورزشی و تناسب اندام","مشاوره و روانشناسی","حمل‌ونقل و باربری","فناوری و دیجیتال","فرهنگی و هنری","کشاورزی و دامپروری","صنعت و تولید","املاک و ساختمان","گردشگری و سرگرمی","سایر (گروه آزاد)"];
+
+/* ---------- Main init ---------- */
+function initializeApp(telegramApp) {
+    tg = telegramApp;
+    try { tg.ready?.(); } catch(e) {}
+    try { tg.expand?.(); } catch(e) {}
+    try { tg.MainButton?.hide?.(); } catch(e) {}
+    try { if (tg.setHeaderColor) tg.setHeaderColor('#FBF7F4'); } catch(e) {}
+    try { if (tg.setBackgroundColor) tg.setBackgroundColor('#FBF7F4'); } catch(e) {}
+
+    const form = document.getElementById('business-form');
+    const submitButton = document.getElementById('submit-button');
+    const provinceSelect = document.getElementById('province');
+    const citySelect = document.getElementById('city');
+    const categorySelect = document.getElementById('category');
+
+    Object.keys(provincesAndCities).sort((a,b)=>a.localeCompare(b,'fa')).forEach(p => provinceSelect.add(new Option(p,p)));
+    categories.forEach(c => categorySelect.add(new Option(c,c)));
+
+    function updateCities(selectedCity){
+        const selectedProvince = provinceSelect.value;
+        citySelect.innerHTML = '<option value="" disabled selected>انتخاب کن</option>';
+        citySelect.disabled = true;
+        if (selectedProvince && provincesAndCities[selectedProvince]) {
+            provincesAndCities[selectedProvince].sort((a,b)=>a.localeCompare(b,'fa')).forEach(c => citySelect.add(new Option(c,c)));
+            citySelect.disabled = false;
+            if (selectedCity) citySelect.value = selectedCity;
+        }
+    }
+    provinceSelect.addEventListener('change', () => updateCities());
+
+    const params = new URLSearchParams(window.location.search);
+    const businessId = params.get('id');
+    if (!businessId) {
+        showFatalError('شناسهٔ سالن یافت نشد', 'این خطا معمولاً به‌خاطر مشکل در لینک ایجادشده توسط رباته. به ربات برگرد و دوباره تلاش کن.');
+        return;
+    }
+    document.getElementById('business_id').value = businessId;
+
+    fetch(`api.php?action=get_business&id=${businessId}`, { headers: { 'X-Telegram-Init-Data': tg.initData } })
+        .then(r => r.json())
+        .then(result => {
+            if (result.status !== 'success') {
+                showFatalError('خطا در دریافت اطلاعات', result.message || 'خطا در دریافت اطلاعات سالن.');
+                return;
+            }
+            const business = result.data;
+            document.getElementById('business_name').value = business.name || '';
+            document.getElementById('phone').value = business.phone || '';
+            document.getElementById('phone').dispatchEvent(new Event('input'));
+            categorySelect.value = business.type || '';
+            provinceSelect.value = business.province || '';
+            updateCities(business.city);
+            document.getElementById('address').value = business.address || '';
+
+            renderInvitationSection(business, businessId);
+
+            hidePageLoader();
+            document.getElementById('app').style.display = 'block';
+        })
+        .catch(error => {
+            console.error('Fetch Error:', error);
+            showFatalError('خطا در ارتباط با سرور', 'اتصال اینترنتت رو بررسی کن و دوباره تلاش کن.');
+        });
+
+    function renderInvitationSection(business, businessId){
+        const el = document.getElementById('invitationContent');
+        if (business.link_alias && business.link_alias.trim() !== '') {
+            const fullLink = `https://t.me/${BOT_USERNAME}?start=${business.link_alias}`;
+            el.innerHTML = `
+                <div class="link-active">
+                    <div class="top-row"><b>🔗 لینک رزرو تو</b><span class="badge-live">فعال</span></div>
+                    <div class="link-value-row">
+                        <input type="text" id="invitation-link-display" readonly value="${fullLink}">
+                        <button type="button" class="icon-btn copy" id="copy-invitation-btn" aria-label="کپی">📋</button>
+                        <button type="button" class="icon-btn share" id="share-invitation-btn" aria-label="اشتراک">📤</button>
+                    </div>
+                    <div class="link-feedback" id="invitation-feedback"></div>
+                    <div class="link-hint">این لینک رو با مشتری‌هات به اشتراک بذار تا مستقیم به صفحهٔ رزروت برسن.</div>
+                </div>
+                <div style="text-align:center;margin-top:12px">
+                    <a href="link.html?id=${businessId}" style="font-size:.8rem;color:var(--brand);font-weight:700;text-decoration:none">✏️ تغییر نام لینک</a>
+                </div>
+            `;
+            const feedback = document.getElementById('invitation-feedback');
+            document.getElementById('copy-invitation-btn').addEventListener('click', () => {
+                navigator.clipboard.writeText(fullLink).then(() => {
+                    feedback.textContent = '✅ لینک کپی شد!';
+                    haptic('light');
+                    setTimeout(() => { feedback.textContent = ''; }, 2000);
+                }).catch(() => { feedback.textContent = '❌ خطا در کپی لینک'; feedback.style.color = 'var(--danger)'; });
+            });
+            document.getElementById('share-invitation-btn').addEventListener('click', () => {
+                const shareText = `🔗 لینک رزرو ${business.name}\n\n${fullLink}\n\nبرای رزرو نوبت روی لینک بالا بزن.`;
+                if (navigator.share) {
+                    navigator.share({ title: `لینک رزرو ${business.name}`, text: shareText });
+                } else {
+                    navigator.clipboard.writeText(shareText).then(() => {
+                        feedback.textContent = '✅ متن اشتراک‌گذاری کپی شد!';
+                        setTimeout(() => { feedback.textContent = ''; }, 2000);
+                    });
+                }
+            });
+        } else {
+            el.innerHTML = `
+                <div class="link-empty">
+                    <p>هنوز لینک اختصاصی نساختی. با ساختنش، مشتری‌ها می‌تونن مستقیم از تلگرام برات رزرو کنن.</p>
+                    <a href="link.html?id=${businessId}">🆕 ساخت لینک اختصاصی</a>
+                </div>
+            `;
+        }
+    }
+
+    /* live validation */
+    function fieldWrap(el){ return el.closest('.form-group'); }
+    function markValid(el){ fieldWrap(el)?.classList.remove('invalid'); }
+    function markInvalid(el){ fieldWrap(el)?.classList.add('invalid'); }
+
+    document.getElementById('business_name').addEventListener('blur', e => {
+        if (e.target.value.trim()) markValid(e.target); else markInvalid(e.target);
+    });
+    ['category','province','city'].forEach(id => {
+        document.getElementById(id).addEventListener('change', e => markValid(e.target));
+    });
+    const phoneInput = document.getElementById('phone');
+    phoneInput.addEventListener('input', () => {
+        const ok = /^09[0-9]{9}$/.test(phoneInput.value.trim());
+        document.getElementById('phoneValidBadge').classList.toggle('show', ok);
+        if (ok) markValid(phoneInput);
+    });
+    phoneInput.addEventListener('blur', () => {
+        if (!/^09[0-9]{9}$/.test(phoneInput.value.trim())) markInvalid(phoneInput);
+    });
+
+    function validateForm(){
+        let isValid = true;
+        form.querySelectorAll('[required]').forEach(input => {
+            if (!input.value || input.value.trim() === '') { markInvalid(input); isValid = false; }
+            else markValid(input);
+        });
+        if (!/^09[0-9]{9}$/.test(phoneInput.value.trim())) { markInvalid(phoneInput); isValid = false; }
+        return isValid;
+    }
+
+    function setLoading(isLoading){
+        submitButton.disabled = isLoading;
+        submitButton.classList.toggle('loading', isLoading);
+    }
+
+    function showMessage(message){
+        const zone = document.getElementById('messageZone');
+        zone.innerHTML = `<div class="banner error">⚠️ <span>${message}</span></div>`;
+        zone.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setTimeout(() => { zone.innerHTML = ''; }, 6000);
+    }
+
+    function showSuccessScreen(message){
+        form.style.display = 'none';
+        document.getElementById('ctaBar').style.display = 'none';
+        document.getElementById('messageZone').innerHTML = '';
+        const screen = document.getElementById('successScreen');
+        screen.style.display = 'block';
+        screen.innerHTML = `
+            <div class="success-badge">✅</div>
+            <h2>تغییرات ذخیره شد!</h2>
+            <p>${message || 'اطلاعات سالنت به‌روزرسانی شد.'}<br>این پنجره در چند لحظه بسته می‌شود...</p>
+        `;
+        haptic('medium');
+    }
+
+    form.addEventListener('submit', function(e){
+        e.preventDefault();
+        if (submitButton.disabled) return;
+        if (!validateForm()) {
+            const firstInvalid = form.querySelector('.invalid input, .invalid select');
+            if (firstInvalid) { firstInvalid.focus(); firstInvalid.scrollIntoView({ behavior:'smooth', block:'center' }); }
+            haptic('light');
+            return;
+        }
+        setLoading(true);
+        const data = {};
+        new FormData(form).forEach((value, key) => data[key] = value);
+        const requestData = { ...data, telegram_init_data: tg.initData };
+
+        fetch('api.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json; charset=utf-8', 'X-Telegram-Init-Data': tg.initData },
+            body: JSON.stringify(requestData)
+        })
+        .then(r => r.json())
+        .then(result => {
+            if (result.status === 'success') {
+                showSuccessScreen(result.message);
+                if (tg.MainButton?.setText) tg.MainButton.setText('تغییرات ذخیره شد').show();
+                setTimeout(() => { tg.close?.(); }, 3000);
+            } else {
+                showMessage(result.message || 'خطایی از سمت سرور رخ داد.');
+            }
+        })
+        .catch(error => {
+            console.error('Submit Error:', error);
+            showMessage('خطا در ارتباط با سرور.');
+        })
+        .finally(() => setLoading(false));
+    });
+}
+
+document.addEventListener('DOMContentLoaded', startApp);
+</script>
+</body>
+</html>

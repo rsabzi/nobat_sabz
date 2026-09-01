@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>جستجوی سالن و آرایشگاه</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+    :root{
+        --ink:#241B22;
+        --ink-soft:#7A6A72;
+        --brand:#7A2E43;
+        --brand-dark:#5C2233;
+        --brand-light:#F3E4E8;
+        --gold:#C9A15C;
+        --gold-soft:#F3EAD6;
+        --bg:#FBF7F4;
+        --surface:#FFFFFF;
+        --surface-soft:#F7F0EC;
+        --sage:#5B7F5E;
+        --sage-soft:#E7EFE7;
+        --border:#EDE2DC;
+        --shadow-sm:0 2px 8px -4px rgba(36,27,34,.14);
+        --shadow-md:0 10px 30px -14px rgba(36,27,34,.28);
+        --radius-lg:20px;
+        --radius-md:14px;
+        --radius-sm:10px;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html{-webkit-text-size-adjust:100%}
+    body{
+        font-family:'Vazirmatn',system-ui,sans-serif;
+        background:var(--bg);
+        color:var(--ink);
+        min-height:100vh;
+        padding-bottom:32px;
+    }
+    button, select, input{font-family:inherit}
+    :focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:6px}
+    @media (prefers-reduced-motion: reduce){
+        *{animation-duration:.001ms !important;transition-duration:.001ms !important}
+    }
+
+    /* ===== Header ===== */
+    .topbar{
+        position:sticky;top:0;z-index:20;
+        background:var(--bg);
+        padding:16px 18px 10px;
+    }
+    .brand-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+    .brand-row h1{font-size:1.05rem;font-weight:800;letter-spacing:-.01em}
+    .brand-row .eyebrow{font-size:.72rem;color:var(--ink-soft);font-weight:600;letter-spacing:.04em}
+
+    .search-shell{
+        display:flex;align-items:center;gap:8px;
+        background:var(--surface);
+        border:1.5px solid var(--border);
+        border-radius:999px;
+        padding:6px 8px 6px 6px;
+        box-shadow:var(--shadow-sm);
+        transition:border-color .15s, box-shadow .15s;
+    }
+    .search-shell:focus-within{border-color:var(--brand);box-shadow:0 0 0 4px var(--brand-light)}
+    .search-shell .icon{width:38px;height:38px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--brand);font-size:1.1rem}
+    .search-shell input{
+        flex:1;border:none;background:transparent;font-size:.95rem;font-weight:500;
+        color:var(--ink);padding:8px 2px;min-width:0;
+    }
+    .search-shell input::placeholder{color:#B8A9AF}
+    .search-shell button.filter-toggle{
+        flex:none;width:38px;height:38px;border-radius:50%;border:none;
+        background:var(--surface-soft);color:var(--brand);font-size:1rem;cursor:pointer;
+        display:flex;align-items:center;justify-content:center;transition:background .15s,transform .1s;
+    }
+    .search-shell button.filter-toggle.active{background:var(--brand);color:#fff}
+    .search-shell button.filter-toggle:active{transform:scale(.92)}
+    .search-shell button.go{
+        flex:none;height:38px;padding:0 18px;border:none;border-radius:999px;
+        background:var(--brand);color:#fff;font-weight:700;font-size:.85rem;cursor:pointer;
+        transition:background .15s, transform .1s;
+    }
+    .search-shell button.go:active{transform:scale(.96)}
+    .search-shell button.go:disabled{opacity:.6}
+
+    /* category chip scroller */
+    .chip-row{
+        display:flex;gap:8px;overflow-x:auto;padding:14px 2px 4px;
+        scrollbar-width:none;
+    }
+    .chip-row::-webkit-scrollbar{display:none}
+    .chip{
+        flex:none;padding:8px 16px;border-radius:999px;border:1.5px solid var(--border);
+        background:var(--surface);color:var(--ink-soft);font-size:.82rem;font-weight:600;
+        cursor:pointer;white-space:nowrap;transition:all .15s;
+    }
+    .chip.active{background:var(--brand);border-color:var(--brand);color:#fff}
+    .chip:active{transform:scale(.96)}
+
+    /* filters drawer */
+    .filters-drawer{
+        max-height:0;overflow:hidden;transition:max-height .25s ease;
+    }
+    .filters-drawer.open{max-height:220px}
+    .filters-drawer-inner{
+        display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px 2px 2px;
+    }
+    .field{display:flex;flex-direction:column;gap:5px}
+    .field label{font-size:.72rem;font-weight:700;color:var(--ink-soft)}
+    .field select{
+        appearance:none;-webkit-appearance:none;
+        background:var(--surface) url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%237A6A72" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>') left 10px center/16px no-repeat;
+        border:1.5px solid var(--border);border-radius:var(--radius-sm);
+        padding:9px 34px 9px 12px;font-size:.85rem;font-weight:500;color:var(--ink);
+    }
+
+    .recent-wrap{padding:10px 2px 0}
+    .recent-wrap .label{font-size:.72rem;font-weight:700;color:var(--ink-soft);margin-bottom:8px}
+    .recent-list{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}
+    .recent-list::-webkit-scrollbar{display:none}
+    .recent-item{
+        flex:none;padding:6px 14px;border-radius:999px;background:var(--surface-soft);
+        font-size:.78rem;color:var(--ink-soft);cursor:pointer;font-weight:500;
+    }
+
+    /* active filter chips */
+    .active-filters{display:flex;flex-wrap:wrap;gap:8px;padding:10px 2px 0}
+    .filter-chip{
+        display:flex;align-items:center;gap:6px;background:var(--gold-soft);
+        color:var(--brand-dark);border-radius:999px;padding:5px 8px 5px 14px;font-size:.78rem;font-weight:600;
+    }
+    .filter-chip button{
+        width:18px;height:18px;border-radius:50%;border:none;background:rgba(122,46,67,.14);
+        color:var(--brand-dark);font-size:.8rem;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    }
+
+    /* ===== Results ===== */
+    main{padding:6px 18px 0}
+    .results-header{display:flex;align-items:center;justify-content:space-between;padding:16px 2px 12px}
+    .results-count{font-size:.85rem;font-weight:700;color:var(--ink)}
+    .sort-select{
+        appearance:none;-webkit-appearance:none;background:transparent;
+        border:none;font-size:.8rem;font-weight:600;color:var(--brand);padding:4px 18px 4px 4px;
+        background-image:url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%237A2E43" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>');
+        background-repeat:no-repeat;background-position:left center;background-size:15px;
+    }
+
+    .business-grid{display:flex;flex-direction:column;gap:14px}
+
+    .business-card{
+        background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+        padding:16px;box-shadow:var(--shadow-sm);
+        transition:transform .15s, box-shadow .15s;
+        animation:rise .35s ease both;
+    }
+    @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    .business-card:active{transform:scale(.99)}
+
+    .card-top{display:flex;gap:12px;align-items:flex-start}
+    .monogram{
+        flex:none;width:52px;height:52px;border-radius:16px;
+        background:linear-gradient(135deg,var(--brand),var(--brand-dark));
+        display:flex;align-items:center;justify-content:center;
+        color:var(--gold-soft);font-weight:800;font-size:1.3rem;
+        box-shadow:inset 0 0 0 2px rgba(201,161,92,.5);
+    }
+    .card-heading{flex:1;min-width:0}
+    .card-heading .name{font-size:1rem;font-weight:700;color:var(--ink);line-height:1.35}
+    .card-heading .meta{display:flex;align-items:center;gap:5px;margin-top:4px;font-size:.78rem;color:var(--ink-soft);font-weight:500}
+    .type-badge{
+        flex:none;background:var(--gold-soft);color:var(--brand-dark);font-size:.7rem;font-weight:700;
+        padding:5px 10px;border-radius:999px;white-space:nowrap;
+    }
+
+    .card-desc{font-size:.83rem;color:var(--ink-soft);line-height:1.6;margin-top:10px;
+        display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+    .card-info-row{display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:10px;font-size:.78rem;color:var(--ink-soft)}
+    .card-info-row span{display:flex;align-items:center;gap:4px}
+
+    .service-pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+    .service-pill{
+        font-size:.72rem;font-weight:600;color:var(--brand-dark);
+        background:var(--surface-soft);border:1px solid var(--border);
+        padding:4px 10px;border-radius:999px;
+    }
+
+    .card-actions{display:flex;gap:8px;margin-top:14px}
+    .btn{
+        flex:1;text-align:center;padding:11px;border-radius:var(--radius-sm);font-size:.85rem;font-weight:700;
+        border:none;cursor:pointer;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;
+        transition:transform .1s, filter .15s;
+    }
+    .btn:active{transform:scale(.97)}
+    .btn-outline{background:var(--surface);color:var(--brand);border:1.5px solid var(--brand-light);box-shadow:none}
+    .btn-outline:hover{background:var(--brand-light)}
+    .btn-fill{background:linear-gradient(135deg,var(--brand),var(--brand-dark));color:#fff}
+    .btn-fill:hover{filter:brightness(1.05)}
+
+    /* skeleton loading */
+    .skeleton-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px}
+    .skeleton{background:linear-gradient(90deg,var(--surface-soft) 25%,#efe4de 37%,var(--surface-soft) 63%);
+        background-size:400% 100%;animation:shimmer 1.4s ease infinite;border-radius:8px}
+    @keyframes shimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}
+    .sk-row{display:flex;gap:12px}
+    .sk-avatar{width:52px;height:52px;border-radius:16px;flex:none}
+    .sk-lines{flex:1}
+    .sk-line{height:12px;margin-bottom:8px}
+
+    /* pagination */
+    .pagination{display:flex;justify-content:center;align-items:center;gap:6px;padding:22px 0 4px;flex-wrap:wrap}
+    .pagination button{
+        min-width:36px;height:36px;padding:0 10px;border-radius:10px;border:1.5px solid var(--border);
+        background:var(--surface);color:var(--ink);font-size:.82rem;font-weight:600;cursor:pointer;
+    }
+    .pagination button.active-page{background:var(--brand);border-color:var(--brand);color:#fff}
+    .pagination button:disabled{opacity:.4;cursor:not-allowed}
+
+    /* empty state */
+    .empty-state{text-align:center;padding:56px 20px}
+    .empty-state .glyph{font-size:2.4rem;margin-bottom:14px}
+    .empty-state h3{font-size:1rem;font-weight:800;margin-bottom:6px}
+    .empty-state p{font-size:.85rem;color:var(--ink-soft);line-height:1.6}
+
+    /* bottom sheet */
+    .sheet-backdrop{
+        position:fixed;inset:0;background:rgba(36,27,34,.5);z-index:100;
+        opacity:0;pointer-events:none;transition:opacity .2s;
+    }
+    .sheet-backdrop.open{opacity:1;pointer-events:auto}
+    .sheet{
+        position:fixed;left:0;right:0;bottom:0;z-index:101;
+        background:var(--surface);border-radius:24px 24px 0 0;
+        max-height:86vh;overflow-y:auto;padding:10px 20px calc(24px + env(safe-area-inset-bottom));
+        transform:translateY(100%);transition:transform .28s cubic-bezier(.32,.72,0,1);
+        box-shadow:0 -10px 40px rgba(36,27,34,.25);
+    }
+    .sheet.open{transform:translateY(0)}
+    .sheet-handle{width:40px;height:4px;background:var(--border);border-radius:99px;margin:6px auto 14px}
+    .sheet-header{text-align:center;margin-bottom:18px}
+    .sheet-header .monogram{margin:0 auto 12px}
+    .sheet-header h2{font-size:1.15rem;font-weight:800}
+    .sheet-section{margin-bottom:18px}
+    .sheet-section h4{font-size:.78rem;font-weight:700;color:var(--brand);margin-bottom:8px;letter-spacing:.02em}
+    .sheet-section p{font-size:.85rem;color:var(--ink-soft);line-height:1.7}
+    .detail-row{display:flex;gap:8px;font-size:.85rem;padding:6px 0;border-bottom:1px solid var(--border)}
+    .detail-row:last-child{border-bottom:none}
+    .detail-row b{flex:none;color:var(--ink-soft);font-weight:600}
+    .service-detail-card{
+        background:var(--surface-soft);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px;
+        border-inline-start:3px solid var(--gold);
+    }
+    .service-detail-card .sname{font-weight:700;font-size:.88rem;margin-bottom:3px}
+    .service-detail-card .sdesc{font-size:.78rem;color:var(--ink-soft);margin-bottom:6px}
+    .service-detail-card .smeta{display:flex;gap:14px;font-size:.78rem;color:var(--ink-soft);font-weight:600}
+    .sheet-cta{position:sticky;bottom:0;background:var(--surface);padding-top:6px}
+
+    @media (min-width:640px){
+        main, .topbar{max-width:640px;margin:0 auto}
+        .sheet{max-width:640px;margin:0 auto;left:0;right:0}
+    }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+    <div class="brand-row">
+        <div>
+            <div class="eyebrow">رزرو نوبت آنلاین</div>
+            <h1>سالن و آرایشگاه مورد نظرت رو پیدا کن</h1>
+        </div>
+    </div>
+
+    <form id="searchForm">
+        <div class="search-shell">
+            <div class="icon">🔍</div>
+            <input type="text" id="query" name="query" placeholder="نام سالن، نوع خدمات یا محله...">
+            <button type="button" class="filter-toggle" id="filterToggleBtn" aria-label="فیلترها">⚙️</button>
+            <button type="submit" class="go" id="searchBtn">جستجو</button>
+        </div>
+
+        <div class="filters-drawer" id="filtersDrawer">
+            <div class="filters-drawer-inner">
+                <div class="field">
+                    <label for="province">استان</label>
+                    <select id="province" name="province"><option value="">همه استان‌ها</option></select>
+                </div>
+                <div class="field">
+                    <label for="city">شهر</label>
+                    <select id="city" name="city"><option value="">همه شهرها</option></select>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <div class="chip-row" id="categoryChips">
+        <!-- category chips injected here; includes hidden select kept for form submit -->
+    </div>
+    <select id="category" name="category" form="searchForm" style="display:none"><option value="">همه دسته‌ها</option></select>
+
+    <div class="active-filters" id="activeFilters" style="display:none"></div>
+
+    <div class="recent-wrap" id="recentSearches" style="display:none">
+        <div class="label">جستجوی اخیر</div>
+        <div class="recent-list" id="recentList"></div>
+    </div>
+</div>
+
+<main>
+    <div class="results-header" id="resultsHeader" style="display:none">
+        <div class="results-count" id="resultsCount"></div>
+        <select class="sort-select" id="sortSelect">
+            <option value="relevance">مرتبط‌ترین</option>
+            <option value="newest">جدیدترین</option>
+            <option value="oldest">قدیمی‌ترین</option>
+            <option value="name">نام (الفبایی)</option>
+            <option value="services">بیشترین خدمات</option>
+        </select>
+    </div>
+
+    <div id="loadingIndicator" style="display:none">
+        <div class="business-grid">
+            <div class="skeleton-card"><div class="sk-row"><div class="skeleton sk-avatar"></div><div class="sk-lines"><div class="skeleton sk-line" style="width:60%"></div><div class="skeleton sk-line" style="width:40%"></div><div class="skeleton sk-line" style="width:90%"></div></div></div></div>
+            <div class="skeleton-card"><div class="sk-row"><div class="skeleton sk-avatar"></div><div class="sk-lines"><div class="skeleton sk-line" style="width:55%"></div><div class="skeleton sk-line" style="width:35%"></div><div class="skeleton sk-line" style="width:85%"></div></div></div></div>
+        </div>
+    </div>
+
+    <div class="business-grid" id="businessGrid"></div>
+
+    <div class="pagination" id="pagination" style="display:none"></div>
+
+    <div class="empty-state" id="noResults" style="display:none">
+        <div class="glyph">💇‍♀️</div>
+        <h3>نتیجه‌ای پیدا نشد</h3>
+        <p>کلمهٔ دیگری امتحان کن یا فیلترها رو تغییر بده</p>
+    </div>
+
+    <div class="empty-state" id="initialState">
+        <div class="glyph">✨</div>
+        <h3>بگرد تا بهترین سالن رو پیدا کنی</h3>
+        <p>با نام، نوع خدمات یا شهر جستجو کن، یا از دسته‌بندی‌های بالا شروع کن</p>
+    </div>
+</main>
+
+<div class="sheet-backdrop" id="sheetBackdrop"></div>
+<div class="sheet" id="detailSheet">
+    <div class="sheet-handle"></div>
+    <div id="sheetContent"></div>
+</div>
+
+<script>
+(function(){
+    try{
+        const tg = window.Telegram?.WebApp;
+        if(tg){
+            tg.ready();
+            tg.expand();
+            if(tg.setHeaderColor) tg.setHeaderColor('#FBF7F4');
+            if(tg.setBackgroundColor) tg.setBackgroundColor('#FBF7F4');
+        }
+    }catch(e){}
+})();
+
+function haptic(style){
+    try{ window.Telegram?.WebApp?.HapticFeedback?.impactOccurred(style || 'light'); }catch(e){}
+}
+
+class AdvancedSearch {
+    constructor() {
+        this.currentPage = 1;
+        this.currentFilters = {};
+        this.recentSearches = this.loadRecentSearches();
+        this.init();
+    }
+
+    init() {
+        this.loadFilters();
+        this.bindEvents();
+        this.displayRecentSearches();
+    }
+
+    async loadFilters() {
+        try {
+            const response = await fetch('search_api.php?action=filters');
+            const data = await response.json();
+            if (data.success) {
+                this.populateSelect('province', data.filters.provinces, 'province', 'count');
+                if (data.filters.categories) {
+                    this.populateSelect('category', data.filters.categories, 'business_type', 'count');
+                    this.renderCategoryChips(data.filters.categories);
+                }
+                this.setupCascadingFilters();
+            }
+        } catch (error) {
+            console.error('خطا در بارگذاری فیلترها:', error);
+        }
+    }
+
+    renderCategoryChips(categories) {
+        const row = document.getElementById('categoryChips');
+        row.innerHTML = '';
+        const allChip = document.createElement('button');
+        allChip.type = 'button';
+        allChip.className = 'chip active';
+        allChip.textContent = 'همه';
+        allChip.onclick = () => this.selectChip(allChip, '');
+        row.appendChild(allChip);
+
+        categories.forEach(cat => {
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.className = 'chip';
+            chip.textContent = `${cat.business_type} (${cat.count})`;
+            chip.onclick = () => this.selectChip(chip, cat.business_type);
+            row.appendChild(chip);
+        });
+    }
+
+    selectChip(el, value) {
+        haptic('light');
+        document.querySelectorAll('#categoryChips .chip').forEach(c => c.classList.remove('active'));
+        el.classList.add('active');
+        const categorySelect = document.getElementById('category');
+        categorySelect.value = value;
+        categorySelect.dispatchEvent(new Event('change'));
+        this.currentPage = 1;
+        this.performSearch();
+    }
+
+    populateSelect(selectId, options, valueField, countField) {
+        const select = document.getElementById(selectId);
+        const currentValue = select.value;
+        const defaultOption = select.querySelector('option[value=""]');
+        select.innerHTML = '';
+        select.appendChild(defaultOption);
+        options.forEach(option => {
+            const optionElement = document.createElement('option');
+            optionElement.value = option[valueField];
+            optionElement.textContent = `${option[valueField]} (${option[countField]})`;
+            select.appendChild(optionElement);
+        });
+        select.value = currentValue;
+    }
+
+    setupCascadingFilters() {
+        const provinceSelect = document.getElementById('province');
+        const citySelect = document.getElementById('city');
+        const categorySelect = document.getElementById('category');
+
+        categorySelect.addEventListener('change', async () => {
+            const selectedCategory = categorySelect.value;
+            this.clearSelect(provinceSelect);
+            this.clearSelect(citySelect);
+            if (selectedCategory) {
+                await this.loadProvincesByCategory(selectedCategory);
+            } else {
+                await this.loadGeneralProvinces();
+            }
+        });
+
+        provinceSelect.addEventListener('change', async () => {
+            const selectedProvince = provinceSelect.value;
+            const selectedCategory = categorySelect.value;
+            this.clearSelect(citySelect);
+            if (selectedProvince) {
+                if (selectedCategory) {
+                    await this.loadCitiesByProvinceAndCategory(selectedProvince, selectedCategory);
+                } else {
+                    await this.loadCitiesByProvince(selectedProvince);
+                }
+            }
+        });
+
+        citySelect.addEventListener('change', async () => {
+            const selectedProvince = provinceSelect.value;
+            const selectedCity = citySelect.value;
+            if (selectedProvince && selectedCity && !categorySelect.value) {
+                await this.loadCategoriesByCity(selectedProvince, selectedCity);
+            }
+        });
+    }
+
+    clearSelect(selectElement) {
+        const defaultOption = selectElement.querySelector('option[value=""]');
+        selectElement.innerHTML = '';
+        if (defaultOption) selectElement.appendChild(defaultOption.cloneNode(true));
+    }
+
+    async loadCitiesByProvince(province) {
+        try {
+            const response = await fetch(`search_api.php?action=cities&province=${encodeURIComponent(province)}`);
+            const data = await response.json();
+            if (data.success) {
+                const citySelect = document.getElementById('city');
+                data.cities.forEach(city => {
+                    const option = document.createElement('option');
+                    option.value = city.city;
+                    option.textContent = `${city.city} (${city.count})`;
+                    citySelect.appendChild(option);
+                });
+            }
+        } catch (error) { console.error('خطا در بارگذاری شهرها:', error); }
+    }
+
+    async loadCategoriesByCity(province, city) {
+        try {
+            const response = await fetch(`search_api.php?action=categories&province=${encodeURIComponent(province)}&city=${encodeURIComponent(city)}`);
+            const data = await response.json();
+            if (data.success) {
+                const categorySelect = document.getElementById('category');
+                data.categories.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category.business_type;
+                    option.textContent = `${category.business_type} (${category.count})`;
+                    categorySelect.appendChild(option);
+                });
+            }
+        } catch (error) { console.error('خطا در بارگذاری دسته‌بندی‌ها:', error); }
+    }
+
+    async loadGeneralCategories() {
+        try {
+            const response = await fetch('search_api.php?action=filters');
+            const data = await response.json();
+            if (data.success && data.filters.categories) {
+                const categorySelect = document.getElementById('category');
+                data.filters.categories.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category.business_type;
+                    option.textContent = `${category.business_type} (${category.count})`;
+                    categorySelect.appendChild(option);
+                });
+            }
+        } catch (error) { console.error('خطا در بارگذاری دسته‌بندی‌های کلی:', error); }
+    }
+
+    async loadGeneralProvinces() {
+        try {
+            const response = await fetch('search_api.php?action=filters');
+            const data = await response.json();
+            if (data.success && data.filters.provinces) {
+                const provinceSelect = document.getElementById('province');
+                data.filters.provinces.forEach(province => {
+                    const option = document.createElement('option');
+                    option.value = province.province;
+                    option.textContent = `${province.province} (${province.count})`;
+                    provinceSelect.appendChild(option);
+                });
+            }
+        } catch (error) { console.error('خطا در بارگذاری استان‌های کلی:', error); }
+    }
+
+    async loadProvincesByCategory(category) {
+        try {
+            const response = await fetch(`search_api.php?action=provinces_by_category&category=${encodeURIComponent(category)}`);
+            const data = await response.json();
+            if (data.success) {
+                const provinceSelect = document.getElementById('province');
+                data.provinces.forEach(province => {
+                    const option = document.createElement('option');
+                    option.value = province.province;
+                    option.textContent = `${province.province} (${province.count})`;
+                    provinceSelect.appendChild(option);
+                });
+            }
+        } catch (error) { console.error('خطا در بارگذاری استان‌ها بر اساس دسته‌بندی:', error); }
+    }
+
+    async loadCitiesByProvinceAndCategory(province, category) {
+        try {
+            const response = await fetch(`search_api.php?action=cities&province=${encodeURIComponent(province)}&category=${encodeURIComponent(category)}`);
+            const data = await response.json();
+            if (data.success) {
+                const citySelect = document.getElementById('city');
+                data.cities.forEach(city => {
+                    const option = document.createElement('option');
+                    option.value = city.city;
+                    option.textContent = `${city.city} (${city.count})`;
+                    citySelect.appendChild(option);
+                });
+            }
+        } catch (error) { console.error('خطا در بارگذاری شهرها بر اساس استان و دسته‌بندی:', error); }
+    }
+
+    bindEvents() {
+        const form = document.getElementById('searchForm');
+        const sortSelect = document.getElementById('sortSelect');
+        const filterToggleBtn = document.getElementById('filterToggleBtn');
+        const filtersDrawer = document.getElementById('filtersDrawer');
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            haptic('light');
+            this.currentPage = 1;
+            this.performSearch();
+        });
+
+        sortSelect.addEventListener('change', () => {
+            this.currentPage = 1;
+            this.performSearch();
+        });
+
+        filterToggleBtn.addEventListener('click', () => {
+            filtersDrawer.classList.toggle('open');
+            filterToggleBtn.classList.toggle('active');
+        });
+
+        document.getElementById('sheetBackdrop').addEventListener('click', () => this.closeSheet());
+    }
+
+    async performSearch() {
+        const formData = new FormData(document.getElementById('searchForm'));
+        const params = new URLSearchParams();
+        for (let [key, value] of formData.entries()) {
+            if (value.trim()) params.append(key, value.trim());
+        }
+        params.append('page', this.currentPage);
+        params.append('sort', document.getElementById('sortSelect').value);
+
+        this.showLoading();
+        document.getElementById('initialState').style.display = 'none';
+
+        try {
+            const response = await fetch(`search_api.php?${params}`);
+            const data = await response.json();
+            if (data.success) {
+                this.displayResults(data);
+                this.saveRecentSearch(data.filters);
+            } else {
+                this.showError(data.error);
+            }
+        } catch (error) {
+            console.error('خطا در جستجو:', error);
+            this.showError('خطا در اتصال به سرور');
+        } finally {
+            this.hideLoading();
+        }
+    }
+
+    displayResults(data) {
+        const { data: businesses, pagination, filters, search_term } = data;
+        const filtersWithSearchTerm = { ...filters };
+        if (search_term) filtersWithSearchTerm.search_term = search_term;
+
+        this.displayBusinesses(businesses);
+        this.displayPagination(pagination);
+        this.displayActiveFilters(filtersWithSearchTerm);
+        this.updateResultsHeader(pagination);
+
+        if (businesses.length === 0) this.showNoResults(); else this.hideNoResults();
+        this.scrollToResults();
+    }
+
+    scrollToResults() {
+        const el = document.getElementById('resultsHeader');
+        if (el) setTimeout(() => el.scrollIntoView({behavior:'smooth', block:'start'}), 100);
+    }
+
+    displayBusinesses(businesses) {
+        const grid = document.getElementById('businessGrid');
+        grid.innerHTML = '';
+        businesses.forEach((business, i) => {
+            const card = this.createBusinessCard(business);
+            card.style.animationDelay = (i * 40) + 'ms';
+            grid.appendChild(card);
+        });
+    }
+
+    createBusinessCard(business) {
+        const card = document.createElement('div');
+        card.className = 'business-card';
+
+        const initial = (business.name || '؟').trim().charAt(0);
+
+        const servicesHtml = (business.services && business.services.length > 0)
+            ? `<div class="service-pills">${business.services.slice(0,4).map(s => `<span class="service-pill">${s}</span>`).join('')}${business.services.length > 4 ? `<span class="service-pill">+${business.services.length - 4}</span>` : ''}</div>`
+            : '';
+
+        const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+        const userId = telegramUser?.id || null;
+        const bookingUrl = userId
+            ? `booking.html?business_id=${business.id}&user_id=${userId}&from_search=true`
+            : `booking.html?business_id=${business.id}&from_search=true`;
+
+        card.innerHTML = `
+            <div class="card-top">
+                <div class="monogram">${initial}</div>
+                <div class="card-heading">
+                    <div class="name">${business.name}</div>
+                    <div class="meta">📍 ${business.city}، ${business.province}</div>
+                </div>
+                <div class="type-badge">${business.business_type}</div>
+            </div>
+            <div class="card-desc">${business.description || 'توضیحاتی ثبت نشده'}</div>
+            <div class="card-info-row">
+                <span>📞 ${business.phone}</span>
+                <span>👤 ${business.owner_name}</span>
+            </div>
+            ${servicesHtml}
+            <div class="card-actions">
+                <button type="button" class="btn btn-outline" onclick="showBusinessDetails(${business.id})">جزئیات</button>
+                <a href="${bookingUrl}" class="btn btn-fill">💇 رزرو نوبت</a>
+            </div>
+        `;
+        return card;
+    }
+
+    displayPagination(pagination) {
+        const paginationDiv = document.getElementById('pagination');
+        if (pagination.total_pages <= 1) { paginationDiv.style.display = 'none'; return; }
+        paginationDiv.style.display = 'flex';
+        paginationDiv.innerHTML = '';
+
+        const prevBtn = document.createElement('button');
+        prevBtn.textContent = '‹';
+        prevBtn.disabled = !pagination.has_prev;
+        prevBtn.onclick = () => { this.currentPage = pagination.current_page - 1; this.performSearch(); };
+        paginationDiv.appendChild(prevBtn);
+
+        const startPage = Math.max(1, pagination.current_page - 2);
+        const endPage = Math.min(pagination.total_pages, pagination.current_page + 2);
+        for (let i = startPage; i <= endPage; i++) {
+            const pageBtn = document.createElement('button');
+            pageBtn.textContent = i;
+            if (i === pagination.current_page) pageBtn.classList.add('active-page');
+            pageBtn.onclick = () => { this.currentPage = i; this.performSearch(); };
+            paginationDiv.appendChild(pageBtn);
+        }
+
+        const nextBtn = document.createElement('button');
+        nextBtn.textContent = '›';
+        nextBtn.disabled = !pagination.has_next;
+        nextBtn.onclick = () => { this.currentPage = pagination.current_page + 1; this.performSearch(); };
+        paginationDiv.appendChild(nextBtn);
+    }
+
+    displayActiveFilters(filters) {
+        const filtersDiv = document.getElementById('activeFilters');
+        filtersDiv.innerHTML = '';
+        const activeFilters = [];
+        if (filters.search_term) activeFilters.push({ key: 'query', label: `${filters.search_term}` });
+        else if (filters.query) activeFilters.push({ key: 'query', label: `${filters.query}` });
+        if (filters.category) activeFilters.push({ key: 'category', label: filters.category });
+        if (filters.province) activeFilters.push({ key: 'province', label: filters.province });
+        if (filters.city) activeFilters.push({ key: 'city', label: filters.city });
+
+        if (activeFilters.length > 0) {
+            filtersDiv.style.display = 'flex';
+            activeFilters.forEach(filter => {
+                const chip = document.createElement('div');
+                chip.className = 'filter-chip';
+                chip.innerHTML = `<span>${filter.label}</span><button aria-label="حذف">&times;</button>`;
+                chip.querySelector('button').onclick = () => this.removeFilter(filter.key);
+                filtersDiv.appendChild(chip);
+            });
+        } else {
+            filtersDiv.style.display = 'none';
+        }
+    }
+
+    removeFilter(filterKey) {
+        const element = document.getElementById(filterKey);
+        if (element) {
+            element.value = '';
+            if (filterKey === 'category') {
+                document.querySelectorAll('#categoryChips .chip').forEach((c,i) => c.classList.toggle('active', i===0));
+            }
+            this.currentPage = 1;
+            this.performSearch();
+        }
+    }
+
+    updateResultsHeader(pagination) {
+        const header = document.getElementById('resultsHeader');
+        const count = document.getElementById('resultsCount');
+        if (pagination.total > 0) {
+            header.style.display = 'flex';
+            count.textContent = `${pagination.total} نتیجه`;
+        } else {
+            header.style.display = 'none';
+        }
+    }
+
+    saveRecentSearch(filters) {
+        if (filters.query) {
+            this.recentSearches = this.recentSearches.filter(s => s !== filters.query);
+            this.recentSearches.unshift(filters.query);
+            this.recentSearches = this.recentSearches.slice(0, 8);
+            localStorage.setItem('recentSearches', JSON.stringify(this.recentSearches));
+            this.displayRecentSearches();
+        }
+    }
+
+    loadRecentSearches() {
+        try { return JSON.parse(localStorage.getItem('recentSearches')) || []; }
+        catch { return []; }
+    }
+
+    displayRecentSearches() {
+        const container = document.getElementById('recentSearches');
+        const list = document.getElementById('recentList');
+        if (this.recentSearches.length > 0) {
+            container.style.display = 'block';
+            list.innerHTML = '';
+            this.recentSearches.forEach(search => {
+                const item = document.createElement('div');
+                item.className = 'recent-item';
+                item.textContent = search;
+                item.onclick = () => {
+                    document.getElementById('query').value = search;
+                    this.currentPage = 1;
+                    this.performSearch();
+                };
+                list.appendChild(item);
+            });
+        } else {
+            container.style.display = 'none';
+        }
+    }
+
+    showLoading() {
+        document.getElementById('loadingIndicator').style.display = 'block';
+        const searchBtn = document.getElementById('searchBtn');
+        searchBtn.disabled = true;
+    }
+    hideLoading() {
+        document.getElementById('loadingIndicator').style.display = 'none';
+        document.getElementById('searchBtn').disabled = false;
+    }
+    showNoResults() { document.getElementById('noResults').style.display = 'block'; }
+    hideNoResults() { document.getElementById('noResults').style.display = 'none'; }
+    showError(message) { alert('خطا: ' + message); }
+
+    openSheet() {
+        document.getElementById('sheetBackdrop').classList.add('open');
+        document.getElementById('detailSheet').classList.add('open');
+    }
+    closeSheet() {
+        document.getElementById('sheetBackdrop').classList.remove('open');
+        document.getElementById('detailSheet').classList.remove('open');
+    }
+
+    async showBusinessDetails(businessId) {
+        try {
+            const response = await fetch(`search_api.php?action=business_details&id=${businessId}`);
+            const data = await response.json();
+            if (!(data.success && data.business)) { alert('خطا در دریافت اطلاعات کسب‌وکار'); return; }
+
+            const business = data.business;
+            const initial = (business.name || '؟').trim().charAt(0);
+
+            let servicesHtml = '';
+            if (business.services && business.services.length > 0) {
+                servicesHtml = `<div class="sheet-section"><h4>خدمات</h4>` +
+                    business.services.map(s => `
+                        <div class="service-detail-card">
+                            <div class="sname">${s.name}</div>
+                            ${s.description ? `<div class="sdesc">${s.description}</div>` : ''}
+                            <div class="smeta">
+                                ${s.price ? `<span>💰 ${parseInt(s.price).toLocaleString()} تومان</span>` : ''}
+                                ${s.duration_minutes ? `<span>⏱️ ${s.duration_minutes} دقیقه</span>` : ''}
+                            </div>
+                        </div>`).join('') + `</div>`;
+            }
+
+            const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+            const userId = telegramUser?.id || null;
+            const bookingUrl = userId ? `booking.html?business_id=${business.id}&user_id=${userId}` : `booking.html?business_id=${business.id}`;
+
+            document.getElementById('sheetContent').innerHTML = `
+                <div class="sheet-header">
+                    <div class="monogram" style="width:56px;height:56px;font-size:1.5rem">${initial}</div>
+                    <h2>${business.name}</h2>
+                    <span class="type-badge">${business.business_type}</span>
+                </div>
+                <div class="sheet-section">
+                    <h4>دربارهٔ سالن</h4>
+                    <p>${business.description || 'توضیحاتی ثبت نشده'}</p>
+                </div>
+                <div class="sheet-section">
+                    <div class="detail-row"><b>📍 آدرس</b><span>${business.address}</span></div>
+                    <div class="detail-row"><b>📞 تلفن</b><span>${business.phone}</span></div>
+                    <div class="detail-row"><b>🌍 موقعیت</b><span>${business.city}، ${business.province}</span></div>
+                    <div class="detail-row"><b>👤 مدیر</b><span>${business.owner_name}</span></div>
+                </div>
+                ${servicesHtml}
+                <div class="sheet-cta">
+                    <a href="${bookingUrl}" class="btn btn-fill" style="width:100%">💇 رزرو نوبت</a>
+                </div>
+            `;
+            haptic('light');
+            this.openSheet();
+        } catch (error) {
+            console.error('خطا در نمایش جزئیات:', error);
+            alert('خطا در اتصال به سرور');
+        }
+    }
+}
+
+let searchInstance;
+document.addEventListener('DOMContentLoaded', () => {
+    searchInstance = new AdvancedSearch();
+    window.showBusinessDetails = (businessId) => searchInstance.showBusinessDetails(businessId);
+});
+</script>
+</body>
+</html>

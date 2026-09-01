@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>رزرو نوبت</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+    :root{
+        --ink:#241B22;
+        --ink-soft:#7A6A72;
+        --brand:#7A2E43;
+        --brand-dark:#5C2233;
+        --brand-light:#F3E4E8;
+        --gold:#C9A15C;
+        --gold-soft:#F3EAD6;
+        --bg:#FBF7F4;
+        --surface:#FFFFFF;
+        --surface-soft:#F7F0EC;
+        --sage:#5B7F5E;
+        --sage-soft:#E7EFE7;
+        --danger:#B3453F;
+        --danger-soft:#F7E7E5;
+        --border:#EDE2DC;
+        --shadow-sm:0 2px 8px -4px rgba(36,27,34,.14);
+        --shadow-md:0 10px 30px -14px rgba(36,27,34,.28);
+        --radius-lg:20px;--radius-md:14px;--radius-sm:10px;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    body{
+        font-family:'Vazirmatn',system-ui,sans-serif;background:var(--bg);color:var(--ink);
+        min-height:100vh;padding-bottom:110px;opacity:0;transition:opacity .4s ease;
+    }
+    body.loaded{opacity:1}
+    button,input,textarea,select{font-family:inherit}
+    :focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:6px}
+    @media (prefers-reduced-motion: reduce){*{animation-duration:.001ms !important;transition-duration:.001ms !important}}
+
+    /* page loader */
+    .page-loader{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;flex-direction:column;
+        align-items:center;justify-content:center;gap:14px;transition:opacity .4s ease;}
+    .page-loader.hidden{opacity:0;pointer-events:none}
+    .spinner{width:34px;height:34px;border:3px solid var(--brand-light);border-top-color:var(--brand);
+        border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .page-loader p{font-size:.85rem;color:var(--ink-soft);font-weight:600}
+
+    /* topbar */
+    .topbar{position:sticky;top:0;z-index:20;background:var(--bg);padding:14px 18px 6px;
+        display:flex;align-items:center;gap:10px}
+    .back-btn{display:none;align-items:center;gap:4px;background:var(--surface);border:1.5px solid var(--border);
+        border-radius:999px;padding:8px 14px;font-size:.8rem;font-weight:700;color:var(--brand);cursor:pointer}
+    .topbar h1{font-size:1rem;font-weight:800;flex:1}
+
+    main{padding:4px 18px 0;max-width:640px;margin:0 auto}
+
+    /* business card */
+    .biz-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+        padding:16px;box-shadow:var(--shadow-sm);margin-bottom:18px}
+    .biz-top{display:flex;gap:12px;align-items:center}
+    .monogram{flex:none;width:50px;height:50px;border-radius:15px;
+        background:linear-gradient(135deg,var(--brand),var(--brand-dark));
+        display:flex;align-items:center;justify-content:center;color:var(--gold-soft);
+        font-weight:800;font-size:1.25rem;box-shadow:inset 0 0 0 2px rgba(201,161,92,.5)}
+    .biz-name{font-size:1.02rem;font-weight:800}
+    .biz-type{font-size:.72rem;color:var(--brand-dark);background:var(--gold-soft);display:inline-block;
+        padding:3px 10px;border-radius:999px;font-weight:700;margin-top:4px}
+    .biz-meta{display:flex;flex-direction:column;gap:6px;margin-top:12px;font-size:.8rem;color:var(--ink-soft)}
+    .biz-meta div{display:flex;align-items:center;gap:6px}
+    .biz-services{margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+    .biz-services h4{font-size:.75rem;font-weight:700;color:var(--brand);margin-bottom:8px}
+    .svc-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;font-size:.82rem}
+    .svc-row .sname{font-weight:600}
+    .svc-row .sprice{color:var(--brand-dark);font-weight:700;font-size:.78rem}
+    .svc-row .sdur{color:var(--ink-soft);font-size:.72rem;margin-right:8px}
+
+    /* stepper */
+    .stepper{display:flex;align-items:center;gap:6px;margin-bottom:16px}
+    .step-pill{display:flex;align-items:center;gap:6px;font-size:.74rem;font-weight:700;color:var(--ink-soft);
+        opacity:.5;transition:opacity .25s}
+    .step-pill.active,.step-pill.done{opacity:1}
+    .step-pill .dot{width:22px;height:22px;border-radius:50%;background:var(--surface-soft);
+        display:flex;align-items:center;justify-content:center;font-size:.7rem;border:1.5px solid var(--border)}
+    .step-pill.active .dot{background:var(--brand);border-color:var(--brand);color:#fff}
+    .step-pill.done .dot{background:var(--sage);border-color:var(--sage);color:#fff}
+    .step-line{flex:1;height:1.5px;background:var(--border);margin:0 2px}
+
+    /* section */
+    .section{margin-bottom:22px;transition:opacity .3s, transform .3s}
+    .section.locked{opacity:.4;pointer-events:none}
+    .section h3{font-size:.92rem;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+    .section .hint{font-size:.78rem;color:var(--ink-soft);margin-bottom:12px;margin-top:-6px}
+
+    /* date scroller */
+    .dates-grid{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 8px;scrollbar-width:none}
+    .dates-grid::-webkit-scrollbar{display:none}
+    .date-card{flex:none;min-width:74px;background:var(--surface);border:1.5px solid var(--border);
+        border-radius:var(--radius-md);padding:12px 8px;text-align:center;cursor:pointer;transition:all .15s}
+    .date-card .day-name{font-size:.7rem;color:var(--ink-soft);font-weight:600}
+    .date-card .jalali-date{font-size:.88rem;font-weight:800;margin:4px 0 2px}
+    .date-card .slot-count{font-size:.66rem;color:var(--sage);font-weight:700}
+    .date-card.selected{background:var(--brand);border-color:var(--brand)}
+    .date-card.selected .day-name{color:var(--brand-light)}
+    .date-card.selected .jalali-date{color:#fff}
+    .date-card.selected .slot-count{color:var(--gold-soft)}
+    .date-card:active{transform:scale(.96)}
+
+    .loading-message,.no-dates-message,.empty-hint{font-size:.83rem;color:var(--ink-soft);
+        background:var(--surface-soft);border-radius:var(--radius-sm);padding:14px;text-align:center}
+
+    /* time slots */
+    .slots-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .time-slot{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-sm);
+        padding:11px 4px;text-align:center;font-size:.82rem;font-weight:700;cursor:pointer;transition:all .15s;color:var(--ink)}
+    .time-slot.selected{background:var(--brand);border-color:var(--brand);color:#fff}
+    .time-slot:active{transform:scale(.95)}
+
+    /* form */
+    .form-group{margin-bottom:14px}
+    .form-group label{display:block;font-size:.8rem;font-weight:700;margin-bottom:6px}
+    .form-group .req{color:var(--danger)}
+    .input-wrap{position:relative}
+    .form-group input,.form-group textarea{
+        width:100%;border:1.5px solid var(--border);border-radius:var(--radius-sm);
+        padding:12px 14px;font-size:.9rem;background:var(--surface);color:var(--ink);transition:border-color .15s;
+    }
+    .form-group input:focus,.form-group textarea:focus{border-color:var(--brand)}
+    .form-group textarea{resize:vertical;min-height:70px}
+    .valid-badge{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:.95rem;display:none}
+    .valid-badge.show{display:block}
+    .field-note{font-size:.72rem;color:var(--ink-soft);margin-top:5px}
+
+    /* banners */
+    .banner{border-radius:var(--radius-sm);padding:13px 14px;font-size:.83rem;font-weight:600;
+        display:flex;align-items:flex-start;gap:8px;margin-bottom:16px;line-height:1.6}
+    .banner.error{background:var(--danger-soft);color:var(--danger)}
+    .banner.success{background:var(--sage-soft);color:var(--sage)}
+
+    /* sticky bottom cta */
+    .cta-bar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--border);
+        padding:12px 18px calc(12px + env(safe-area-inset-bottom));box-shadow:0 -6px 24px rgba(36,27,34,.08);
+        transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);z-index:30}
+    .cta-bar.show{transform:translateY(0)}
+    .cta-inner{max-width:640px;margin:0 auto;display:flex;align-items:center;gap:12px}
+    .cta-summary{flex:1;font-size:.78rem;color:var(--ink-soft);min-width:0}
+    .cta-summary b{display:block;font-size:.86rem;color:var(--ink);font-weight:800}
+    .cta-btn{flex:none;background:linear-gradient(135deg,var(--brand),var(--brand-dark));color:#fff;border:none;
+        border-radius:999px;padding:14px 26px;font-size:.88rem;font-weight:800;cursor:pointer;
+        display:flex;align-items:center;gap:6px;transition:transform .1s,filter .15s}
+    .cta-btn:active{transform:scale(.96)}
+    .cta-btn:disabled{opacity:.5;cursor:not-allowed}
+    .cta-btn .spin{width:15px;height:15px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;
+        border-radius:50%;animation:spin .7s linear infinite;display:none}
+    .cta-btn.loading .spin{display:block}
+    .cta-btn.loading .label{display:none}
+
+    /* success screen */
+    .success-screen{text-align:center;padding:30px 10px 10px}
+    .success-badge{width:70px;height:70px;border-radius:50%;background:var(--sage-soft);
+        display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 18px;
+        animation:pop .4s cubic-bezier(.34,1.56,.64,1) both}
+    @keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+    .success-screen h2{font-size:1.15rem;font-weight:800;margin-bottom:8px}
+    .success-screen p{font-size:.85rem;color:var(--ink-soft);margin-bottom:20px;line-height:1.7}
+    .code-box{background:var(--surface-soft);border:1.5px dashed var(--gold);border-radius:var(--radius-md);
+        padding:16px;margin-bottom:20px}
+    .code-box .label{font-size:.72rem;color:var(--ink-soft);font-weight:700;margin-bottom:6px}
+    .code-box .code{font-size:1.3rem;font-weight:800;letter-spacing:.05em;color:var(--brand-dark)}
+    .success-actions{display:flex;flex-direction:column;gap:10px}
+    .success-actions .btn{padding:13px;border-radius:var(--radius-sm);font-weight:700;font-size:.85rem;
+        border:none;cursor:pointer;text-decoration:none;display:block}
+    .success-actions .btn-fill{background:var(--brand);color:#fff}
+    .success-actions .btn-outline{background:var(--surface);color:var(--brand);border:1.5px solid var(--brand-light)}
+</style>
+</head>
+<body>
+
+<div class="page-loader" id="pageLoader">
+    <div class="spinner"></div>
+    <p>در حال آماده‌سازی رزرو...</p>
+</div>
+
+<div class="topbar">
+    <button class="back-btn" id="backBtn" onclick="goBack()">← برگشت</button>
+    <h1>رزرو نوبت</h1>
+</div>
+
+<main>
+    <div class="biz-card" id="businessInfo"></div>
+
+    <div id="messageZone"></div>
+
+    <div class="stepper" id="stepper">
+        <div class="step-pill active" data-step="date"><span class="dot">1</span>تاریخ</div>
+        <div class="step-line"></div>
+        <div class="step-pill" data-step="time"><span class="dot">2</span>زمان</div>
+        <div class="step-line"></div>
+        <div class="step-pill" data-step="info"><span class="dot">3</span>اطلاعات</div>
+    </div>
+
+    <div id="bookingFlow">
+        <div class="section" id="dateSection">
+            <h3>📅 چه روزی می‌خوای بیای؟</h3>
+            <div id="loadingDates" class="loading-message">در حال بارگذاری تاریخ‌های موجود...</div>
+            <div id="availableDates" class="dates-grid" style="display:none"></div>
+            <div id="noDatesMessage" class="no-dates-message" style="display:none">
+                متأسفانه فعلاً تاریخی برای رزرو موجود نیست.
+            </div>
+        </div>
+
+        <div class="section locked" id="timeSection">
+            <h3>⏰ چه ساعتی؟</h3>
+            <div class="slots-grid" id="timeSlots">
+                <div class="empty-hint" style="grid-column:1/-1">اول یک تاریخ رو از بالا انتخاب کن</div>
+            </div>
+        </div>
+
+        <div class="section locked" id="formSection">
+            <h3>👤 مشخصات تو</h3>
+            <div class="form-group">
+                <label for="customerName">نام و نام خانوادگی <span class="req">*</span></label>
+                <input type="text" id="customerName" placeholder="مثلاً نگار محمدی" required>
+            </div>
+            <div class="form-group">
+                <label for="customerPhone">شماره موبایل <span class="req">*</span></label>
+                <div class="input-wrap">
+                    <input type="tel" id="customerPhone" placeholder="09123456789" required pattern="^09[0-9]{9}$">
+                    <span class="valid-badge" id="phoneValidBadge">✅</span>
+                </div>
+                <div class="field-note">برای هماهنگی و یادآوری نوبت استفاده می‌شه</div>
+            </div>
+            <div class="form-group">
+                <label for="customerNotes">توضیحات <span style="color:var(--ink-soft);font-weight:500">(اختیاری)</span></label>
+                <textarea id="customerNotes" placeholder="نکتهٔ خاصی هست که بدونیم خوبه؟"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div class="success-screen" id="successScreen" style="display:none"></div>
+</main>
+
+<div class="cta-bar" id="ctaBar">
+    <div class="cta-inner">
+        <div class="cta-summary" id="ctaSummary">یک تاریخ و زمان انتخاب کن</div>
+        <button class="cta-btn" id="bookBtn" onclick="makeBooking()" disabled>
+            <span class="spin"></span><span class="label">✅ ثبت نوبت</span>
+        </button>
+    </div>
+</div>
+
+<script>
+let tg = window.Telegram?.WebApp || {};
+let businessId = null;
+let selectedSlot = null;
+let businessData = null;
+let selectedDate = null;
+let availableDates = [];
+let isLoading = false;
+
+function haptic(style){ try{ tg.HapticFeedback?.impactOccurred(style || 'light'); }catch(e){} }
+
+function hidePageLoader() {
+    const pageLoader = document.getElementById('pageLoader');
+    setTimeout(() => {
+        pageLoader.classList.add('hidden');
+        document.body.classList.add('loaded');
+        setTimeout(() => { pageLoader.style.display = 'none'; }, 400);
+    }, 500);
+}
+
+function initializeApp() {
+    if (tg.ready) tg.ready();
+    if (tg.expand) tg.expand();
+    if (tg.setHeaderColor) tg.setHeaderColor('#FBF7F4');
+    if (tg.setBackgroundColor) tg.setBackgroundColor('#FBF7F4');
+
+    checkBackButtonVisibility();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    businessId = urlParams.get('business_id');
+
+    if (!businessId) {
+        hidePageLoader();
+        showError('شناسه کسب‌وکار یافت نشد!');
+        return;
+    }
+
+    Promise.all([loadBusinessInfo(), loadAvailableDates()])
+        .then(() => hidePageLoader())
+        .catch((error) => {
+            console.error('خطا در بارگذاری اولیه:', error);
+            hidePageLoader();
+            showError('خطا در بارگذاری اطلاعات. لطفاً صفحه را تازه‌سازی کنید.');
+        });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeApp);
+} else {
+    initializeApp();
+}
+
+async function loadBusinessInfo() {
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const response = await fetch(`api.php?action=get_business&id=${businessId}`, {
+            signal: controller.signal, headers: { 'Cache-Control': 'max-age=300' }
+        });
+        clearTimeout(timeoutId);
+        if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const result = await response.json();
+        if (result.status === 'success') {
+            businessData = result.data;
+            displayBusinessInfo(businessData);
+            return result.data;
+        } else {
+            throw new Error(result.message || 'خطا در دریافت اطلاعات کسب‌وکار');
+        }
+    } catch (error) {
+        if (error.name === 'AbortError') throw new Error('زمان انتظار تمام شد. لطفاً اتصال اینترنت خود را بررسی کنید.');
+        console.error('خطا در بارگذاری اطلاعات کسب‌وکار:', error);
+        throw error;
+    }
+}
+
+function displayBusinessInfo(business) {
+    const el = document.getElementById('businessInfo');
+    const initial = (business.name || '؟').trim().charAt(0);
+
+    let servicesHtml = '';
+    if (business.services && business.services.length > 0) {
+        servicesHtml = `<div class="biz-services"><h4>خدمات این سالن</h4>` +
+            business.services.map(s => `
+                <div class="svc-row">
+                    <span class="sname">${s.name}</span>
+                    <span>
+                        ${s.price ? `<span class="sprice">${parseInt(s.price).toLocaleString()} تومان</span>` : ''}
+                        ${s.duration_minutes ? `<span class="sdur">${s.duration_minutes} دقیقه</span>` : ''}
+                    </span>
+                </div>`).join('') + `</div>`;
+    }
+
+    el.innerHTML = `
+        <div class="biz-top">
+            <div class="monogram">${initial}</div>
+            <div>
+                <div class="biz-name">${business.name}</div>
+                <span class="biz-type">${business.business_type || 'سالن زیبایی'}</span>
+            </div>
+        </div>
+        <div class="biz-meta">
+            <div>👤 ${business.owner_name || 'نامشخص'}</div>
+            <div>📍 ${business.address || 'نامشخص'}</div>
+            <div>📞 ${business.phone || 'نامشخص'}</div>
+        </div>
+        ${servicesHtml}
+    `;
+}
+
+async function loadAvailableDates() {
+    const loadingElement = document.getElementById('loadingDates');
+    const datesContainer = document.getElementById('availableDates');
+    const noDateMessage = document.getElementById('noDatesMessage');
+
+    loadingElement.style.display = 'block';
+    datesContainer.style.display = 'none';
+    noDateMessage.style.display = 'none';
+
+    try {
+        const response = await fetch(`api.php?action=get_available_dates&business_id=${businessId}`);
+        const result = await response.json();
+        if (result.status === 'success' && result.data && result.data.length > 0) {
+            availableDates = result.data;
+            displayAvailableDates(result.data);
+        } else {
+            loadingElement.style.display = 'none';
+            noDateMessage.style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Error loading available dates:', error);
+        loadingElement.style.display = 'none';
+        noDateMessage.style.display = 'block';
+    }
+}
+
+function displayAvailableDates(dates) {
+    document.getElementById('loadingDates').style.display = 'none';
+    const datesContainer = document.getElementById('availableDates');
+    datesContainer.style.display = 'flex';
+    datesContainer.innerHTML = '';
+
+    dates.forEach((dateInfo, index) => {
+        const dateCard = document.createElement('div');
+        dateCard.className = 'date-card';
+        dateCard.dataset.date = dateInfo.date;
+        dateCard.innerHTML = `
+            <div class="day-name">${dateInfo.day_name}</div>
+            <div class="jalali-date">${dateInfo.jalali_date}</div>
+            ${dateInfo.slot_count ? `<div class="slot-count">${dateInfo.slot_count} زمان</div>` : ''}
+        `;
+        dateCard.addEventListener('click', () => selectDate(dateInfo.date));
+        datesContainer.appendChild(dateCard);
+        if (index === 0) setTimeout(() => selectDate(dateInfo.date), 150);
+    });
+}
+
+function setStep(step) {
+    const order = ['date', 'time', 'info'];
+    const idx = order.indexOf(step);
+    document.querySelectorAll('.step-pill').forEach(pill => {
+        const pillIdx = order.indexOf(pill.dataset.step);
+        pill.classList.toggle('active', pillIdx === idx);
+        pill.classList.toggle('done', pillIdx < idx);
+    });
+}
+
+function selectDate(date) {
+    selectedDate = date;
+    document.querySelectorAll('.date-card.selected').forEach(c => c.classList.remove('selected'));
+    const card = document.querySelector(`[data-date="${date}"]`);
+    if (card) card.classList.add('selected');
+
+    document.getElementById('timeSection').classList.remove('locked');
+    setStep('time');
+    loadTimeSlots();
+}
+
+async function loadTimeSlots() {
+    if (!selectedDate) return;
+    const slotsContainer = document.getElementById('timeSlots');
+    slotsContainer.innerHTML = '<div class="empty-hint" style="grid-column:1/-1">در حال بارگذاری...</div>';
+
+    try {
+        const response = await fetch(`api.php?action=get_available_slots&business_id=${businessId}&date=${selectedDate}`);
+        const result = await response.json();
+        if (result.status === 'success') displayTimeSlots(result.data);
+        else slotsContainer.innerHTML = '<div class="empty-hint" style="grid-column:1/-1">خطا در دریافت زمان‌های در دسترس</div>';
+    } catch (error) {
+        slotsContainer.innerHTML = '<div class="empty-hint" style="grid-column:1/-1">خطا در ارتباط با سرور</div>';
+        console.error('Error:', error);
+    }
+}
+
+function displayTimeSlots(slots) {
+    const slotsContainer = document.getElementById('timeSlots');
+    if (slots.length === 0) {
+        slotsContainer.innerHTML = '<div class="empty-hint" style="grid-column:1/-1">متأسفانه در این روز زمان خالی نیست</div>';
+        return;
+    }
+    slotsContainer.innerHTML = '';
+    slots.forEach(slot => {
+        const slotEl = document.createElement('div');
+        slotEl.className = 'time-slot';
+        slotEl.textContent = slot.start_time;
+        slotEl.onclick = () => selectTimeSlot(slotEl, slot);
+        slotsContainer.appendChild(slotEl);
+    });
+}
+
+function selectTimeSlot(element, slot) {
+    haptic('light');
+    document.querySelectorAll('.time-slot.selected').forEach(el => el.classList.remove('selected'));
+    element.classList.add('selected');
+    selectedSlot = slot;
+
+    const formSection = document.getElementById('formSection');
+    if (formSection.classList.contains('locked')) {
+        formSection.classList.remove('locked');
+        setStep('info');
+        setTimeout(() => {
+            formSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            document.getElementById('customerName').focus({ preventScroll: true });
+        }, 200);
+    }
+    updateCtaBar();
+}
+
+document.getElementById('customerPhone').addEventListener('input', (e) => {
+    const isValid = /^09[0-9]{9}$/.test(e.target.value.trim());
+    document.getElementById('phoneValidBadge').classList.toggle('show', isValid);
+    updateCtaBar();
+});
+document.getElementById('customerName').addEventListener('input', updateCtaBar);
+
+function updateCtaBar() {
+    const bookBtn = document.getElementById('bookBtn');
+    const ctaBar = document.getElementById('ctaBar');
+    const ctaSummary = document.getElementById('ctaSummary');
+    const customerName = document.getElementById('customerName').value.trim();
+    const customerPhone = document.getElementById('customerPhone').value.trim();
+    const isPhoneValid = /^09[0-9]{9}$/.test(customerPhone);
+
+    if (selectedSlot) {
+        ctaBar.classList.add('show');
+        const dateInfo = availableDates.find(d => d.date === selectedDate);
+        ctaSummary.innerHTML = `<b>${dateInfo ? dateInfo.jalali_date : ''} · ${selectedSlot.start_time}</b>${customerName ? customerName : 'مشخصاتت رو کامل کن'}`;
+    }
+    bookBtn.disabled = !selectedSlot || !customerName || !isPhoneValid;
+}
+
+async function makeBooking() {
+    if (isLoading) return;
+
+    if (!selectedSlot) { showError('لطفاً زمان مورد نظر را انتخاب کنید.'); return; }
+    const customerName = document.getElementById('customerName').value.trim();
+    if (!customerName) { showError('لطفاً نام خود را وارد کنید.'); document.getElementById('customerName').focus(); return; }
+    const customerPhone = document.getElementById('customerPhone').value.trim();
+    const phonePattern = /^09[0-9]{9}$/;
+    if (!customerPhone) { showError('لطفاً شماره تماس خود را وارد کنید.'); document.getElementById('customerPhone').focus(); return; }
+    if (!phonePattern.test(customerPhone)) { showError('شماره تماس باید با 09 شروع شده و 11 رقم باشد.'); document.getElementById('customerPhone').focus(); return; }
+    if (!selectedDate) { showError('لطفاً تاریخ مورد نظر را انتخاب کنید.'); return; }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlUserId = urlParams.get('user_id');
+    const telegramUser = tg.initDataUnsafe?.user;
+    const userId = urlUserId || telegramUser?.id || null;
+
+    const bookingData = {
+        business_id: businessId,
+        date: selectedDate,
+        start_time: selectedSlot.start_time,
+        end_time: selectedSlot.end_time,
+        customer_name: customerName,
+        customer_phone: customerPhone,
+        customer_notes: document.getElementById('customerNotes').value.trim(),
+        user_id: userId
+    };
+
+    isLoading = true;
+    setCtaLoading(true);
+
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        const response = await fetch('api.php?action=create_booking', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(bookingData),
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        const result = await response.json();
+
+        if (!response.ok) { showError(result.message || `خطای سرور: ${response.status}`); return; }
+
+        if (result.status === 'success') {
+            haptic('medium');
+            if (tg.sendData) {
+                tg.sendData(JSON.stringify({
+                    action: 'booking_completed',
+                    booking_id: result.booking_id,
+                    confirmation_code: result.confirmation_code
+                }));
+            }
+            showSuccessScreen(result);
+        } else {
+            showError(result.message || 'خطا در ثبت رزرو');
+        }
+    } catch (error) {
+        if (error.name === 'AbortError') showError('⏰ زمان انتظار تمام شد. لطفاً دوباره تلاش کنید.');
+        else showError('❌ خطا در ارتباط با سرور: ' + (error.message || 'نامشخص'));
+        console.error('خطا در ثبت رزرو:', error);
+    } finally {
+        isLoading = false;
+        setCtaLoading(false);
+    }
+}
+
+function setCtaLoading(show) {
+    document.getElementById('bookBtn').classList.toggle('loading', show);
+    document.getElementById('bookBtn').disabled = show;
+}
+
+function showSuccessScreen(result) {
+    document.getElementById('bookingFlow').style.display = 'none';
+    document.getElementById('stepper').style.display = 'none';
+    document.getElementById('ctaBar').classList.remove('show');
+    const screen = document.getElementById('successScreen');
+    screen.style.display = 'block';
+    screen.innerHTML = `
+        <div class="success-badge">✅</div>
+        <h2>نوبتت ثبت شد!</h2>
+        <p>یه پیام تأیید هم برات ارسال شد. سر وقت منتظرتیم 💇</p>
+        <div class="code-box">
+            <div class="label">کد پیگیری نوبت</div>
+            <div class="code">${result.confirmation_code}</div>
+        </div>
+        <div class="success-actions">
+            <a href="search.html" class="btn btn-outline">🔍 جستجوی سالن‌های دیگر</a>
+        </div>
+    `;
+    screen.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function showError(message) {
+    const zone = document.getElementById('messageZone');
+    zone.innerHTML = `<div class="banner error">⚠️ <span>${message}</span></div>`;
+    zone.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => { zone.innerHTML = ''; }, 5000);
+}
+
+function checkBackButtonVisibility() {
+    const backBtn = document.getElementById('backBtn');
+    const urlParams = new URLSearchParams(window.location.search);
+    const fromSearch = urlParams.get('from_search');
+    if (fromSearch === 'true' || document.referrer.includes('index.html') || document.referrer.includes('search')) {
+        backBtn.style.display = 'flex';
+    } else {
+        backBtn.style.display = 'none';
+    }
+}
+
+function goBack() {
+    if (window.history.length > 1) window.history.back();
+    else window.location.href = 'search.html';
+}
+</script>
+</body>
+</html>

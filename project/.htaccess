@@ -1,0 +1,31 @@
+#
+# فایل تنظیمات سرور برای اجرای صحیح وب-اپ تلگرام
+# این فایل را در ریشه اصلی پروژه خود (/nobatsabz/) قرار دهید.
+#
+
+<IfModule mod_headers.c>
+    # --- تنظیمات امنیتی و CORS ---
+    # به همه دامنه‌ها اجازه دسترسی می‌دهد تا از خطاهای CORS جلوگیری شود.
+    Header set Access-Control-Allow-Origin "*"
+
+    # --- سیاست امنیتی محتوا (CSP) ---
+    # این بخش بسیار مهم است. به مرورگر اجازه می‌دهد اسکریپت‌ها و استایل‌ها را
+    # از سرورهای تلگرام بارگذاری و اجرا کند. بدون این دستور، ممکن است
+    # اسکریپت telegram-web-app.js در موبایل مسدود شود.
+    Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://telegram.org; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:;"
+</IfModule>
+
+<IfModule mod_rewrite.c>
+    # --- بازنویسی URL ---
+    RewriteEngine On
+
+    # اطمینان از اینکه تمام درخواست‌ها به صورت امن (HTTPS) هستند.
+    RewriteCond %{HTTPS} off
+    RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+
+</IfModule>
+
+# --- تنظیمات انکودینگ ---
+# اطمینان از اینکه تمام فایل‌ها با انکودینگ صحیح (UTF-8) ارسال می‌شوند.
+AddDefaultCharset UTF-8

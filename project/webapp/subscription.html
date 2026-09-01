@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>پلن‌های اشتراک</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+    :root{
+        --ink:#241B22;--ink-soft:#7A6A72;
+        --brand:#7A2E43;--brand-dark:#5C2233;--brand-light:#F3E4E8;
+        --gold:#C9A15C;--gold-soft:#F3EAD6;
+        --bg:#FBF7F4;--surface:#FFFFFF;--surface-soft:#F7F0EC;
+        --sage:#5B7F5E;--sage-soft:#E7EFE7;
+        --danger:#B3453F;--danger-soft:#F7E7E5;
+        --warn:#B5842E;--warn-soft:#F7EFDD;
+        --border:#EDE2DC;
+        --shadow-sm:0 2px 8px -4px rgba(36,27,34,.14);--shadow-md:0 10px 30px -14px rgba(36,27,34,.28);
+        --radius-lg:20px;--radius-md:14px;--radius-sm:10px;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    body{font-family:'Vazirmatn',system-ui,sans-serif;background:var(--bg);color:var(--ink);
+        min-height:100vh;padding-bottom:24px;opacity:0;transition:opacity .4s ease}
+    body.loaded{opacity:1}
+    button,input{font-family:inherit}
+    :focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:6px}
+    @media (prefers-reduced-motion: reduce){*{animation-duration:.001ms !important;transition-duration:.001ms !important}}
+
+    .topbar{position:sticky;top:0;z-index:20;background:var(--bg);padding:14px 18px 6px;display:flex;align-items:center;gap:10px}
+    .back-btn{display:flex;align-items:center;gap:4px;background:var(--surface);border:1.5px solid var(--border);
+        border-radius:999px;padding:8px 14px;font-size:.8rem;font-weight:700;color:var(--brand);cursor:pointer}
+
+    main{max-width:600px;margin:0 auto;padding:8px 18px 0}
+    .intro{text-align:center;margin-bottom:22px}
+    .intro .eyebrow{font-size:.72rem;font-weight:700;color:var(--brand);letter-spacing:.04em;margin-bottom:6px}
+    .intro h1{font-size:1.3rem;font-weight:800;margin-bottom:6px}
+    .intro p{font-size:.85rem;color:var(--ink-soft)}
+    .trust-row{display:flex;justify-content:center;gap:16px;margin-top:12px;font-size:.72rem;color:var(--ink-soft);font-weight:600}
+    .trust-row span{display:flex;align-items:center;gap:4px}
+
+    .pending-banner{background:var(--warn-soft);border:1.5px solid var(--warn);border-radius:var(--radius-md);
+        padding:14px 16px;margin-bottom:18px;display:flex;gap:10px;align-items:flex-start}
+    .pending-banner .txt{flex:1}
+    .pending-banner h4{font-size:.85rem;font-weight:800;color:#7A5A1E;margin-bottom:4px}
+    .pending-banner p{font-size:.78rem;color:#7A5A1E;line-height:1.6}
+    .pending-banner button{flex:none;background:none;border:none;color:#7A5A1E;font-size:.76rem;font-weight:700;
+        text-decoration:underline;cursor:pointer;margin-top:6px}
+
+    .loading-row{text-align:center;padding:60px 20px}
+    .spinner{width:32px;height:32px;border:3px solid var(--brand-light);border-top-color:var(--brand);
+        border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 14px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .loading-row p{font-size:.85rem;color:var(--ink-soft);font-weight:600}
+
+    .banner{border-radius:var(--radius-sm);padding:13px 14px;font-size:.83rem;font-weight:600;
+        display:flex;align-items:flex-start;gap:8px;margin-bottom:16px;line-height:1.6}
+    .banner.error{background:var(--danger-soft);color:var(--danger)}
+
+    .plans{display:flex;flex-direction:column;gap:16px}
+    .plan-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-lg);
+        padding:22px;box-shadow:var(--shadow-sm);position:relative;transition:transform .15s}
+    .plan-card.featured{border-color:var(--gold);box-shadow:0 12px 32px -14px rgba(201,161,92,.5)}
+    .featured-tag{position:absolute;top:-11px;right:22px;background:linear-gradient(135deg,var(--gold),#B5893F);
+        color:#fff;font-size:.7rem;font-weight:800;padding:5px 14px;border-radius:999px;box-shadow:var(--shadow-sm)}
+    .plan-name{font-size:1.05rem;font-weight:800;color:var(--brand-dark);margin-bottom:8px}
+    .plan-price{font-size:1.6rem;font-weight:800;display:flex;align-items:baseline;gap:6px;margin-bottom:4px}
+    .plan-price .unit{font-size:.78rem;color:var(--ink-soft);font-weight:600}
+    .plan-desc{font-size:.8rem;color:var(--ink-soft);margin-bottom:16px}
+    .plan-features{list-style:none;margin-bottom:18px;display:flex;flex-direction:column;gap:9px}
+    .plan-features li{display:flex;align-items:center;gap:8px;font-size:.83rem;color:var(--ink)}
+    .plan-features li:before{content:'✓';flex:none;width:18px;height:18px;border-radius:50%;background:var(--sage-soft);
+        color:var(--sage);font-size:.7rem;font-weight:800;display:flex;align-items:center;justify-content:center}
+    .buy-btn{width:100%;background:linear-gradient(135deg,var(--brand),var(--brand-dark));color:#fff;border:none;
+        border-radius:999px;padding:14px;font-size:.9rem;font-weight:800;cursor:pointer;
+        display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .1s,filter .15s}
+    .plan-card.featured .buy-btn{background:linear-gradient(135deg,var(--gold),#B5893F);color:#3A2A0E}
+    .buy-btn:active{transform:scale(.98)}
+    .buy-btn:disabled{opacity:.65;cursor:not-allowed}
+    .buy-btn .spin{width:15px;height:15px;border:2px solid rgba(255,255,255,.45);border-top-color:#fff;
+        border-radius:50%;animation:spin .7s linear infinite;display:none}
+    .buy-btn.loading .spin{display:block}
+    .buy-btn.loading .label{display:none}
+
+    .footnote{text-align:center;font-size:.74rem;color:var(--ink-soft);margin-top:22px;line-height:1.7}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+    <button class="back-btn" onclick="goBack()">← بازگشت</button>
+</div>
+
+<main>
+    <div class="intro">
+        <div class="eyebrow">ارتقای سالن</div>
+        <h1>💳 پلن اشتراک مناسب سالنت رو انتخاب کن</h1>
+        <p>هرچی مشتری بیشتری داری، پلن بزرگ‌تر انتخاب کن</p>
+        <div class="trust-row"><span>🔒 پرداخت امن</span><span>✅ فعال‌سازی آنی</span></div>
+    </div>
+
+    <div id="pendingZone"></div>
+    <div id="messageZone"></div>
+
+    <div id="loading" class="loading-row"><div class="spinner"></div><p>در حال بارگذاری پلن‌ها...</p></div>
+    <div id="plans-container" class="plans" style="display:none"></div>
+
+    <p class="footnote">پس از پرداخت موفق، اشتراک سالنت به‌صورت خودکار فعال می‌شه.<br>در صورت بروز مشکل، از داخل ربات با پشتیبانی در تماس باش.</p>
+</main>
+
+<script>
+let businessId = null;
+let tg = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.body.classList.add('loaded');
+    if (window.Telegram && window.Telegram.WebApp) {
+        tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+        try { if (tg.setHeaderColor) tg.setHeaderColor('#FBF7F4'); } catch(e) {}
+        try { if (tg.setBackgroundColor) tg.setBackgroundColor('#FBF7F4'); } catch(e) {}
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    businessId = urlParams.get('id');
+
+    if (!businessId) { showError('شناسه کسب‌وکار یافت نشد'); return; }
+
+    loadSubscriptionPlans();
+    checkPendingOrder();
+});
+
+function haptic(style){ try{ tg?.HapticFeedback?.impactOccurred(style || 'light'); }catch(e){} }
+
+function goBack() {
+    if (tg && tg.close) tg.close();
+    else window.history.back();
+}
+
+function showError(message) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('messageZone').innerHTML = `<div class="banner error">⚠️ <span>${message}</span></div>`;
+}
+
+function showPlans(plans) {
+    document.getElementById('loading').style.display = 'none';
+    const container = document.getElementById('plans-container');
+    container.style.display = 'flex';
+    container.innerHTML = '';
+
+    if (!plans || plans.length === 0) {
+        container.innerHTML = '<div class="banner error">⚠️ <span>هیچ پلن اشتراکی یافت نشد.</span></div>';
+        return;
+    }
+    plans.forEach((plan, index) => container.appendChild(createPlanCard(plan, index === 1)));
+}
+
+function createPlanCard(plan, isFeatured = false) {
+    const card = document.createElement('div');
+    card.className = `plan-card ${isFeatured ? 'featured' : ''}`;
+
+    const reservationText = plan.reservation_limit === -1 ? 'نامحدود' : Number(plan.reservation_limit).toLocaleString('fa-IR');
+    const priceFormatted = parseFloat(plan.price).toLocaleString('fa-IR');
+
+    let planDescription = '';
+    let planFeatures = [];
+
+    if (plan.name === 'پکیج اولیه') {
+        planDescription = 'مناسب برای کسب‌وکارهای نوپا و کم مشتری';
+        planFeatures = [`${reservationText} توکن رزرو در ماه`, 'پشتیبانی استاندارد', 'مدیریت زمان‌بندی ساده', 'گزارش‌گیری پایه', 'مناسب تا ۱۵۰ رزرو ماهانه'];
+    } else if (plan.name === 'پکیج متوسط') {
+        planDescription = 'مناسب برای کسب‌وکارهای با مشتری متوسط';
+        planFeatures = [`${reservationText} توکن رزرو در ماه`, 'پشتیبانی اولویت‌دار', 'مدیریت زمان‌بندی پیشرفته', 'گزارش‌گیری تفصیلی', 'مناسب تا ۳۰۰ رزرو ماهانه', 'امکانات اضافی مدیریت'];
+    } else if (plan.name === 'پکیج پیشرفته') {
+        planDescription = 'مناسب برای کسب‌وکارهای پرمشتری';
+        planFeatures = [`${reservationText} توکن رزرو در ماه`, 'پشتیبانی VIP شبانه‌روزی', 'مدیریت زمان‌بندی حرفه‌ای', 'گزارش‌گیری کامل و تحلیلی', 'مناسب تا ۵۰۰ رزرو ماهانه', 'تمام امکانات پیشرفته', 'مشاورهٔ تخصصی'];
+    } else {
+        planFeatures = [`تعداد رزرو در ماه: ${reservationText}`, 'پشتیبانی ۲۴ ساعته', 'مدیریت زمان‌بندی پیشرفته', 'گزارش‌گیری تفصیلی'];
+    }
+
+    const featuresHTML = planFeatures.map(f => `<li>${f}</li>`).join('');
+
+    card.innerHTML = `
+        ${isFeatured ? '<span class="featured-tag">⭐ پیشنهاد ویژه</span>' : ''}
+        <div class="plan-name">${plan.name}</div>
+        <div class="plan-price">${priceFormatted}<span class="unit">ریال / ماه</span></div>
+        <div class="plan-desc">${planDescription}</div>
+        <ul class="plan-features">${featuresHTML}</ul>
+        <button type="button" class="buy-btn"><span class="spin"></span><span class="label">🛒 خرید این پکیج</span></button>
+    `;
+    card.querySelector('.buy-btn').addEventListener('click', (e) => purchasePlan(plan.id, plan.name, e.currentTarget));
+    return card;
+}
+
+function loadSubscriptionPlans() {
+    fetch('api.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get_subscription_plans' })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success' && data.plans) showPlans(data.plans);
+        else showError(data.message || 'خطا در دریافت پلن‌ها');
+    })
+    .catch(error => { console.error('Error:', error); showError('خطا در ارتباط با سرور'); });
+}
+
+function purchasePlan(planId, planName, button) {
+    button.classList.add('loading');
+    button.disabled = true;
+
+    validatePurchaseSecurity(planId)
+        .then(securityResult => {
+            if (securityResult.status !== 'valid') throw new Error(securityResult.message || 'خطا در اعتبارسنجی امنیتی');
+            return createDirectWooCommerceOrder(planId, securityResult.security_token);
+        })
+        .then(orderResult => {
+            if (orderResult.status !== 'success') throw new Error(orderResult.message || 'خطا در ایجاد سفارش');
+            redirectToPayment(orderResult.payment_url, orderResult.order_id, planName);
+        })
+        .catch(error => {
+            console.error('Purchase Error:', error);
+            document.getElementById('messageZone').innerHTML = `<div class="banner error">⚠️ <span>${error.message || 'خطا در فرآیند خرید'}</span></div>`;
+            document.getElementById('messageZone').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        })
+        .finally(() => {
+            button.classList.remove('loading');
+            button.disabled = false;
+        });
+}
+
+function validatePurchaseSecurity(planId) {
+    return fetch('./woocommerce_security.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            action: 'validate_purchase',
+            business_id: businessId,
+            plan_id: planId,
+            user_data: { user_agent: navigator.userAgent, timestamp: Date.now() }
+        })
+    }).then(response => response.json());
+}
+
+function createDirectWooCommerceOrder(planId, securityToken) {
+    return fetch('./woocommerce_direct_purchase.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            action: 'create_direct_order',
+            business_id: businessId,
+            plan_id: planId,
+            security_token: securityToken,
+            user_data: { email: '', phone: '' }
+        })
+    }).then(response => response.json());
+}
+
+function redirectToPayment(paymentUrl, orderId, planName) {
+    const confirmMessage = `آیا مایل به خرید ${planName} هستی؟ به درگاه پرداخت هدایت می‌شی.`;
+
+    if (tg && tg.showConfirm) {
+        tg.showConfirm(confirmMessage, (confirmed) => {
+            if (confirmed) {
+                haptic('medium');
+                tg.openLink(paymentUrl);
+                setTimeout(() => { tg.showAlert('پس از تکمیل پرداخت، به ربات برگرد تا اشتراکت فعال بشه.'); }, 1000);
+            }
+        });
+    } else {
+        if (confirm(confirmMessage)) {
+            localStorage.setItem('pending_order', JSON.stringify({ order_id: orderId, plan_name: planName, timestamp: Date.now() }));
+            window.location.href = paymentUrl;
+        }
+    }
+}
+
+function checkPendingOrder() {
+    const pendingOrder = localStorage.getItem('pending_order');
+    if (!pendingOrder) return;
+    try {
+        const orderData = JSON.parse(pendingOrder);
+        const timeDiff = Date.now() - orderData.timestamp;
+        if (timeDiff < 3600000) showOrderStatusMessage(orderData);
+        else localStorage.removeItem('pending_order');
+    } catch (e) { localStorage.removeItem('pending_order'); }
+}
+
+function showOrderStatusMessage(orderData) {
+    document.getElementById('pendingZone').innerHTML = `
+        <div class="pending-banner">
+            <span>📋</span>
+            <div class="txt">
+                <h4>سفارش در انتظار پرداخت</h4>
+                <p>سفارش «${orderData.plan_name}» (شماره ${orderData.order_id}) هنوز پرداخت نشده.</p>
+                <button type="button" onclick="clearPendingOrder()">پاک کردن این پیام</button>
+            </div>
+        </div>
+    `;
+}
+
+function clearPendingOrder() {
+    localStorage.removeItem('pending_order');
+    document.getElementById('pendingZone').innerHTML = '';
+}
+</script>
+</body>
+</html>

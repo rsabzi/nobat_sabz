@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>پنل صف کسب‌وکار</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+    :root{
+        --ink:#241B22;--ink-soft:#7A6A72;
+        --brand:#7A2E43;--brand-dark:#5C2233;--brand-light:#F3E4E8;
+        --gold:#C9A15C;--gold-soft:#F3EAD6;
+        --bg:#FBF7F4;--surface:#FFFFFF;--surface-soft:#F7F0EC;
+        --sage:#5B7F5E;--sage-soft:#E7EFE7;
+        --danger:#B3453F;--danger-soft:#F7E7E5;
+        --border:#EDE2DC;
+        --shadow-sm:0 2px 8px -4px rgba(36,27,34,.14);--shadow-md:0 10px 30px -14px rgba(36,27,34,.28);
+        --radius-lg:20px;--radius-md:14px;--radius-sm:10px;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    body{font-family:'Vazirmatn',system-ui,sans-serif;background:var(--bg);color:var(--ink);
+        min-height:100vh;padding-bottom:28px}
+    button,input,select,textarea{font-family:inherit}
+    :focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:6px}
+    @media (prefers-reduced-motion: reduce){*{animation-duration:.001ms !important;transition-duration:.001ms !important}}
+
+    .topbar{position:sticky;top:0;z-index:20;background:var(--bg);padding:18px 18px 14px;
+        display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border)}
+    .brand-badge{flex:none;width:42px;height:42px;border-radius:13px;
+        background:linear-gradient(135deg,var(--brand),var(--brand-dark));display:flex;align-items:center;
+        justify-content:center;font-size:1.15rem;box-shadow:var(--shadow-sm)}
+    .topbar-text{flex:1;min-width:0}
+    .topbar-text .eyebrow{font-size:.68rem;font-weight:700;color:var(--brand);letter-spacing:.03em;margin-bottom:2px}
+    .topbar-text h1{font-size:1.05rem;font-weight:800}
+    .topbar-text #businessTitle{font-size:.75rem;color:var(--ink-soft);font-weight:600;margin-top:2px}
+
+    .container{max-width:1100px;margin:0 auto;padding:18px 16px 0}
+    .grid{display:grid;grid-template-columns:1fr;gap:14px}
+    @media(min-width:860px){.grid{grid-template-columns:1.6fr 1fr}}
+
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+        padding:18px;box-shadow:var(--shadow-sm)}
+    .card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+    .card-head .title-group{display:flex;align-items:center;gap:8px}
+    .live-dot{width:8px;height:8px;border-radius:50%;background:var(--sage);flex:none;
+        box-shadow:0 0 0 0 rgba(91,127,94,.5);animation:livePulse 1.8s ease-out infinite}
+    @keyframes livePulse{
+        0%{box-shadow:0 0 0 0 rgba(91,127,94,.45)}
+        70%{box-shadow:0 0 0 7px rgba(91,127,94,0)}
+        100%{box-shadow:0 0 0 0 rgba(91,127,94,0)}
+    }
+    .card-head h2{font-size:.92rem;font-weight:800}
+    #avgDuration{font-size:.74rem;color:var(--ink-soft);font-weight:600}
+
+    .row{display:flex;justify-content:space-between;align-items:center;gap:10px;
+        border-bottom:1px solid var(--border);padding:14px 2px}
+    .row:first-of-type{padding-top:16px}
+    .row:last-child{border-bottom:none}
+    .name{font-weight:800;font-size:.92rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .muted{color:var(--ink-soft);font-size:.78rem;margin-top:4px}
+    .badge{display:inline-block;background:var(--gold-soft);color:var(--brand-dark);
+        padding:.22rem .6rem;border-radius:999px;font-size:.7rem;font-weight:700}
+    .actions{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex:none}
+    .actions .muted{margin-top:0;font-variant-numeric:tabular-nums}
+    button{padding:.55rem 1rem;border:none;border-radius:var(--radius-sm);cursor:pointer;
+        font-size:.8rem;font-weight:700;transition:transform .1s}
+    button:active{transform:scale(.96)}
+    .primary{background:linear-gradient(135deg,var(--sage),#4a6c4d);color:#fff;box-shadow:var(--shadow-sm)}
+    .secondary{background:var(--surface-soft);color:var(--ink-soft)}
+    .danger{background:var(--danger-soft);color:var(--danger)}
+
+    .footer{display:flex;justify-content:space-between;align-items:center;margin-top:4px;
+        padding-top:12px;border-top:1px dashed var(--border);color:var(--ink-soft);font-size:.72rem;font-weight:600}
+    #queueList .muted:only-child{padding:28px 4px;text-align:center;font-size:.85rem}
+
+    .card.history{margin-top:0}
+    .history-note{display:flex;align-items:flex-start;gap:10px;background:var(--surface-soft);
+        border-radius:var(--radius-sm);padding:14px;font-size:.8rem;color:var(--ink-soft);line-height:1.7;margin-top:10px}
+    .history-note .ico{flex:none;font-size:1rem}
+
+    @media(max-width:520px){
+        .row{flex-direction:column;align-items:stretch}
+        .actions{flex-direction:row;justify-content:space-between;align-items:center;width:100%;margin-top:10px}
+    }
+</style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="brand-badge">👥</div>
+        <div class="topbar-text">
+            <div class="eyebrow">مدیریت سالن</div>
+            <h1>مدیریت صف نوبت</h1>
+            <div id="businessTitle" class="muted"></div>
+        </div>
+    </div>
+    <div class="container">
+        <div class="grid">
+            <div class="card">
+                <div class="card-head">
+                    <div class="title-group">
+                        <span class="live-dot"></span>
+                        <h2>صف فعال</h2>
+                    </div>
+                    <div id="avgDuration" class="muted"></div>
+                </div>
+                <div id="queueList"></div>
+                <div class="footer">
+                    <span id="lastUpdated" class="muted"></span>
+                </div>
+            </div>
+            <div class="card history">
+                <div class="card-head">
+                    <div class="title-group"><h2>📊 تاریخچهٔ اخیر</h2></div>
+                </div>
+                <div id="historyList" class="history-note">
+                    <span class="ico">ℹ️</span>
+                    <span>برای تاریخچهٔ کامل از پنل گزارش‌گیری استفاده کنید.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        let tg = window.Telegram?.WebApp || {};
+        let businessId = null;
+        const queueList = document.getElementById('queueList');
+        const avgDurationEl = document.getElementById('avgDuration');
+        const lastUpdatedEl = document.getElementById('lastUpdated');
+        
+        const businessTitle = document.getElementById('businessTitle');
+
+        function init(){
+            if(tg.ready) tg.ready();
+            const params = new URLSearchParams(location.search);
+            businessId = params.get('business_id');
+            if(!businessId){
+                queueList.innerHTML = '<div class="muted">شناسه کسب‌وکار یافت نشد</div>';
+                return;
+            }
+            businessTitle.textContent = 'کد کسب‌وکار: ' + businessId;
+            fetchQueue();
+            setInterval(fetchQueue, 3000);
+        }
+
+        async function fetchQueue(){
+            try{
+                const res = await fetch(`api.php?action=get_active_queue&business_id=${encodeURIComponent(businessId)}`, {
+                    headers: { 'X-Telegram-Init-Data': tg.initData || '' }
+                });
+                const out = await res.json();
+                if(out.status !== 'success') throw new Error(out.message||'خطا');
+                renderQueue(out.queue || []);
+                avgDurationEl.textContent = `میانگین زمان خدمت: ${Math.round(out.avg_duration_minutes)} دقیقه`;
+                lastUpdatedEl.textContent = 'آخرین بروزرسانی: ' + new Date().toLocaleTimeString('fa-IR');
+            }catch(err){
+                console.error(err);
+            }
+        }
+
+        function renderQueue(items){
+            if(!items.length){
+                queueList.innerHTML = '<div class="muted">رزروی در صف نیست</div>';
+                return;
+            }
+            queueList.innerHTML = '';
+            items.forEach((it,idx)=>{
+                const row = document.createElement('div');
+                row.className = 'row';
+                const isCurrent = it.queue_status === 'in_progress' || idx===0;
+                const btn = document.createElement('button');
+                btn.className = 'primary';
+                btn.textContent = 'تکمیل خدمت';
+                btn.onclick = ()=> completeBooking(it.id);
+                const eta = document.createElement('span');
+                eta.className = 'muted';
+                eta.textContent = `ETA: ${it.eta_minutes} دقیقه`;
+                const actions = document.createElement('div');
+                actions.className = 'actions';
+                actions.appendChild(eta);
+                actions.appendChild(btn);
+                const left = document.createElement('div');
+                left.innerHTML = `
+                        <div class="name">${it.customer_name || 'نامشخص'} <span class="badge">${isCurrent? 'در حال انجام' : 'در انتظار'}</span></div>
+                        <div class="muted">📞 ${it.customer_phone || '-'} • ⏰ ${it.start_time?.slice(0,5) || '-'} • موقعیت: ${it.position}</div>
+                `;
+                row.appendChild(left);
+                row.appendChild(actions);
+                queueList.appendChild(row);
+            });
+        }
+
+        async function completeBooking(bookingId){
+            if(!confirm('این رزرو تکمیل شود و از صف حذف گردد؟')) return;
+            try{
+                const res = await fetch('api.php?action=complete_booking', {
+                    method: 'POST', headers: {'Content-Type':'application/json','X-Telegram-Init-Data': tg.initData || ''},
+                    body: JSON.stringify({business_id: businessId, booking_id: bookingId, telegram_init_data: tg.initData || ''})
+                });
+                const out = await res.json();
+                if(out.status === 'success'){
+                    fetchQueue();
+                } else {
+                    alert(out.message||'خطا در تکمیل رزرو');
+                }
+            }catch(err){
+                alert('خطا در ارتباط با سرور');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

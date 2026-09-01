@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>مدیریت خدمات</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+    :root{
+        --ink:#241B22;--ink-soft:#7A6A72;
+        --brand:#7A2E43;--brand-dark:#5C2233;--brand-light:#F3E4E8;
+        --gold:#C9A15C;--gold-soft:#F3EAD6;
+        --bg:#FBF7F4;--surface:#FFFFFF;--surface-soft:#F7F0EC;
+        --sage:#5B7F5E;--sage-soft:#E7EFE7;
+        --danger:#B3453F;--danger-soft:#F7E7E5;
+        --border:#EDE2DC;
+        --shadow-sm:0 2px 8px -4px rgba(36,27,34,.14);--shadow-md:0 10px 30px -14px rgba(36,27,34,.28);
+        --radius-lg:20px;--radius-md:14px;--radius-sm:10px;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    body{font-family:'Vazirmatn',system-ui,sans-serif;background:var(--bg);color:var(--ink);
+        min-height:100vh;padding-bottom:104px;opacity:0;transition:opacity .4s ease}
+    body.loaded{opacity:1}
+    button,input,select,textarea{font-family:inherit}
+    :focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:6px}
+    @media (prefers-reduced-motion: reduce){*{animation-duration:.001ms !important;transition-duration:.001ms !important}}
+
+    main{max-width:600px;margin:0 auto;padding:24px 18px 0}
+    .intro{text-align:center;margin-bottom:20px}
+    .intro .eyebrow{font-size:.72rem;font-weight:700;color:var(--brand);letter-spacing:.04em;margin-bottom:6px}
+    .intro h1{font-size:1.25rem;font-weight:800}
+    .intro p{font-size:.82rem;color:var(--ink-soft);margin-top:4px}
+
+    #messageZone{margin-bottom:6px}
+    .banner{border-radius:var(--radius-sm);padding:13px 14px;font-size:.83rem;font-weight:600;
+        display:flex;align-items:flex-start;gap:8px;margin-bottom:16px;line-height:1.6}
+    .banner.error{background:var(--danger-soft);color:var(--danger)}
+
+    /* add-service toggle card */
+    .add-toggle{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;
+        background:var(--surface);border:1.5px dashed var(--brand-light);border-radius:var(--radius-md);
+        padding:14px;font-size:.88rem;font-weight:700;color:var(--brand);cursor:pointer;margin-bottom:16px;transition:all .15s}
+    .add-toggle:active{transform:scale(.99)}
+    .add-toggle.open{display:none}
+
+    .add-card{background:var(--surface);border:1.5px solid var(--brand-light);border-radius:var(--radius-lg);
+        padding:18px;margin-bottom:16px;box-shadow:var(--shadow-sm);display:none}
+    .add-card.open{display:block;animation:rise .25s ease both}
+    @keyframes rise{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+    .add-card h3{font-size:.92rem;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:6px}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .form-group{margin-bottom:12px}
+    .form-group label{display:block;font-size:.76rem;font-weight:700;color:var(--ink-soft);margin-bottom:5px}
+    .form-group input,.form-group textarea{
+        width:100%;border:1.5px solid var(--border);border-radius:var(--radius-sm);
+        padding:10px 12px;font-size:.85rem;background:var(--surface);color:var(--ink);transition:border-color .15s;
+    }
+    .form-group input:focus,.form-group textarea:focus{border-color:var(--brand)}
+    .form-group textarea{resize:vertical;min-height:56px}
+    .switch-row{display:flex;align-items:center;justify-content:space-between;background:var(--surface-soft);
+        border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:12px}
+    .switch-row span{font-size:.82rem;font-weight:600}
+    .switch{position:relative;width:42px;height:24px;flex:none}
+    .switch input{opacity:0;width:0;height:0}
+    .slider{position:absolute;inset:0;background:var(--border);border-radius:999px;cursor:pointer;transition:.2s}
+    .slider:before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;
+        border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+    .switch input:checked + .slider{background:var(--sage)}
+    .switch input:checked + .slider:before{transform:translateX(18px)}
+    .add-actions{display:flex;gap:8px}
+    .btn-secondary{flex:none;background:var(--surface-soft);color:var(--ink-soft);border:none;border-radius:var(--radius-sm);
+        padding:11px 16px;font-size:.83rem;font-weight:700;cursor:pointer}
+    .btn-add{flex:1;background:linear-gradient(135deg,var(--brand),var(--brand-dark));color:#fff;border:none;
+        border-radius:var(--radius-sm);padding:11px 16px;font-size:.85rem;font-weight:700;cursor:pointer}
+    .btn-add:active,.btn-secondary:active{transform:scale(.98)}
+
+    .list-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .list-header h2{font-size:.95rem;font-weight:800}
+    .list-count{font-size:.76rem;color:var(--ink-soft);font-weight:600}
+
+    .loading-row{text-align:center;padding:50px 20px;color:var(--ink-soft)}
+    .spinner{width:28px;height:28px;border:3px solid var(--brand-light);border-top-color:var(--brand);
+        border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .empty-state{text-align:center;padding:44px 20px;background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border)}
+    .empty-state .glyph{font-size:2rem;margin-bottom:10px}
+    .empty-state p{font-size:.85rem;color:var(--ink-soft)}
+
+    .service-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+        padding:16px;margin-bottom:12px;box-shadow:var(--shadow-sm);transition:opacity .2s}
+    .service-card.is-deleted{opacity:.5;border-style:dashed}
+    .service-card.is-new{border-color:var(--gold);border-style:dashed}
+    .service-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px}
+    .service-name-badge{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+    .service-name-badge .name-input{border:none;background:transparent;font-size:.98rem;font-weight:800;
+        padding:2px 4px;width:100%;border-radius:6px}
+    .service-name-badge .name-input:focus{background:var(--surface-soft)}
+    .new-tag{flex:none;font-size:.65rem;font-weight:800;color:var(--brand-dark);background:var(--gold-soft);
+        padding:3px 8px;border-radius:999px}
+    .card-actions{display:flex;gap:6px;flex:none}
+    .icon-btn{width:32px;height:32px;border-radius:var(--radius-sm);border:none;cursor:pointer;font-size:.9rem;
+        display:flex;align-items:center;justify-content:center;transition:transform .1s}
+    .icon-btn:active{transform:scale(.9)}
+    .icon-btn.danger{background:var(--danger-soft);color:var(--danger)}
+    .icon-btn.restore{background:var(--sage-soft);color:var(--sage)}
+
+    .service-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+    .mini-field label{display:block;font-size:.7rem;font-weight:700;color:var(--ink-soft);margin-bottom:4px}
+    .mini-field .input-suffix{position:relative}
+    .mini-field input{width:100%;border:1.5px solid var(--border);border-radius:var(--radius-sm);
+        padding:8px 10px;font-size:.83rem;background:var(--surface-soft);transition:border-color .15s}
+    .mini-field input:focus{border-color:var(--brand);background:var(--surface)}
+    .mini-field .suffix-label{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:.68rem;color:var(--ink-soft);pointer-events:none}
+
+    .service-desc textarea{width:100%;border:1.5px solid var(--border);border-radius:var(--radius-sm);
+        padding:8px 10px;font-size:.8rem;background:var(--surface-soft);resize:vertical;min-height:44px}
+    .service-desc textarea:focus{border-color:var(--brand);background:var(--surface)}
+    .service-footer{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+    .created-note{font-size:.7rem;color:var(--ink-soft)}
+    .active-toggle{display:flex;align-items:center;gap:8px}
+    .active-toggle span{font-size:.76rem;font-weight:700;color:var(--ink-soft)}
+
+    .cta-bar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--border);
+        padding:12px 18px calc(12px + env(safe-area-inset-bottom));box-shadow:0 -6px 24px rgba(36,27,34,.08);z-index:30}
+    .cta-inner{max-width:600px;margin:0 auto;display:flex;align-items:center;gap:12px}
+    .cta-status{flex:1;font-size:.76rem;color:var(--ink-soft);font-weight:600}
+    .cta-status.dirty{color:var(--brand)}
+    .cta-btn{flex:none;background:linear-gradient(135deg,var(--brand),var(--brand-dark));color:#fff;border:none;
+        border-radius:999px;padding:13px 24px;font-size:.85rem;font-weight:800;cursor:pointer;
+        display:flex;align-items:center;gap:6px;transition:transform .1s,filter .15s}
+    .cta-btn:active{transform:scale(.96)}
+    .cta-btn:disabled{opacity:.5;cursor:not-allowed}
+    .cta-btn .spin{width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;
+        border-radius:50%;animation:spin .7s linear infinite;display:none}
+    .cta-btn.loading .spin{display:block}
+    .cta-btn.loading .label{display:none}
+
+    .toast{position:fixed;top:16px;left:16px;right:16px;z-index:200;background:var(--surface);
+        border-radius:var(--radius-sm);padding:13px 16px;font-size:.83rem;font-weight:700;box-shadow:var(--shadow-md);
+        display:flex;align-items:center;gap:8px;transform:translateY(-30px);opacity:0;transition:all .25s;max-width:560px;margin:0 auto}
+    .toast.show{transform:translateY(0);opacity:1}
+    .toast.success{color:var(--sage);border:1px solid var(--sage-soft)}
+    .toast.error{color:var(--danger);border:1px solid var(--danger-soft)}
+
+    @media (max-width:400px){.service-fields{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<main>
+    <div class="intro">
+        <div class="eyebrow">مدیریت سالن</div>
+        <h1>🛠️ خدمات سالن</h1>
+        <p>خدماتی که ارائه می‌دی رو اینجا تعریف و ویرایش کن</p>
+    </div>
+
+    <div id="messageZone"></div>
+
+    <button type="button" class="add-toggle" id="addToggleBtn">➕ افزودن خدمت جدید</button>
+
+    <div class="add-card" id="addCard">
+        <h3>✨ خدمت تازه</h3>
+        <div class="form-group">
+            <label for="newServiceName">نام خدمت *</label>
+            <input type="text" id="newServiceName" placeholder="مثلاً کوتاهی مو">
+        </div>
+        <div class="grid2">
+            <div class="form-group">
+                <label for="newServicePrice">قیمت (تومان)</label>
+                <input type="number" id="newServicePrice" placeholder="۵۰۰۰۰" min="0">
+            </div>
+            <div class="form-group">
+                <label for="newServiceDuration">مدت زمان (دقیقه) *</label>
+                <input type="number" id="newServiceDuration" placeholder="۳۰" min="1" max="1440">
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="newServiceDescription">توضیحات <span style="font-weight:500">(اختیاری)</span></label>
+            <textarea id="newServiceDescription" placeholder="توضیح کوتاهی دربارهٔ این خدمت..."></textarea>
+        </div>
+        <div class="switch-row">
+            <span>این خدمت فعال باشه؟</span>
+            <label class="switch"><input type="checkbox" id="newServiceActive" checked><span class="slider"></span></label>
+        </div>
+        <div class="add-actions">
+            <button type="button" class="btn-secondary" id="cancelAddBtn">انصراف</button>
+            <button type="button" class="btn-add" id="confirmAddBtn">➕ اضافه کردن</button>
+        </div>
+    </div>
+
+    <div class="list-header">
+        <h2>📋 خدمات موجود</h2>
+        <span class="list-count" id="listCount"></span>
+    </div>
+
+    <div id="servicesList">
+        <div class="loading-row"><div class="spinner"></div><p>در حال بارگذاری خدمات...</p></div>
+    </div>
+</main>
+
+<div class="cta-bar">
+    <div class="cta-inner">
+        <div class="cta-status" id="ctaStatus">تغییری برای ذخیره نیست</div>
+        <button type="button" class="cta-btn" id="saveBtn" disabled>
+            <span class="spin"></span><span class="label">💾 ذخیرهٔ تغییرات</span>
+        </button>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+function getTelegramApp() {
+    const hash = window.location.hash;
+    if (hash && hash.includes('tgWebAppData=')) {
+        try {
+            const match = hash.match(/tgWebAppData=([^&]+)/);
+            if (match) {
+                const tgWebAppData = decodeURIComponent(match[1]);
+                const params = new URLSearchParams(tgWebAppData);
+                const userParam = params.get('user');
+                let userData = {};
+                if (userParam) userData = JSON.parse(decodeURIComponent(userParam));
+                return {
+                    initData: tgWebAppData, initDataUnsafe: { user: userData },
+                    ready: () => {}, expand: () => {}, close: () => {},
+                    HapticFeedback: { impactOccurred(){} },
+                    MainButton: { setText: (t) => this, show: () => this, hide: () => this }
+                };
+            }
+        } catch (e) { console.error('Error parsing URL fragment:', e); }
+    }
+    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
+        return window.Telegram.WebApp;
+    }
+    return null;
+}
+
+const tg = getTelegramApp() || (window.Telegram && window.Telegram.WebApp) || {
+    initData: '', ready: () => {}, expand: () => {}, showAlert: (m) => alert(m),
+    HapticFeedback: { impactOccurred(){} },
+    MainButton: { setText: () => {}, show: () => {}, hide: () => {} }
+};
+if (tg.ready) tg.ready();
+if (tg.expand) tg.expand();
+try { if (tg.setHeaderColor) tg.setHeaderColor('#FBF7F4'); } catch(e) {}
+try { if (tg.setBackgroundColor) tg.setBackgroundColor('#FBF7F4'); } catch(e) {}
+
+function haptic(style){ try{ tg.HapticFeedback?.impactOccurred(style || 'light'); }catch(e){} }
+
+let businessId = null;
+let services = [];
+let isLoading = false;
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.body.classList.add('loaded');
+    businessId = getParameterByName('businessId') || getParameterByName('id');
+    if (!businessId) { showError('شناسه سالن یافت نشد'); return; }
+    loadServices();
+
+    document.getElementById('addToggleBtn').addEventListener('click', () => {
+        document.getElementById('addToggleBtn').classList.add('open');
+        document.getElementById('addCard').classList.add('open');
+        document.getElementById('newServiceName').focus();
+    });
+    document.getElementById('cancelAddBtn').addEventListener('click', closeAddCard);
+    document.getElementById('confirmAddBtn').addEventListener('click', addNewService);
+    document.getElementById('saveBtn').addEventListener('click', saveAllServices);
+});
+
+function closeAddCard(){
+    document.getElementById('addToggleBtn').classList.remove('open');
+    document.getElementById('addCard').classList.remove('open');
+    document.getElementById('newServiceName').value = '';
+    document.getElementById('newServicePrice').value = '';
+    document.getElementById('newServiceDuration').value = '';
+    document.getElementById('newServiceDescription').value = '';
+    document.getElementById('newServiceActive').checked = true;
+}
+
+function getParameterByName(name) {
+    const url = window.location.href;
+    const nameEscaped = name.replace(/[\[\]]/g, '\\$&');
+    const regex = new RegExp('[?&]' + nameEscaped + '(=([^&#]*)|&|#|$)');
+    const results = regex.exec(url);
+    if (!results) return null;
+    if (!results[2]) return '';
+    return decodeURIComponent(results[2].replace(/\+/g, ' '));
+}
+
+async function loadServices() {
+    if (isLoading) return;
+    isLoading = true;
+    try {
+        const headers = { 'Content-Type': 'application/json; charset=utf-8' };
+        if (tg.initData) headers['X-Telegram-Init-Data'] = tg.initData;
+        const response = await fetch(`api.php?action=get_services&id=${businessId}`, { method: 'GET', headers });
+        const data = await response.json();
+        if (data.status === 'success') {
+            services = (data.data && data.data.services) ? data.data.services : [];
+            renderServices();
+        } else {
+            showError(data.message || 'خطا در بارگذاری خدمات');
+        }
+    } catch (error) {
+        console.error('خطا در بارگذاری خدمات:', error);
+        showError('خطا در ارتباط با سرور');
+    } finally {
+        isLoading = false;
+    }
+}
+
+function renderServices() {
+    const container = document.getElementById('servicesList');
+    const visibleCount = services.filter(s => !s.deleted).length;
+    document.getElementById('listCount').textContent = services.length ? `${visibleCount} فعال` : '';
+
+    if (services.length === 0) {
+        container.innerHTML = `<div class="empty-state"><div class="glyph">🛠️</div><p>هنوز خدمتی ثبت نشده — از دکمهٔ بالا شروع کن</p></div>`;
+        updateCtaStatus();
+        return;
+    }
+
+    container.innerHTML = services.map((service, index) => `
+        <div class="service-card ${service.deleted ? 'is-deleted' : ''} ${service.id === null ? 'is-new' : ''}" data-index="${index}">
+            <div class="service-top">
+                <div class="service-name-badge">
+                    <input type="text" class="name-input" value="${escapeAttr(service.name)}"
+                        onchange="updateService(${index}, 'name', this.value)" ${service.deleted ? 'disabled' : ''}>
+                    ${service.id === null ? '<span class="new-tag">تازه</span>' : ''}
+                </div>
+                <div class="card-actions">
+                    ${service.deleted
+                        ? `<button type="button" class="icon-btn restore" onclick="deleteService(${index})" aria-label="بازگردانی">↩️</button>`
+                        : `<button type="button" class="icon-btn danger" onclick="deleteService(${index})" aria-label="حذف">🗑️</button>`}
+                </div>
+            </div>
+            <div class="service-fields">
+                <div class="mini-field">
+                    <label>قیمت</label>
+                    <div class="input-suffix">
+                        <input type="number" value="${service.price ?? 0}" min="0"
+                            onchange="updateService(${index}, 'price', this.value)" ${service.deleted ? 'disabled' : ''}>
+                        <span class="suffix-label">تومان</span>
+                    </div>
+                </div>
+                <div class="mini-field">
+                    <label>مدت زمان</label>
+                    <div class="input-suffix">
+                        <input type="number" value="${service.duration_minutes ?? ''}" min="1" max="1440"
+                            onchange="updateService(${index}, 'duration_minutes', this.value)" ${service.deleted ? 'disabled' : ''}>
+                        <span class="suffix-label">دقیقه</span>
+                    </div>
+                </div>
+            </div>
+            <div class="service-desc">
+                <textarea rows="2" placeholder="توضیحات (اختیاری)" onchange="updateService(${index}, 'description', this.value)" ${service.deleted ? 'disabled' : ''}>${service.description ? escapeHtml(service.description) : ''}</textarea>
+            </div>
+            <div class="service-footer">
+                <span class="created-note">${service.created_at ? 'ایجاد: ' + new Date(service.created_at).toLocaleDateString('fa-IR') : ''}</span>
+                <div class="active-toggle">
+                    <span>${service.is_active ? 'فعال' : 'غیرفعال'}</span>
+                    <label class="switch">
+                        <input type="checkbox" ${service.is_active ? 'checked' : ''} onchange="toggleServiceActive(${index})" ${service.deleted ? 'disabled' : ''}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    updateCtaStatus();
+}
+
+function escapeHtml(str){ const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+function escapeAttr(str){ return (str || '').replace(/"/g, '&quot;'); }
+
+function addNewService() {
+    const name = document.getElementById('newServiceName').value.trim();
+    const price = parseFloat(document.getElementById('newServicePrice').value) || 0;
+    const duration = parseInt(document.getElementById('newServiceDuration').value) || 0;
+    const description = document.getElementById('newServiceDescription').value.trim();
+    const isActive = document.getElementById('newServiceActive').checked;
+
+    if (!name) { showError('نام خدمت الزامی است'); return; }
+    if (duration <= 0 || duration > 1440) { showError('مدت زمان باید بین ۱ تا ۱۴۴۰ دقیقه باشد'); return; }
+
+    services.push({
+        id: null, name, description: description || null, price,
+        duration_minutes: duration, is_active: isActive ? 1 : 0, created_at: null, deleted: false
+    });
+    renderServices();
+    closeAddCard();
+    haptic('light');
+    showToast('خدمت جدید اضافه شد — یادت نره «ذخیرهٔ تغییرات» رو بزنی', 'success');
+    document.getElementById('servicesList').scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
+function updateService(index, field, value) {
+    if (index < 0 || index >= services.length) return;
+    let v = value;
+    if (field === 'price') { v = parseFloat(value); if (isNaN(v) || v < 0) v = 0; }
+    if (field === 'duration_minutes') {
+        v = parseInt(value, 10);
+        if (!Number.isInteger(v) || v < 1) v = 1;
+        if (v > 1440) v = 1440;
+    }
+    services[index][field] = v;
+    services[index].modified = true;
+    updateCtaStatus();
+}
+
+function toggleServiceActive(index) {
+    if (index < 0 || index >= services.length) return;
+    services[index].is_active = services[index].is_active ? 0 : 1;
+    services[index].modified = true;
+    haptic('light');
+    renderServices();
+}
+
+function deleteService(index) {
+    if (index < 0 || index >= services.length) return;
+    services[index].deleted = !services[index].deleted;
+    services[index].modified = true;
+    haptic('light');
+    renderServices();
+}
+
+function hasUnsavedChanges(){
+    return services.some(s => s.modified || s.deleted || s.id === null);
+}
+
+function updateCtaStatus(){
+    const saveBtn = document.getElementById('saveBtn');
+    const status = document.getElementById('ctaStatus');
+    const dirty = hasUnsavedChanges();
+    saveBtn.disabled = !dirty;
+    status.classList.toggle('dirty', dirty);
+    status.textContent = dirty ? '✏️ تغییرات ذخیره‌نشده داری' : 'تغییری برای ذخیره نیست';
+}
+
+async function saveAllServices() {
+    if (isLoading) return;
+    const saveBtn = document.getElementById('saveBtn');
+    isLoading = true;
+    saveBtn.classList.add('loading');
+    saveBtn.disabled = true;
+
+    try {
+        const headers = { 'Content-Type': 'application/json; charset=utf-8' };
+        if (tg.initData) headers['X-Telegram-Init-Data'] = tg.initData;
+        const payload = {
+            action: 'update_services',
+            businessId: businessId,
+            services: services,
+            telegram_init_data: tg.initData || undefined
+        };
+        const response = await fetch('api.php', { method: 'POST', headers, body: JSON.stringify(payload) });
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            haptic('medium');
+            showSuccess('همهٔ تغییرات ذخیره شد!');
+            if (data.data && data.data.services) {
+                services = data.data.services;
+                renderServices();
+            }
+        } else {
+            showError(data.message || 'خطا در ذخیره تغییرات');
+        }
+    } catch (error) {
+        console.error('خطا در ذخیره:', error);
+        showError('خطا در ارتباط با سرور');
+    } finally {
+        isLoading = false;
+        saveBtn.classList.remove('loading');
+        updateCtaStatus();
+    }
+}
+
+function showSuccess(message){ showToast(message, 'success'); }
+function showError(message){
+    if (tg && tg.showAlert) tg.showAlert('خطا: ' + message);
+    showToast(message, 'error');
+}
+
+function showToast(message, type = 'success') {
+    const toast = document.getElementById('toast');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `${type === 'success' ? '✅' : '⚠️'} <span>${message}</span>`;
+    requestAnimationFrame(() => toast.classList.add('show'));
+    clearTimeout(window.__toastTimer);
+    window.__toastTimer = setTimeout(() => { toast.classList.remove('show'); }, 3200);
+}
+</script>
+</body>
+</html>

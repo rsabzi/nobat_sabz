@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>صف نوبت کسب‌وکار</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root{
+            --ink:#241B22;--ink-soft:#7A6A72;
+            --brand:#7A2E43;--brand-dark:#5C2233;--brand-light:#F3E4E8;
+            --gold:#C9A15C;--gold-soft:#F3EAD6;
+            --bg:#FBF7F4;--surface:#FFFFFF;--surface-soft:#F7F0EC;
+            --sage:#5B7F5E;--sage-soft:#E7EFE7;
+            --danger:#B3453F;--danger-soft:#F7E7E5;
+            --border:#EDE2DC;
+            --shadow-sm:0 2px 8px -4px rgba(36,27,34,.14);--shadow-md:0 10px 30px -14px rgba(36,27,34,.28);
+            --radius-lg:20px;--radius-md:14px;--radius-sm:10px;
+        }
+        *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+        body{margin:0;font-family:'Vazirmatn',system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+        .container{max-width:720px;margin:0 auto;padding:20px 16px}
+        .card{background:var(--surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);
+            border:1px solid var(--border);overflow:hidden}
+        .header{background:linear-gradient(135deg,var(--brand),var(--brand-dark));color:#fff;padding:22px 20px}
+        .header .eyebrow{font-size:.68rem;font-weight:700;letter-spacing:.04em;opacity:.85;margin-bottom:4px}
+        #title{font-size:1.15rem;font-weight:800}
+        #summary{color:rgba(255,255,255,.85);font-size:.78rem;margin-top:6px;font-weight:600}
+
+        .list{padding:16px}
+        .row{display:flex;justify-content:space-between;align-items:center;gap:10px;
+            border-bottom:1px solid var(--border);padding:12px 2px}
+        .row:last-child{border-bottom:none}
+        .name{font-weight:800;font-size:.9rem}
+        .muted{color:var(--ink-soft);font-size:.78rem;margin-top:3px}
+        .list .muted:only-child{padding:22px 4px;text-align:center;font-size:.85rem}
+
+        .highlight{background:var(--gold-soft);border:1px solid var(--gold);border-radius:var(--radius-md);
+            padding:14px;margin:6px 0}
+        .row.me{background:var(--sage-soft);border:1px solid var(--sage);border-radius:var(--radius-md);
+            box-shadow:var(--shadow-sm);padding:14px;margin:6px 0}
+        .row.me .name{color:var(--sage)}
+
+        .highlight .name{font-size:.95rem;font-weight:800;color:var(--brand-dark)}
+        .highlight .muted{color:var(--brand-dark);opacity:.75}
+
+        .progress{height:8px;background:var(--surface-soft);border-radius:999px;overflow:hidden;
+            border:1px solid var(--border)}
+        .bar{height:100%;background:linear-gradient(90deg,var(--gold),var(--brand));width:0%;
+            border-radius:999px;transition:width .4s ease}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <div class="eyebrow">پیگیری زندهٔ نوبت</div>
+                <div id="title">وضعیت صف</div>
+                <div id="summary"></div>
+            </div>
+            <div class="list" id="queueList"></div>
+            <div class="list">
+                <div id="userInfo" class="highlight" style="display:none"></div>
+                <div class="progress"><div id="progressBar" class="bar"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let tg = window.Telegram?.WebApp || {};
+        let businessId = null;
+        let userId = null;
+        let customerPhone = null;
+        const queueList = document.getElementById('queueList');
+        const summary = document.getElementById('summary');
+        const userInfo = document.getElementById('userInfo');
+        const progressBar = document.getElementById('progressBar');
+
+        function init(){
+            if(tg.ready) tg.ready();
+            const params = new URLSearchParams(location.search);
+            businessId = params.get('business_id');
+            customerPhone = params.get('phone') || null;
+            userId = params.get('user_id') || tg.initDataUnsafe?.user?.id || null;
+            if(!businessId){
+                summary.textContent = 'شناسه کسب‌وکار یافت نشد';
+                return;
+            }
+            fetchQueue();
+            setInterval(fetchQueue, 3000);
+        }
+
+        async function fetchQueue(){
+            try{
+                const params = new URLSearchParams();
+                params.set('action','get_active_queue');
+                params.set('business_id', businessId);
+                if(userId) params.set('user_id', userId);
+                if(customerPhone) params.set('customer_phone', customerPhone);
+                const bookingId = new URLSearchParams(location.search).get('booking_id');
+                if(bookingId) params.set('booking_id', bookingId);
+                const res = await fetch(`api.php?${params.toString()}`, { headers: { 'X-Telegram-Init-Data': tg.initData || '' } });
+                const out = await res.json();
+                if(out.status !== 'success'){
+                    if(out.message === 'NO_ACTIVE_BOOKING'){
+                        if(tg.close) tg.close();
+                        else {
+                            document.body.innerHTML = '';
+                        }
+                        return;
+                    }
+                    throw new Error(out.message||'خطا');
+                }
+                renderQueue(out.queue||[]);
+                summary.textContent = `میانگین خدمت: ${Math.round(out.avg_duration_minutes)} دقیقه • نفرات فعال: ${out.queue.length}`;
+                fetchUserInfo();
+            }catch(err){ console.error(err); }
+        }
+
+        async function fetchUserInfo(){
+            try{
+                const url = new URL('api.php', location.origin);
+                url.searchParams.set('action','get_customer_queue_info');
+                url.searchParams.set('business_id', businessId);
+                if(userId) url.searchParams.set('user_id', userId);
+                if(customerPhone) url.searchParams.set('customer_phone', customerPhone);
+                const res = await fetch(url);
+                const out = await res.json();
+                if(out.status !== 'success') return;
+                const pos = out.position;
+                const eta = out.eta_minutes;
+                if(pos){
+                    userInfo.style.display='block';
+                    userInfo.innerHTML = `
+                        <div class="name">نوبت شما: نفر ${pos}</div>
+                        <div class="muted">زمان تخمینی رسیدن نوبت: ${eta} دقیقه</div>
+                    `;
+                    const total = out.total_active || 1;
+                    const progress = Math.min(100, Math.round(((total - pos) / total) * 100));
+                    progressBar.style.width = progress + '%';
+                } else {
+                    userInfo.style.display='block';
+                    userInfo.innerHTML = `<div class="muted">رزرو فعال برای شما یافت نشد</div>`;
+                    progressBar.style.width = '0%';
+                }
+            }catch(err){ console.error(err); }
+        }
+
+        function renderQueue(items){
+            queueList.innerHTML = '';
+            if(!items.length){
+                queueList.innerHTML = '<div class="muted">صف خالی است</div>';
+                return;
+            }
+            items.forEach(it=>{
+                const row = document.createElement('div');
+                row.className = 'row';
+                const isMe = (userId && it.user_telegram_id && Number(it.user_telegram_id)===Number(userId)) || (customerPhone && it.customer_phone===customerPhone);
+                if(isMe) row.classList.add('me');
+                row.innerHTML = `
+                    <div>
+                        <div class="name">${it.customer_name || 'نامشخص'} ${isMe?'🟢':''}</div>
+                        <div class="muted">⏰ ${it.start_time?.slice(0,5) || '-'} • وضعیت: ${it.queue_status==='in_progress'?'در حال انجام':'در انتظار'} • موقعیت: ${it.position}</div>
+                    </div>
+                    <div class="muted">ETA: ${it.eta_minutes} دقیقه</div>
+                `;
+                queueList.appendChild(row);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

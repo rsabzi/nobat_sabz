@@ -1,0 +1,175 @@
+<?php
+session_start();
+if (!isset($_SESSION['is_admin']) || $_SESSION['is_admin'] !== true) {
+    header('Location: admin_login.php');
+    exit;
+}
+?>
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>داشبورد مدیر</title>
+    <style>
+        body{margin:0;font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;background:#0f172a;color:#e2e8f0}
+        header{display:flex;justify-content:space-between;align-items:center;padding:1rem 1.5rem;background:#111827;border-bottom:1px solid #1f2937}
+        .brand{font-weight:700;color:#93c5fd}
+        .container{display:flex;height:calc(100vh - 64px)}
+        nav{width:260px;background:#111827;border-right:1px solid #1f2937;padding:1rem}
+        nav button{width:100%;padding:.75rem;margin:.25rem 0;background:#1f2937;border:none;color:#e2e8f0;border-radius:8px;cursor:pointer}
+        nav button.active{background:#2563eb}
+        main{flex:1;padding:1rem 1.5rem;overflow:auto}
+        table{width:100%;border-collapse:collapse;background:#0b1220}
+        th,td{padding:.6rem;border-bottom:1px solid #1f2937}
+        th{background:#111827}
+        .actions button{margin:0 .25rem;padding:.4rem .6rem;border:none;border-radius:6px;cursor:pointer}
+        .edit{background:#16a34a;color:#fff}
+        .delete{background:#dc2626;color:#fff}
+        .topbar{display:flex;gap:.5rem}
+        .search{padding:.5rem;border:1px solid #334155;background:#0b1220;color:#e2e8f0;border-radius:8px}
+    </style>
+</head>
+<body>
+    <header>
+        <div class="brand">پنل مدیریت نوبت‌سبز</div>
+        <div class="topbar">
+            <input id="search" class="search" placeholder="جستجو...">
+            <form method="post" action="admin_logout.php"><button>خروج</button></form>
+        </div>
+    </header>
+    <div class="container">
+        <nav>
+            <button data-view="businesses" class="active">کسب‌وکارها</button>
+            <button data-view="services">خدمات</button>
+            <button data-view="bookings">رزروها</button>
+            <button data-view="users">کاربران/مشتریان</button>
+            <button data-view="subscriptions">اشتراک‌ها</button>
+            <button data-view="schedules">برنامه‌ها</button>
+            <button data-view="specific_time_slots">اسلات‌های خاص</button>
+            <button data-view="schedule_overrides">استثناهای برنامه</button>
+            <button data-view="payments">پرداخت‌ها</button>
+            <button data-view="marketers">بازاریاب‌ها</button>
+        </nav>
+        <main>
+            <div id="content"></div>
+        </main>
+    </div>
+    <script>
+    const navButtons=document.querySelectorAll('nav button');
+    const content=document.getElementById('content');
+    const search=document.getElementById('search');
+
+    let currentView='businesses';
+    async function load(view){
+        currentView=view;
+        navButtons.forEach(b=>b.classList.toggle('active',b.dataset.view===view));
+        const q=search.value || '';
+        const res=await fetch(`admin_api.php?table=${encodeURIComponent(view)}&q=${encodeURIComponent(q)}`);
+        const data=await res.json();
+        renderTable(view,data);
+    }
+
+    function renderTable(view,data){
+        if(!Array.isArray(data.rows)) {content.innerHTML='<p>خطا در دریافت داده</p>';return;}
+        const cols=data.columns || (data.rows[0]?Object.keys(data.rows[0]):[]);
+        let html='<table><thead><tr>' + cols.map(c=>`<th>${c}</th>`).join('') + '<th>عملیات</th></tr></thead><tbody>';
+        html+=data.rows.map(row=>{
+            let actionsHtml = `<button class='edit' onclick='editRow("${view}", ${row.id})'>ویرایش</button>
+                               <button class='delete' onclick='deleteRow("${view}", ${row.id})'>حذف</button>`;
+            
+            // اضافه کردن دکمه‌های تایید حضور برای رزروها
+            if(view === 'bookings' && row.status === 'confirmed') {
+                actionsHtml += `<br><button class='attendance-yes' onclick='markAttendance(${row.id}, ${row.user_id || 0}, ${row.business_id || 0}, "attended")' style='background:#16a34a;color:#fff;margin:2px;padding:4px 8px;border:none;border-radius:4px;cursor:pointer'>✅ حاضر شد</button>
+                               <button class='attendance-no' onclick='markAttendance(${row.id}, ${row.user_id || 0}, ${row.business_id || 0}, "no_show")' style='background:#dc2626;color:#fff;margin:2px;padding:4px 8px;border:none;border-radius:4px;cursor:pointer'>❌ حاضر نشد</button>`;
+            }
+            
+            return '<tr>' + cols.map(c=>`<td>${row[c]??''}</td>`).join('')+
+                `<td class='actions'>${actionsHtml}</td>`+
+            '</tr>';
+        }).join('') + '</tbody></table>';
+        content.innerHTML=html;
+    }
+
+    async function deleteRow(table,id){
+        if(!confirm('حذف این رکورد؟')) return;
+        const res=await fetch('admin_api.php',{
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({action:'delete', table, id})
+        });
+        const out=await res.json();
+        if(out.success) load(table); else alert(out.error||'خطا');
+    }
+
+    async function editRow(table,id){
+        const res=await fetch(`admin_api.php?table=${encodeURIComponent(table)}&id=${id}`);
+        const data=await res.json();
+        const row=data.rows && data.rows[0];
+        if(!row){alert('یافت نشد');return;}
+        const cols=Object.keys(row);
+        const values={};
+        for(const c of cols){
+            if(c==='id') continue;
+            const v=prompt(`مقدار برای ${c}:`, row[c]??'');
+            if(v===null) return; values[c]=v;
+        }
+        const res2=await fetch('admin_api.php',{
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({action:'update', table, id, values})
+        });
+        const out=await res2.json();
+        if(out.success) load(table); else alert(out.error||'خطا');
+    }
+
+    navButtons.forEach(b=>b.addEventListener('click',()=>load(b.dataset.view)));
+    search.addEventListener('input',()=>load(currentView));
+    
+    // تابع برای ثبت حضور/غیاب مشتری
+    async function markAttendance(bookingId, userId, businessId, status) {
+        if (!bookingId || !userId) {
+            alert('اطلاعات رزرو ناقص است');
+            return;
+        }
+        
+        const confirmMessage = status === 'attended' ? 
+            'آیا مطمئن هستید که مشتری حاضر شده است؟' : 
+            'آیا مطمئن هستید که مشتری حاضر نشده است؟';
+            
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+        
+        try {
+            const res = await fetch('customer_credit_api.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    action: 'record_attendance',
+                    booking_id: bookingId,
+                    user_id: userId,
+                    business_id: businessId,
+                    attendance_status: status
+                })
+            });
+            
+            const result = await res.json();
+            
+            if(result.success) {
+                const statusText = status === 'attended' ? 'حضور' : 'عدم حضور';
+                const creditText = result.credit_result && result.credit_result.success ? 
+                    `\nامتیاز مشتری به‌روزرسانی شد: ${result.credit_result.new_credit}` : '';
+                alert(`وضعیت ${statusText} مشتری با موفقیت ثبت شد${creditText}`);
+                load(currentView); // بارگذاری مجدد جدول
+            } else {
+                alert(result.error || 'خطا در ثبت وضعیت حضور');
+            }
+        } catch (error) {
+            console.error('خطا در ارسال درخواست:', error);
+            alert('خطا در ارتباط با سرور');
+        }
+    }
+    
+    load(currentView);
+    </script>
+</body>
+</html>

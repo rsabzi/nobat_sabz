@@ -1,0 +1,65 @@
+# فایل‌های لاگ
+*.log
+debug.log
+webapp/debug.log
+
+# فایل‌های تنظیمات محلی
+config.php
+.env
+.env.local
+
+# فایل‌های پشتیبان
+*.bak
+*.backup
+*.sql.backup
+
+# فایل‌های موقت
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# دایرکتوری‌های IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# فایل‌های PHP موقت
+*.php~
+*.php.bak
+
+# فایل‌های آپلود
+uploads/
+temp/
+cache/
+
+# فایل‌های سیستم
+.htaccess.backup
+error_log
+access_log
+
+# فایل‌های تست
+test_*.php
+*_test.php
+phpunit.xml
+
+# فایل‌های vendor (اگر از Composer استفاده شود)
+vendor/
+composer.lock
+
+# فایل‌های node (اگر از npm استفاده شود)
+node_modules/
+package-lock.json
+yarn.lock
+
+# فایل‌های ساخت
+build/
+dist/
+
+# فایل‌های امنیتی
+*.key
+*.pem
+*.crt
+secrets/
