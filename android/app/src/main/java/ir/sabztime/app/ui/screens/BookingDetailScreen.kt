@@ -46,6 +46,7 @@ import ir.sabztime.app.core.SabzException
 import ir.sabztime.app.core.UiState
 import ir.sabztime.app.data.BookingSummary
 import ir.sabztime.app.data.CustomerQueueInfoResponse
+import ir.sabztime.app.ui.components.EmptyState
 import ir.sabztime.app.ui.components.ErrorState
 import ir.sabztime.app.ui.components.InfoRow
 import ir.sabztime.app.ui.components.LoadingState
@@ -96,7 +97,7 @@ class BookingDetailViewModel(private val graph: AppGraph, private val bookingId:
         val b = (_state.value.booking as? UiState.Success)?.data ?: return
         viewModelScope.launch {
             try {
-                val q = graph.repository.myQueueInfo(b.id)
+                val q = graph.repository.myQueueInfo(b.businessId)
                 _state.value = _state.value.copy(queue = q)
             } catch (e: Exception) {
                 // صف در دسترس نبود — غیرضروری است
@@ -145,7 +146,11 @@ fun BookingDetailScreen(graph: AppGraph, bookingId: Int, navController: NavHostC
         when (val b = state.booking) {
             is UiState.Loading -> LoadingState(Modifier.padding(padding))
             is UiState.Error -> ErrorState(b.message, b.kind, onRetry = viewModel::load, modifier = Modifier.padding(padding))
-            UiState.Empty -> LoadingState(Modifier.padding(padding))
+            UiState.Empty -> EmptyState(
+                icon = "📅",
+                title = "این نوبت ثبت نشده است",
+                modifier = Modifier.padding(padding)
+            )
             is UiState.Success -> {
                 val booking = b.data
                 Column(
@@ -254,6 +259,7 @@ fun BookingDetailScreen(graph: AppGraph, bookingId: Int, navController: NavHostC
                     Spacer(Modifier.height(8.dp))
                 }
             }
+            else -> {}
         }
     }
 

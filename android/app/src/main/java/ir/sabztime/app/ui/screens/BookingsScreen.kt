@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -144,10 +143,7 @@ fun BookingsScreen(graph: AppGraph, navController: NavHostController) {
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(ui.data, key = { it.id }) { b ->
-                        BookingCard(
-                            b,
-                            onClick = { navController.navigate(Routes.booking(b.id)) }
-                        )
+                        BookingCard(b, onClick = { navController.navigate(Routes.booking(b.id)) })
                     }
                 }
             }

@@ -2,7 +2,6 @@ package ir.sabztime.app.data
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 
 // ---------------------------------------------------------------------------
 // جستجو (search_api.php)
@@ -128,6 +127,7 @@ data class SlotsResponse(val status: String = "", val data: List<TimeSlot> = emp
 @Serializable
 data class BookingSummary(
     val id: Int,
+    @SerialName("business_id") val businessId: Int = 0,
     @SerialName("confirmation_code") val confirmationCode: String = "",
     @SerialName("booking_date") val bookingDate: String = "",
     @SerialName("start_time") val startTime: String = "",
