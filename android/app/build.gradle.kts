@@ -105,39 +105,3 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
-
-// ---------------------------------------------------------------------------
-// CI diagnostics: surface kotlin-compile errors and junit failures through
-// $GITHUB_STEP_SUMMARY (readable via check-run API).
-// ---------------------------------------------------------------------------
-val ciSummaryFile: java.io.File? = System.getenv("GITHUB_STEP_SUMMARY")?.let { java.io.File(it) }
-
-if (ciSummaryFile != null) {
-    logging.addStandardErrorListener { msg ->
-        runCatching {
-            val s = msg.toString()
-            if (s.startsWith("e: ") || s.contains("error:") || s.contains("FAILED")) {
-                ciSummaryFile.appendText(s.trimEnd() + "\n")
-            }
-        }
-    }
-}
-
-tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
-    finalizedBy("ciExportTestResults")
-}
-
-tasks.register("ciExportTestResults") {
-    doLast {
-        val s = ciSummaryFile ?: return@doLast
-        runCatching {
-            val dir = java.io.File(buildDir, "test-results/testDebugUnitTest")
-            dir.listFiles { f -> f.name.endsWith(".xml") }?.forEach { fx ->
-                val t = fx.readText()
-                Regex("<failure[^>]*message=\"([^\"]*)\"").findAll(t).forEach { m ->
-                    s.appendText("- FAIL: " + m.groupValues[1].take(300) + "\n")
-                }
-            }
-        }
-    }
-}
