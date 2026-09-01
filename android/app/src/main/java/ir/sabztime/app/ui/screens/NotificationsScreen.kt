@@ -38,11 +38,9 @@ import androidx.navigation.NavHostController
 import ir.sabztime.app.core.AppGraph
 import ir.sabztime.app.core.SabzException
 import ir.sabztime.app.core.UiState
-import ir.sabztime.app.core.toSabzException
 import ir.sabztime.app.data.NotificationItem
 import ir.sabztime.app.ui.components.EmptyState
 import ir.sabztime.app.ui.components.ErrorState
-import ir.sabztime.app.ui.components.GlassCard
 import ir.sabztime.app.ui.components.LoadingState
 import ir.sabztime.app.util.Jalali
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -63,7 +61,7 @@ class NotificationsViewModel(private val graph: AppGraph) : ViewModel() {
                 val list = graph.repository.notifications()
                 _state.value = if (list.isEmpty()) UiState.Empty else UiState.Success(list)
             } catch (e: Exception) {
-                val sabz = e.toSabzException()
+                val sabz = e as? SabzException ?: SabzException.Network(e)
                 _state.value = UiState.Error(sabz.toFriendlyMessage(), sabz.kind)
             }
         }
@@ -77,7 +75,6 @@ fun NotificationsScreen(graph: AppGraph, navController: NavHostController) {
     val state by viewModel.state.collectAsState()
 
     Scaffold(
-        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text("اعلان‌ها", fontWeight = FontWeight.Bold) },
@@ -106,9 +103,11 @@ fun NotificationsScreen(graph: AppGraph, navController: NavHostController) {
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(s.data, key = { "${it.type}-${it.refId}-${it.createdAt}" }) { n ->
-                    GlassCard {
-                    // کارت شیشه‌ای اعلان
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                    ) {
+                        Row(Modifier.padding(14.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Text(n.icon, style = MaterialTheme.typography.titleLarge)
                             Spacer(Modifier.size(12.dp))
                             Column {
