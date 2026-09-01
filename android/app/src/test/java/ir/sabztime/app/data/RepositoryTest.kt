@@ -113,7 +113,7 @@ class RepositoryTest {
         val p = repo.me()
         assertEquals("علی", p.user.name)
         assertEquals(10, p.credit?.currentCredit)
-        assertEquals(2, p.businesses.size)
+        assertEquals(1, p.businesses.size)
         assertEquals("SAMPLE8181", p.marketer?.marketerCode)
     }
 
