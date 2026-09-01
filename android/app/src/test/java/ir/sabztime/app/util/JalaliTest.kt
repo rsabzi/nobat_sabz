@@ -61,6 +61,11 @@ class JalaliTest {
     @Test
     fun `phone validation`() {
         assertTrue(TextUtil.isValidIranMobile("09123456789"))
+        assertTrue(TextUtil.isValidIranMobile("۰۹۱۲۳۴۵۶۷۸۹"))
+        assertTrue(TextUtil.isValidIranMobile("٠٩١٢٣٤٥٦٧٨٩"))
+        assertTrue(TextUtil.isValidIranMobile("989123456789"))
+        assertTrue(TextUtil.isValidIranMobile("9123456789"))
+        assertEquals("09123456789", TextUtil.normalizeMobile("+98-912-345-6789"))
         assertFalse(TextUtil.isValidIranMobile("0912345678"))
         assertFalse(TextUtil.isValidIranMobile("02123456789"))
         assertFalse(TextUtil.isValidIranMobile(""))
