@@ -37,9 +37,11 @@ import androidx.navigation.NavHostController
 import ir.sabztime.app.core.AppGraph
 import ir.sabztime.app.core.SabzException
 import ir.sabztime.app.core.UiState
+import ir.sabztime.app.core.toSabzException
 import ir.sabztime.app.data.MarketerDashboardResponse
 import ir.sabztime.app.ui.components.EmptyState
 import ir.sabztime.app.ui.components.ErrorState
+import ir.sabztime.app.ui.components.GlassCard
 import ir.sabztime.app.ui.components.InfoRow
 import ir.sabztime.app.ui.components.LoadingState
 import ir.sabztime.app.ui.components.SectionCard
@@ -62,7 +64,7 @@ class MarketerViewModel(private val graph: AppGraph) : ViewModel() {
                 val d = graph.repository.marketerDashboard()
                 _state.value = UiState.Success(d)
             } catch (e: Exception) {
-                val sabz = e as? SabzException ?: SabzException.Network(e)
+                val sabz = e.toSabzException()
                 _state.value = UiState.Error(sabz.toFriendlyMessage(), sabz.kind)
             }
         }
@@ -76,6 +78,7 @@ fun MarketerScreen(graph: AppGraph, navController: NavHostController) {
     val state by viewModel.state.collectAsState()
 
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text("داشبورد بازاریاب", fontWeight = FontWeight.Bold) },
@@ -140,11 +143,9 @@ fun MarketerScreen(graph: AppGraph, navController: NavHostController) {
                                 Text("کسب‌وکارهای معرفی‌شده", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             }
                             items(d.businesses, key = { it.id }) { b ->
-                                Card(
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                                ) {
-                                    Column(Modifier.fillMaxWidth().padding(14.dp)) {
+                                GlassCard {
+                                    // کارت شیشه‌ای کسب‌وکار معرفی‌شده
+                                    Column(Modifier.fillMaxWidth()) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Text(b.name, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                                         }

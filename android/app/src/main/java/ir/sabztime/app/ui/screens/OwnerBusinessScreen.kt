@@ -39,6 +39,7 @@ import androidx.navigation.NavHostController
 import ir.sabztime.app.core.AppGraph
 import ir.sabztime.app.core.SabzException
 import ir.sabztime.app.core.UiState
+import ir.sabztime.app.core.toSabzException
 import ir.sabztime.app.data.QueueItem
 import ir.sabztime.app.data.QueueResponse
 import ir.sabztime.app.data.SubscriptionStatusResponse
@@ -83,7 +84,7 @@ class OwnerBusinessViewModel(private val graph: AppGraph, private val businessId
                     queue = if (q.queue.isEmpty()) UiState.Empty else UiState.Success(q)
                 )
             } catch (e: Exception) {
-                val sabz = e as? SabzException ?: SabzException.Network(e)
+                val sabz = e.toSabzException()
                 _state.value = _state.value.copy(queue = UiState.Error(sabz.toFriendlyMessage(), sabz.kind))
             }
         }
@@ -106,7 +107,7 @@ class OwnerBusinessViewModel(private val graph: AppGraph, private val businessId
                 _state.value = _state.value.copy(actionBusy = false, actionMessage = "صف به‌روزرسانی شد. ✅")
                 refreshQueue()
             } catch (e: Exception) {
-                val sabz = e as? SabzException ?: SabzException.Network(e)
+                val sabz = e.toSabzException()
                 _state.value = _state.value.copy(actionBusy = false, actionMessage = sabz.toFriendlyMessage())
             }
         }
@@ -120,7 +121,7 @@ class OwnerBusinessViewModel(private val graph: AppGraph, private val businessId
                 _state.value = _state.value.copy(actionBusy = false, actionMessage = "رزرو تکمیل شد. ✅")
                 refreshQueue()
             } catch (e: Exception) {
-                val sabz = e as? SabzException ?: SabzException.Network(e)
+                val sabz = e.toSabzException()
                 _state.value = _state.value.copy(actionBusy = false, actionMessage = sabz.toFriendlyMessage())
             }
         }
