@@ -64,6 +64,7 @@ import ir.sabztime.app.data.TimeSlot
 import ir.sabztime.app.ui.Routes
 import ir.sabztime.app.ui.components.ErrorState
 import ir.sabztime.app.ui.components.InfoRow
+import ir.sabztime.app.ui.components.LoadingState
 import ir.sabztime.app.ui.components.SectionCard
 import ir.sabztime.app.ui.components.StatusChip
 import ir.sabztime.app.util.Jalali
@@ -219,7 +220,8 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
                     CircularProgressIndicator()
                 }
             }
-            is UiState.Error -> ErrorState(bState.message, bState.kind) { viewModel.load() }
+            is UiState.Error -> ErrorState(bState.message, bState.kind, onRetry = viewModel::load)
+            UiState.Empty -> LoadingState(Modifier.padding(padding))
             is UiState.Success -> {
                 val b = bState.data
                 LazyColumn(

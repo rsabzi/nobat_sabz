@@ -2,6 +2,7 @@ package ir.sabztime.app.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -9,7 +10,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import ir.sabztime.app.core.AppGraph
-import ir.sabztime.app.ui.components.collectAsStateSafe
 import ir.sabztime.app.ui.screens.BookingDetailScreen
 import ir.sabztime.app.ui.screens.BookingsScreen
 import ir.sabztime.app.ui.screens.BusinessDetailScreen
@@ -48,7 +48,7 @@ object Routes {
 @Composable
 fun AppNav(graph: AppGraph) {
     val navController = rememberNavController()
-    val session by graph.session.collectAsStateSafe()
+    val session by graph.session.collectAsState()
 
     // خروج از همه صفحات هنگام منقضی شدن نشست
     LaunchedEffect(session.loggedIn) {

@@ -17,7 +17,6 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -27,6 +26,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,9 +45,9 @@ import ir.sabztime.app.data.SubscriptionStatusResponse
 import ir.sabztime.app.ui.components.EmptyState
 import ir.sabztime.app.ui.components.ErrorState
 import ir.sabztime.app.ui.components.InfoRow
+import ir.sabztime.app.ui.components.LoadingState
 import ir.sabztime.app.ui.components.SectionCard
 import ir.sabztime.app.ui.components.StatusChip
-import ir.sabztime.app.ui.components.collectAsStateSafe
 import ir.sabztime.app.util.Jalali
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -131,7 +131,7 @@ class OwnerBusinessViewModel(private val graph: AppGraph, private val businessId
 @Composable
 fun OwnerBusinessScreen(graph: AppGraph, businessId: Int, navController: NavHostController) {
     val viewModel: OwnerBusinessViewModel = viewModel(key = "own-$businessId") { OwnerBusinessViewModel(graph, businessId) }
-    val state by viewModel.state.collectAsStateSafe()
+    val state by viewModel.state.collectAsState()
 
     Scaffold(
         topBar = {
@@ -190,7 +190,7 @@ fun OwnerBusinessScreen(graph: AppGraph, businessId: Int, navController: NavHost
             }
 
             when (val q = state.queue) {
-                is UiState.Loading -> item { CircularProgressIndicator(Modifier.padding(24.dp).align(Alignment.CenterHorizontally)) }
+                is UiState.Loading -> item { LoadingState(Modifier.fillMaxWidth()) }
                 is UiState.Error -> item { ErrorState(q.message, q.kind, onRetry = viewModel::refreshQueue) }
                 UiState.Empty -> item {
                     EmptyState(

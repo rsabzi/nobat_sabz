@@ -163,7 +163,3 @@ fun SpacerW(width: Int) = Spacer(Modifier.width(width.dp))
 fun <T> UiState<T>.dataOrNull(): T? = (this as? UiState.Success)?.data
 
 fun String?.orDash(): String = if (this.isNullOrBlank()) "—" else this
-
-@Composable
-fun <T> kotlinx.coroutines.flow.StateFlow<T>.collectAsStateSafe(): androidx.compose.runtime.State<T> =
-    androidx.compose.runtime.collectAsState()

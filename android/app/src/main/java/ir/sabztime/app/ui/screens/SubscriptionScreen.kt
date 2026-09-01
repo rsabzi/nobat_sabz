@@ -15,7 +15,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -24,6 +23,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,7 +39,7 @@ import ir.sabztime.app.core.UiState
 import ir.sabztime.app.data.Plan
 import ir.sabztime.app.ui.components.EmptyState
 import ir.sabztime.app.ui.components.ErrorState
-import ir.sabztime.app.ui.components.collectAsStateSafe
+import ir.sabztime.app.ui.components.LoadingState
 import ir.sabztime.app.util.Jalali
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -70,7 +70,7 @@ class SubscriptionViewModel(private val graph: AppGraph) : ViewModel() {
 @Composable
 fun SubscriptionScreen(graph: AppGraph, businessId: Int, navController: NavHostController) {
     val viewModel: SubscriptionViewModel = viewModel(key = "plans-$businessId") { SubscriptionViewModel(graph) }
-    val state by viewModel.state.collectAsStateSafe()
+    val state by viewModel.state.collectAsState()
 
     Scaffold(
         topBar = {
@@ -85,7 +85,7 @@ fun SubscriptionScreen(graph: AppGraph, businessId: Int, navController: NavHostC
         }
     ) { padding ->
         when (val s = state) {
-            is UiState.Loading -> CircularProgressIndicator(Modifier.padding(40.dp).align(Alignment.CenterHorizontally))
+            is UiState.Loading -> LoadingState(Modifier.padding(padding))
             is UiState.Error -> ErrorState(s.message, s.kind, onRetry = viewModel::load)
             UiState.Empty -> EmptyState(icon = "💳", title = "پلنی تعریف نشده")
             is UiState.Success -> LazyColumn(
