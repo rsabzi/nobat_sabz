@@ -5,7 +5,7 @@ import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import ir.sabztime.app.core.AppGraph
-import ir.sabztime.app.worker.BookingReminderScheduler
+import ir.sabztime.app.worker.ReminderWorker
 import java.util.Locale
 
 class SabzApp : Application() {
@@ -27,7 +27,7 @@ class SabzApp : Application() {
 
         // Initialize dependencies and background workers
         graph = AppGraph(this)
-        BookingReminderScheduler.schedulePeriodic(this)
+        ReminderWorker.schedulePeriodic(this)
     }
 
     companion object {

@@ -3522,6 +3522,7 @@ function handle_post_request($pdo, $internal_user_id) {
              $bookingsStmt = $pdo->prepare("
                  SELECT 
                      b.id,
+                     b.business_id,
                      b.confirmation_code,
                      b.booking_date,
                      b.start_time,

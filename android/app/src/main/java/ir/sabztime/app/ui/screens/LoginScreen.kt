@@ -48,7 +48,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class LoginViewModel(private val graph: AppGraph) : ViewModel() {
-    private val _state = MutableStateFlow<UiState<AuthResponse>>(UiState.Loading)
+    // حالت اولیه باید خنثی (Idle) باشد؛ نه Loading،
+    // در غیر این صورت اسپینر همیشه می‌چرخد و دکمه ورود/ثبت‌نام برای همیشه غیرفعال می‌ماند.
+    private val _state = MutableStateFlow<UiState<AuthResponse>>(UiState.Idle)
     val state: StateFlow<UiState<AuthResponse>> = _state.asStateFlow()
 
     var busy = false
@@ -103,7 +105,8 @@ class LoginViewModel(private val graph: AppGraph) : ViewModel() {
     }
 
     fun resetError() {
-        if (_state.value is UiState.Error) _state.value = UiState.Loading
+        // هنگام جابه‌جایی بین تب ورود/ثبت‌نام، خطای قبلی را پاک و حالت را خنثی می‌کنیم.
+        _state.value = UiState.Idle
     }
 }
 
