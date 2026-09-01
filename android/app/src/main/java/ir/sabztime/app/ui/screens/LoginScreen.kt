@@ -1,7 +1,6 @@
 package ir.sabztime.app.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,23 +9,18 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
-import androidx.compose.material3.TabRowDefaults
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,26 +29,19 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import ir.sabztime.app.core.AppGraph
+import ir.sabztime.app.core.SabzException
 import ir.sabztime.app.core.UiState
-import ir.sabztime.app.core.toSabzException
 import ir.sabztime.app.data.AuthResponse
 import ir.sabztime.app.ui.Routes
-import ir.sabztime.app.ui.components.AuroraBackdrop
-import ir.sabztime.app.ui.components.EmojiBadge3D
-import ir.sabztime.app.ui.components.GlassCard
-import ir.sabztime.app.ui.components.GlassPrimaryButton
-import ir.sabztime.app.ui.components.glass
 import ir.sabztime.app.util.Jalali
 import ir.sabztime.app.util.TextUtil
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -87,7 +74,7 @@ class LoginViewModel(private val graph: AppGraph) : ViewModel() {
                     _state.value = UiState.Success(resp)
                 }
             } catch (e: Exception) {
-                val sabz = e.toSabzException()
+                val sabz = e as? SabzException ?: SabzException.Network(e)
                 _state.value = UiState.Error(sabz.toFriendlyMessage(), sabz.kind)
             } finally {
                 busy = false
@@ -111,7 +98,7 @@ class LoginViewModel(private val graph: AppGraph) : ViewModel() {
                     _state.value = UiState.Success(resp)
                 }
             } catch (e: Exception) {
-                val sabz = e.toSabzException()
+                val sabz = e as? SabzException ?: SabzException.Network(e)
                 _state.value = UiState.Error(sabz.toFriendlyMessage(), sabz.kind)
             } finally {
                 busy = false
@@ -140,7 +127,7 @@ fun LoginScreen(graph: AppGraph, navController: NavHostController) {
     var nameError by remember { mutableStateOf<String?>(null) }
 
     // ورود موفق → صفحه اصلی
-    LaunchedEffect(state) {
+    androidx.compose.runtime.LaunchedEffect(state) {
         if (state is UiState.Success<*>) {
             navController.navigate(Routes.MAIN) {
                 popUpTo(Routes.LOGIN) { inclusive = true }
@@ -162,153 +149,122 @@ fun LoginScreen(graph: AppGraph, navController: NavHostController) {
         return phoneError == null && passwordError == null && nameError == null
     }
 
-    val fieldShape = RoundedCornerShape(14.dp)
-    val fieldColors = OutlinedTextFieldDefaults.colors(
-        focusedContainerColor = MaterialTheme.glass.cardTop,
-        unfocusedContainerColor = MaterialTheme.glass.cardBottom,
-        focusedBorderColor = MaterialTheme.colorScheme.primary,
-        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
-    )
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .imePadding()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("🌿", style = MaterialTheme.typography.displayLarge)
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "نوبت‌سبز",
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            "جستجو، رزرو و مدیریت نوبت در یک اپلیکیشن",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(24.dp))
 
-    Box(Modifier.fillMaxSize()) {
-        AuroraBackdrop(Modifier.matchParentSize())
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .imePadding()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            EmojiBadge3D("🌿", size = 84.dp)
-            Spacer(Modifier.height(12.dp))
-            Text(
-                "نوبت‌سبز",
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                "جستجو، رزرو و مدیریت نوبت در یک اپلیکیشن",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.height(24.dp))
-
-            GlassCard(Modifier.fillMaxWidth(), contentPadding = androidx.compose.foundation.layout.PaddingValues(18.dp)) {
-                TabRow(
-                    selectedTabIndex = tab,
-                    modifier = Modifier.fillMaxWidth(),
-                    containerColor = Color.Transparent,
-                    indicator = { positions ->
-                        TabRowDefaults.SecondaryIndicator(
-                            Modifier.tabIndicatorOffset(positions[tab]),
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                ) {
-                    Tab(selected = tab == 0, onClick = { tab = 0; viewModel.resetError() }, text = { Text("ورود", fontWeight = FontWeight.Medium) })
-                    Tab(selected = tab == 1, onClick = { tab = 1; viewModel.resetError() }, text = { Text("ثبت‌نام", fontWeight = FontWeight.Medium) })
-                }
-                Spacer(Modifier.height(18.dp))
-
-                if (tab == 1) {
-                    OutlinedTextField(
-                        value = name,
-                        onValueChange = { name = it; nameError = null },
-                        label = { Text("نام و نام خانوادگی") },
-                        singleLine = true,
-                        isError = nameError != null,
-                        supportingText = { nameError?.let { Text(it) } },
-                        shape = fieldShape,
-                        colors = fieldColors,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(Modifier.height(12.dp))
-                }
-
-                OutlinedTextField(
-                    value = phone,
-                    onValueChange = {
-                        phone = TextUtil.latinDigits(it).filter { c -> c.isDigit() || c == '+' }
-                        phoneError = null
-                    },
-                    label = { Text("شماره موبایل") },
-                    singleLine = true,
-                    isError = phoneError != null,
-                    supportingText = { phoneError?.let { Text(it) } },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                    shape = fieldShape,
-                    colors = fieldColors,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it; passwordError = null },
-                    label = { Text("رمز عبور") },
-                    singleLine = true,
-                    isError = passwordError != null,
-                    supportingText = { passwordError?.let { Text(it) } },
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    shape = fieldShape,
-                    colors = fieldColors,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                when (val s = state) {
-                    is UiState.Error -> {
-                        Spacer(Modifier.height(12.dp))
-                        Text(
-                            s.message,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                    is UiState.Loading -> {
-                        Spacer(Modifier.height(14.dp))
-                        CircularProgressIndicator(Modifier.height(24.dp))
-                    }
-                    else -> {}
-                }
-
-                Spacer(Modifier.height(20.dp))
-                GlassPrimaryButton(
-                    text = if (tab == 0) "ورود به نوبت‌سبز" else "ایجاد حساب کاربری",
-                    onClick = {
-                        if (validate()) {
-                            if (tab == 0) viewModel.login(phone, password)
-                            else viewModel.register(phone, password, name)
-                        }
-                    },
-                    enabled = state !is UiState.Loading,
-                    leadingEmoji = if (tab == 0) "🔐" else "✨",
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-
-            Spacer(Modifier.height(14.dp))
-            OutlinedButton(onClick = { tab = if (tab == 0) 1 else 0; viewModel.resetError() }, shape = RoundedCornerShape(14.dp)) {
-                Text(if (tab == 0) "حساب ندارید؟ ثبت‌نام کنید" else "قبلاً ثبت‌نام کرده‌اید؟ وارد شوید")
-            }
-
-            TextButton(onClick = { pinScreen(navController) }) {
-                Text("درباره سرویس نوبت‌سبز")
-            }
-            Text(
-                "نکته: اطلاعات شما با حساب تلگرام و سیستم رزرو نوبت‌سبز یکپارچه است.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.height(16.dp))
-            Text(Jalali.persianDigits("نسخه ۱٫۰٫۰"), style = MaterialTheme.typography.labelSmall)
+        TabRow(selectedTabIndex = tab, modifier = Modifier.fillMaxWidth()) {
+            Tab(selected = tab == 0, onClick = { tab = 0; viewModel.resetError() }, text = { Text("ورود") })
+            Tab(selected = tab == 1, onClick = { tab = 1; viewModel.resetError() }, text = { Text("ثبت‌نام") })
         }
+        Spacer(Modifier.height(20.dp))
+
+        if (tab == 1) {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it; nameError = null },
+                label = { Text("نام و نام خانوادگی") },
+                singleLine = true,
+                isError = nameError != null,
+                supportingText = { nameError?.let { Text(it) } },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(12.dp))
+        }
+
+        OutlinedTextField(
+            value = phone,
+            onValueChange = {
+                phone = TextUtil.latinDigits(it).filter { c -> c.isDigit() || c == '+' }
+                phoneError = null
+            },
+            label = { Text("شماره موبایل") },
+            singleLine = true,
+            isError = phoneError != null,
+            supportingText = { phoneError?.let { Text(it) } },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(Modifier.height(12.dp))
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it; passwordError = null },
+            label = { Text("رمز عبور") },
+            singleLine = true,
+            isError = passwordError != null,
+            supportingText = { passwordError?.let { Text(it) } },
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(20.dp))
+
+        when (val s = state) {
+            is UiState.Error -> {
+                androidx.compose.material3.Text(
+                    s.message,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                )
+            }
+            is UiState.Loading -> androidx.compose.material3.CircularProgressIndicator(
+                modifier = Modifier.height(24.dp)
+            )
+            else -> {}
+        }
+
+        Button(
+            onClick = {
+                if (validate()) {
+                    if (tab == 0) viewModel.login(phone, password)
+                    else viewModel.register(phone, password, name)
+                }
+            },
+            enabled = state !is UiState.Loading,
+            modifier = Modifier.fillMaxWidth().height(52.dp)
+        ) {
+            Text(if (tab == 0) "ورود به نوبت‌سبز" else "ایجاد حساب کاربری", fontWeight = FontWeight.Bold)
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        OutlinedButton(onClick = { tab = if (tab == 0) 1 else 0; viewModel.resetError() }, modifier = Modifier.fillMaxWidth()) {
+            Text(if (tab == 0) "حساب ندارید؟ ثبت‌نام کنید" else "قبلاً ثبت‌نام کرده‌اید؟ وارد شوید")
+        }
+
+        TextButton(onClick = { pinScreen(navController) }) {
+            Text("درباره سرویس نوبت‌سبز")
+        }
+        Text(
+            "نکته: اطلاعات شما با حساب تلگرام و سیستم رزرو نوبت‌سبز یکپارچه است.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+        Spacer(Modifier.height(16.dp))
+        Text("\n" + Jalali.persianDigits("نسخه ۱٫۰٫۰"), style = MaterialTheme.typography.labelSmall)
     }
 }
 
