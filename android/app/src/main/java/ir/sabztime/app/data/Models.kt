@@ -2,7 +2,6 @@ package ir.sabztime.app.data
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 
 // ---------------------------------------------------------------------------
 // جستجو (search_api.php)

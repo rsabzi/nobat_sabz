@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,6 +21,7 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -43,7 +43,6 @@ import ir.sabztime.app.ui.Routes
 import ir.sabztime.app.ui.components.EmptyState
 import ir.sabztime.app.ui.components.ErrorState
 import ir.sabztime.app.ui.components.StatusChip
-import ir.sabztime.app.ui.components.collectAsStateSafe
 import ir.sabztime.app.util.Jalali
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -108,7 +107,7 @@ class BookingsViewModel(private val graph: AppGraph) : ViewModel() {
 @Composable
 fun BookingsScreen(graph: AppGraph, navController: NavHostController) {
     val viewModel: BookingsViewModel = viewModel { BookingsViewModel(graph) }
-    val state by viewModel.state.collectAsStateSafe()
+    val state by viewModel.state.collectAsState()
     var tab by rememberSaveable { mutableIntStateOf(0) }
 
     Scaffold(
@@ -144,7 +143,7 @@ fun BookingsScreen(graph: AppGraph, navController: NavHostController) {
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(ui.data, key = { it.id }) { b ->
-                        BookingCard(b) { navController.navigate(Routes.booking(b.id)) }
+                        BookingCard(b, onClick = { navController.navigate(Routes.booking(b.id)) })
                     }
                 }
             }
