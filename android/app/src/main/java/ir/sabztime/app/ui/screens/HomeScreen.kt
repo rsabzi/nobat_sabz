@@ -2,6 +2,7 @@ package ir.sabztime.app.ui.screens
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -29,6 +31,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -43,6 +46,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -54,12 +58,17 @@ import androidx.navigation.NavHostController
 import ir.sabztime.app.core.AppGraph
 import ir.sabztime.app.core.SabzException
 import ir.sabztime.app.core.UiState
+import ir.sabztime.app.core.toSabzException
 import ir.sabztime.app.data.BusinessSummary
 import ir.sabztime.app.data.FiltersData
 import ir.sabztime.app.ui.Routes
+import ir.sabztime.app.ui.components.AuroraBackdrop
+import ir.sabztime.app.ui.components.EmojiBadge3D
 import ir.sabztime.app.ui.components.EmptyState
 import ir.sabztime.app.ui.components.ErrorState
+import ir.sabztime.app.ui.components.GlassCard
 import ir.sabztime.app.ui.components.StatusChip
+import ir.sabztime.app.ui.components.glass
 import ir.sabztime.app.util.Jalali
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -135,7 +144,7 @@ class HomeViewModel(private val graph: AppGraph) : ViewModel() {
                 results = if (list.isEmpty()) UiState.Empty else UiState.Success(list)
             )
         } catch (e: Exception) {
-            val sabz = e as? SabzException ?: SabzException.Network(e)
+            val sabz = e.toSabzException()
             _state.value = _state.value.copy(results = UiState.Error(sabz.toFriendlyMessage(), sabz.kind))
         }
     }
@@ -151,11 +160,12 @@ fun HomeScreen(graph: AppGraph, navController: NavHostController) {
     var provinceMenu by remember { mutableStateOf(false) }
 
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = {
                     Column {
-                        Text("نوبت‌سبز", fontWeight = FontWeight.Bold)
+                        Text("🌿 نوبت‌سبز", fontWeight = FontWeight.Bold)
                         Text(
                             "جستجوی کسب‌وکار و رزرو نوبت",
                             style = MaterialTheme.typography.labelSmall,
@@ -167,17 +177,19 @@ fun HomeScreen(graph: AppGraph, navController: NavHostController) {
                     NotificationBadgeButton { navController.navigate(Routes.NOTIFICATIONS) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                    containerColor = Color.Transparent
                 )
             )
         }
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
+        Box(Modifier.fillMaxSize()) {
+            AuroraBackdrop(Modifier.matchParentSize())
+            Column(Modifier.fillMaxSize().padding(padding)) {
             OutlinedTextField(
                 value = state.query,
                 onValueChange = viewModel::updateQuery,
                 placeholder = { Text("نام کسب‌وکار، خدمت یا شهر…") },
-                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "جستجو") },
                 trailingIcon = {
                     if (state.query.isNotEmpty()) {
                         IconButton(onClick = { viewModel.updateQuery("") }) {
@@ -186,7 +198,13 @@ fun HomeScreen(graph: AppGraph, navController: NavHostController) {
                     }
                 },
                 singleLine = true,
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.glass.cardTop,
+                    unfocusedContainerColor = MaterialTheme.glass.cardBottom,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                ),
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
@@ -240,6 +258,7 @@ fun HomeScreen(graph: AppGraph, navController: NavHostController) {
                     }
                 }
             }
+            }
         }
     }
 
@@ -286,56 +305,74 @@ private fun SelectionDialog(
 
 @Composable
 private fun BusinessCard(b: BusinessSummary, onClick: () -> Unit) {
-    Card(
-        onClick = onClick,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick
     ) {
-        Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            EmojiBadge3D(typeEmoji(b.businessType), size = 48.dp)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
                 Text(
                     b.name,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
+                    fontWeight = FontWeight.Bold
                 )
-                b.businessType?.let {
-                    StatusChip(it, MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primaryContainer)
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    listOfNotNull(b.city, b.province).joinToString("، "),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (b.services.isNotEmpty()) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        b.services.take(3).joinToString(" · "),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
-            Spacer(Modifier.height(6.dp))
-            Text(
-                listOfNotNull(b.city, b.province).joinToString("، "),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            if (b.services.isNotEmpty()) {
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    b.services.take(4).joinToString(" · "),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+            b.businessType?.let {
+                StatusChip(it, MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primaryContainer)
             }
-            if (!b.address.isNullOrBlank()) {
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    b.address,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "مشاهده و رزرو ←",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.align(Alignment.End)
-            )
         }
+        Spacer(Modifier.height(8.dp))
+        if (!b.address.isNullOrBlank()) {
+            Text(
+                "📍 ${b.address}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(6.dp))
+        }
+        Text(
+            "مشاهده و رزرو ←",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+
+/** اموجی سه‌بعدی متناسب با نوع کسب‌وکار برای تشخیص سریع‌تر */
+internal fun typeEmoji(type: String?): String {
+    val t = type ?: return "🏪"
+    return when {
+        t.contains("آرایش") || t.contains("زیبایی") -> "💇"
+        t.contains("دندان") -> "🦷"
+        t.contains("پزشک") || t.contains("درمان") || t.contains("کلینیک") -> "🩺"
+        t.contains("کافی") || t.contains("کافه") -> "☕"
+        t.contains("رستوران") || t.contains("غذا") || t.contains("تیپ") -> "🍽"
+        t.contains("ورزش") || t.contains("باشگاه") -> "🏋"
+        t.contains("آموزش") || t.contains("آموزشگاه") -> "📚"
+        t.contains("خودرو") || t.contains("تعمیر") || t.contains("فنی") -> "🛠"
+        t.contains("پوشاک") || t.contains("فروشگاه") -> "🛍"
+        t.contains("عکاسی") -> "📸"
+        else -> "🏪"
     }
 }
