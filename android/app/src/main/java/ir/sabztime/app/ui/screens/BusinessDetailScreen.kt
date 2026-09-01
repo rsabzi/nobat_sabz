@@ -1,6 +1,8 @@
 package ir.sabztime.app.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -14,12 +16,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -32,6 +34,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -45,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -63,8 +67,8 @@ import ir.sabztime.app.ui.components.ErrorState
 import ir.sabztime.app.ui.components.InfoRow
 import ir.sabztime.app.ui.components.SectionCard
 import ir.sabztime.app.ui.components.StatusChip
-import ir.sabztime.app.ui.components.collectAsStateSafe
 import ir.sabztime.app.util.Jalali
+import kotlinx.coroutines.launch
 
 data class BusinessDetailState(
     val business: UiState<BusinessDetails> = UiState.Loading,
@@ -75,13 +79,14 @@ data class BusinessDetailState(
     val slotsLoading: Boolean = false,
     val selectedSlot: TimeSlot? = null,
     val selectedServiceId: Int? = null,
-    val submit: UiState<BookingCreatedResponse> = UiState.Loading,
+    val submit: UiState<BookingCreatedResponse>? = null,
     val showForm: Boolean = false
 )
 
 class BusinessDetailViewModel(private val graph: AppGraph, private val businessId: Int) : ViewModel() {
-    val state = androidx.compose.runtime.mutableStateOf(BusinessDetailState())
-    private val _state get() = state
+    var state by mutableStateOf(BusinessDetailState())
+        private set
+
     var userId: Long = 0
 
     init {
@@ -90,70 +95,70 @@ class BusinessDetailViewModel(private val graph: AppGraph, private val businessI
             try {
                 val me = graph.repository.me()
                 userId = me.user.telegramId
-            } catch (e: Exception) { /* بدون پروفایل هم می‌شود رزرو کرد (مهمان) */ }
+            } catch (_: Exception) { /* Guest booking fallback */ }
         }
     }
 
     fun load() {
-        _state.value = _state.value.copy(business = UiState.Loading)
+        state = state.copy(business = UiState.Loading)
         viewModelScope.launch {
             try {
                 val b = graph.repository.businessDetails(businessId)
                     ?: throw SabzException.Server("کسب‌وکار پیدا نشد.", "NOT_FOUND", 404)
-                _state.value = _state.value.copy(business = UiState.Success(b))
+                state = state.copy(business = UiState.Success(b))
                 loadDates()
             } catch (e: Exception) {
                 val sabz = e as? SabzException ?: SabzException.Network(e)
-                _state.value = _state.value.copy(business = UiState.Error(sabz.toFriendlyMessage(), sabz.kind))
+                state = state.copy(business = UiState.Error(sabz.toFriendlyMessage(), sabz.kind))
             }
         }
     }
 
     fun loadDates() {
-        _state.value = _state.value.copy(datesLoading = true)
+        state = state.copy(datesLoading = true)
         viewModelScope.launch {
             try {
                 val d = graph.repository.availableDates(businessId)
-                _state.value = _state.value.copy(dates = d, datesLoading = false, selectedDate = null)
-            } catch (e: Exception) {
-                _state.value = _state.value.copy(datesLoading = false)
+                state = state.copy(dates = d, datesLoading = false, selectedDate = null)
+            } catch (_: Exception) {
+                state = state.copy(datesLoading = false)
             }
         }
     }
 
     fun selectDate(date: DateSlot) {
-        _state.value = _state.value.copy(selectedDate = date, selectedSlot = null, slotsLoading = true)
+        state = state.copy(selectedDate = date, selectedSlot = null, slotsLoading = true)
         viewModelScope.launch {
             try {
                 val s = graph.repository.availableSlots(businessId, date.date)
-                _state.value = _state.value.copy(slots = s, slotsLoading = false)
-            } catch (e: Exception) {
-                _state.value = _state.value.copy(slots = emptyList(), slotsLoading = false)
+                state = state.copy(slots = s, slotsLoading = false)
+            } catch (_: Exception) {
+                state = state.copy(slots = emptyList(), slotsLoading = false)
             }
         }
     }
 
     fun selectSlot(slot: TimeSlot) {
-        _state.value = _state.value.copy(selectedSlot = slot)
+        state = state.copy(selectedSlot = slot)
     }
 
     fun selectService(id: Int) {
-        _state.value = _state.value.copy(selectedServiceId = id)
+        state = state.copy(selectedServiceId = id)
     }
 
     fun openForm() {
-        _state.value = _state.value.copy(showForm = true)
+        state = state.copy(showForm = true, submit = null)
     }
 
     fun closeForm() {
-        _state.value = _state.value.copy(showForm = false)
+        state = state.copy(showForm = false, submit = null)
     }
 
     fun submitBooking(name: String, phone: String, notes: String) {
-        val d = _state.value
+        val d = state
         val date = d.selectedDate ?: return
         val slot = d.selectedSlot ?: return
-        _state.value = d.copy(submit = UiState.Loading)
+        state = d.copy(submit = UiState.Loading)
         viewModelScope.launch {
             try {
                 val resp = graph.repository.createBooking(
@@ -166,10 +171,10 @@ class BusinessDetailViewModel(private val graph: AppGraph, private val businessI
                     customerNotes = notes,
                     userId = userId
                 )
-                _state.value = _state.value.copy(submit = UiState.Success(resp))
+                state = state.copy(submit = UiState.Success(resp))
             } catch (e: Exception) {
                 val sabz = e as? SabzException ?: SabzException.Network(e)
-                _state.value = _state.value.copy(submit = UiState.Error(sabz.toFriendlyMessage(), sabz.kind))
+                state = state.copy(submit = UiState.Error(sabz.toFriendlyMessage(), sabz.kind))
             }
         }
     }
@@ -193,7 +198,7 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
             val me = graph.repository.me()
             if (name.isBlank()) name = me.user.name
             if (phone.isBlank()) phone = me.user.phone
-        } catch (e: Exception) {}
+        } catch (_: Exception) {}
     }
 
     Scaffold(
@@ -209,8 +214,18 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
         }
     ) { padding ->
         when (val bState = state.business) {
-            is UiState.Loading -> CircularProgressIndicator(Modifier.padding(40.dp).align(Alignment.CenterHorizontally))
-            is UiState.Error -> ErrorState(bState.message, bState.kind) { viewModel.load() }
+            is UiState.Loading -> {
+                Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            }
+            is UiState.Error -> ErrorState(bState.message, bState.kind, onRetry = viewModel::load)
+            UiState.Empty -> EmptyState(
+                icon = "🏪",
+                title = "کسب‌وکار پیدا نشد",
+                subtitle = "ممکن است این کسب‌وکار حذف یا غیرفعال شده باشد.",
+                modifier = Modifier.padding(padding)
+            )
             is UiState.Success -> {
                 val b = bState.data
                 LazyColumn(
@@ -231,7 +246,7 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
                             }
                             Spacer(Modifier.height(10.dp))
                             if (!b.address.isNullOrBlank()) {
-                                Row {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Filled.Place, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                                     Spacer(Modifier.size(6.dp))
                                     Text(b.address, style = MaterialTheme.typography.bodySmall)
@@ -239,7 +254,7 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
                             }
                             if (!b.phone.isNullOrBlank()) {
                                 Spacer(Modifier.height(4.dp))
-                                Row {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Filled.Phone, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                                     Spacer(Modifier.size(6.dp))
                                     Text(Jalali.persianDigits(b.phone), style = MaterialTheme.typography.bodySmall)
@@ -306,7 +321,7 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
                                         FilterChip(
                                             selected = state.selectedSlot?.startTime == slot.startTime,
                                             onClick = { viewModel.selectSlot(slot) },
-                                            label = { Text("${Jalali.persianDigits(slot.startTime)}") }
+                                            label = { Text(Jalali.persianDigits(slot.startTime)) }
                                         )
                                     }
                                 }
@@ -336,10 +351,9 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
         }
     }
 
-    // فرم رزرو
     if (state.showForm) {
-        androidx.compose.ui.window.Dialog(onDismissRequest = { if (submitState !is UiState.Loading) viewModel.closeForm() }) {
-            androidx.compose.material3.Surface(shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp), tonalElevation = 4.dp) {
+        Dialog(onDismissRequest = { if (submitState !is UiState.Loading) viewModel.closeForm() }) {
+            Surface(shape = RoundedCornerShape(20.dp), tonalElevation = 4.dp) {
                 val d = state.selectedDate
                 val s = state.selectedSlot
                 Column(
@@ -357,19 +371,20 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
                     }
                     Spacer(Modifier.height(16.dp))
 
-                    when (val sub = submitState) {
+                    when (submitState) {
                         is UiState.Success -> {
                             Text("✅", style = MaterialTheme.typography.displayMedium)
                             Text("رزرو شما ثبت شد!", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(8.dp))
-                            InfoRow("کد رزرو", sub.data.confirmationCode ?: "—")
+                            InfoRow("کد رزرو", submitState.data.confirmationCode ?: "—")
+                            Spacer(Modifier.height(12.dp))
                             Button(onClick = {
                                 viewModel.closeForm()
                                 navController.navigate(Routes.BOOKINGS)
                             }, modifier = Modifier.fillMaxWidth()) { Text("مشاهده نوبت‌های من") }
                         }
                         is UiState.Error -> {
-                            Text(sub.message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+                            Text(submitState.message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
                             Spacer(Modifier.height(12.dp))
                             OutlinedButton(onClick = viewModel::closeForm) { Text("بستن") }
                         }
@@ -419,8 +434,11 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
                                 enabled = submitState !is UiState.Loading,
                                 modifier = Modifier.fillMaxWidth().height(50.dp)
                             ) {
-                                if (submitState is UiState.Loading) CircularProgressIndicator(Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary)
-                                else Text("ثبت نهایی رزرو", fontWeight = FontWeight.Bold)
+                                if (submitState is UiState.Loading) {
+                                    CircularProgressIndicator(Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary)
+                                } else {
+                                    Text("ثبت نهایی رزرو", fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }
@@ -433,6 +451,7 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
 @Composable
 private fun ServiceRow(service: Service, selected: Boolean, onSelect: () -> Unit) {
     Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onSelect),
         colors = CardDefaults.cardColors(
             containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
         ),

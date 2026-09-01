@@ -21,6 +21,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -111,7 +112,7 @@ class LoginViewModel(private val graph: AppGraph) : ViewModel() {
 @Composable
 fun LoginScreen(graph: AppGraph, navController: NavHostController) {
     val viewModel: LoginViewModel = viewModel { LoginViewModel(graph) }
-    val state by viewModel.state.collectAsStateSafe()
+    val state by viewModel.state.collectAsState()
 
     var tab by rememberSaveable { mutableStateOf(0) }
     var phone by rememberSaveable { mutableStateOf("") }
@@ -123,7 +124,7 @@ fun LoginScreen(graph: AppGraph, navController: NavHostController) {
 
     // ورود موفق → صفحه اصلی
     androidx.compose.runtime.LaunchedEffect(state) {
-        if (state is UiState.Success) {
+        if (state is UiState.Success<*>) {
             navController.navigate(Routes.MAIN) {
                 popUpTo(Routes.LOGIN) { inclusive = true }
                 launchSingleTop = true

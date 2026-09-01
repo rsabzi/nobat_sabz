@@ -3,7 +3,6 @@ package ir.sabztime.app.data
 import ir.sabztime.app.core.ApiClient
 import ir.sabztime.app.core.jsonBody
 import ir.sabztime.app.core.obj
-import kotlinx.serialization.json.JsonObject
 
 /**
  * لایه داده: همه تماس‌ها به API موجود سرور (بدون تغییر منطق سمت سرور).
