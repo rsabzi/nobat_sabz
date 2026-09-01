@@ -12,6 +12,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -89,15 +90,15 @@ class ApiClient(
             }
 
             if (!resp.isSuccessful) {
-                val msg = root["message"]?.jsonPrimitive?.contentOrNull()
+                val msg = root["message"]?.jsonPrimitive?.contentOrNull
                     ?: "خطای سرور (HTTP ${resp.code})."
-                throw buildHttpError(msg, root["code"]?.jsonPrimitive?.contentOrNull(), resp.code)
+                throw buildHttpError(msg, root["code"]?.jsonPrimitive?.contentOrNull, resp.code)
             }
 
-            val status = root["status"]?.jsonPrimitive?.contentOrNull()
+            val status = root["status"]?.jsonPrimitive?.contentOrNull
             if (status == "error") {
-                val msg = root["message"]?.jsonPrimitive?.contentOrNull() ?: "خطای ناشناخته."
-                throw buildHttpError(msg, root["code"]?.jsonPrimitive?.contentOrNull(), resp.code)
+                val msg = root["message"]?.jsonPrimitive?.contentOrNull ?: "خطای ناشناخته."
+                throw buildHttpError(msg, root["code"]?.jsonPrimitive?.contentOrNull, resp.code)
             }
             root
         }
@@ -112,7 +113,7 @@ class ApiClient(
         }
 
     private fun String.toHttpUrlBuilder(params: Map<String, String>): okhttp3.HttpUrl.Builder {
-        val base = okhttp3.HttpUrl.Companion.toHttpUrlOrNull(this)
+        val base = this.toHttpUrlOrNull()
             ?: throw SabzException.Server("آدرس سرور نامعتبر است.", "BAD_URL", 0)
         val builder = base.newBuilder()
         params.forEach { (k, v) -> builder.addQueryParameter(k, v) }
@@ -123,12 +124,12 @@ class ApiClient(
 // --- کمکی‌های JsonObject ---
 
 fun JsonObject.str(key: String): String? =
-    (this[key] as? JsonPrimitive)?.takeIf { !it.isString || it.content.isNotEmpty() }?.contentOrNull()
+    (this[key] as? JsonPrimitive)?.takeIf { !it.isString || it.content.isNotEmpty() }?.contentOrNull
 
-fun JsonObject.intOrNull(key: String): Int? = (this[key] as? JsonPrimitive)?.contentOrNull()?.toIntOrNull()
-fun JsonObject.longOrNull(key: String): Long? = (this[key] as? JsonPrimitive)?.contentOrNull()?.toLongOrNull()
+fun JsonObject.intOrNull(key: String): Int? = (this[key] as? JsonPrimitive)?.contentOrNull?.toIntOrNull()
+fun JsonObject.longOrNull(key: String): Long? = (this[key] as? JsonPrimitive)?.contentOrNull?.toLongOrNull()
 fun JsonObject.boolOr(key: String): Boolean? = (this[key] as? JsonPrimitive)?.let {
-    it.contentOrNull()?.let { c -> c.toBooleanStrictOrNull() } ?: (it.content == "1")
+    it.contentOrNull?.let { c -> c.toBooleanStrictOrNull() } ?: (it.content == "1")
 }
 
 fun JsonObject.obj(key: String): JsonObject? = this[key] as? JsonObject
