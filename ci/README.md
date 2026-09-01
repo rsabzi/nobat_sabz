@@ -21,3 +21,26 @@ enforced through the Git Database API). Activate them with a token that has
     cp ci/backend-test.yml .github/workflows/backend-test.yml
     git add .github/workflows && git commit -m "ci: activate workflows"
     git push
+
+## 🚀 فعال‌سازی (ساده‌ترین راه — بدون توکن)
+
+1. در GitHub به ریپو بروید: **Settings → Actions → General → Actions permissions** → **Allow all actions** → ذخیره کنید
+2. در همان صفحه: **Settings → Actions → General → Workflow permissions** → **Read and write permissions** → ذخیره کنید
+3. یا به سادگی: **Settings → Actions → Enable** (اگر دکمه فعال باشد)
+
+سپس در تب **Actions**، workflow **Android Build & Test** را انتخاب و **Run workflow** (روی شاخه `arena/01a05c23-nobat-sabz`) بزنید.
+
+## 🚀 فعال‌سازی (راه دوم — با PAT)
+
+```bash
+# 1) یک PAT با scope "workflow" بسازید
+# 2) آن را به عنوان رمز ذخیره کنید، سپس:
+git remote set-url origin https://ghp_XXX@github.com/rsabzi/nobat_sabz.git
+mkdir -p .github/workflows
+cp ci/android-build.yml .github/workflows/android-build.yml
+cp ci/backend-test.yml .github/workflows/backend-test.yml
+git add .github/workflows && git commit -m "ci: activate workflows"
+git push origin arena/01a05c23-nobat-sabz
+```
+
+پس از activate، در تب **Actions** اجرای **Android Build & Test** را مشاهده می‌کنید (واحد تست → APK → شبیه‌ساز). خروجی نهایی APK در شاخه: **`android/release/sabztime-v1.0.0.apk`**
