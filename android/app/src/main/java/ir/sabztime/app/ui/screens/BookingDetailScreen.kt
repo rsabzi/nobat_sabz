@@ -44,6 +44,7 @@ import androidx.navigation.NavHostController
 import ir.sabztime.app.core.AppGraph
 import ir.sabztime.app.core.SabzException
 import ir.sabztime.app.core.UiState
+import ir.sabztime.app.core.toSabzException
 import ir.sabztime.app.data.BookingSummary
 import ir.sabztime.app.data.CustomerQueueInfoResponse
 import ir.sabztime.app.ui.components.EmptyState
@@ -87,7 +88,7 @@ class BookingDetailViewModel(private val graph: AppGraph, private val bookingId:
                 _state.value = _state.value.copy(booking = UiState.Success(b))
                 if (b.status != "cancelled") loadQueue()
             } catch (e: Exception) {
-                val sabz = e as? SabzException ?: SabzException.Network(e)
+                val sabz = e.toSabzException()
                 _state.value = _state.value.copy(booking = UiState.Error(sabz.toFriendlyMessage(), sabz.kind))
             }
         }
@@ -112,7 +113,7 @@ class BookingDetailViewModel(private val graph: AppGraph, private val bookingId:
                 val r = graph.repository.cancelBooking(bookingId)
                 _state.value = _state.value.copy(cancelBusy = false, cancelled = true)
             } catch (e: Exception) {
-                val sabz = e as? SabzException ?: SabzException.Network(e)
+                val sabz = e.toSabzException()
                 _state.value = _state.value.copy(cancelBusy = false, cancelError = sabz.toFriendlyMessage())
             }
         }

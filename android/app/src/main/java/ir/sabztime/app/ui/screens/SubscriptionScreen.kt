@@ -36,9 +36,11 @@ import androidx.navigation.NavHostController
 import ir.sabztime.app.core.AppGraph
 import ir.sabztime.app.core.SabzException
 import ir.sabztime.app.core.UiState
+import ir.sabztime.app.core.toSabzException
 import ir.sabztime.app.data.Plan
 import ir.sabztime.app.ui.components.EmptyState
 import ir.sabztime.app.ui.components.ErrorState
+import ir.sabztime.app.ui.components.GlassCard
 import ir.sabztime.app.ui.components.LoadingState
 import ir.sabztime.app.util.Jalali
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -59,7 +61,7 @@ class SubscriptionViewModel(private val graph: AppGraph) : ViewModel() {
                 val plans = graph.repository.subscriptionPlans()
                 _state.value = if (plans.isEmpty()) UiState.Empty else UiState.Success(plans)
             } catch (e: Exception) {
-                val sabz = e as? SabzException ?: SabzException.Network(e)
+                val sabz = e.toSabzException()
                 _state.value = UiState.Error(sabz.toFriendlyMessage(), sabz.kind)
             }
         }
@@ -73,6 +75,7 @@ fun SubscriptionScreen(graph: AppGraph, businessId: Int, navController: NavHostC
     val state by viewModel.state.collectAsState()
 
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text("پلن‌های اشتراک", fontWeight = FontWeight.Bold) },
@@ -102,11 +105,9 @@ fun SubscriptionScreen(graph: AppGraph, businessId: Int, navController: NavHostC
                     Spacer(Modifier.height(4.dp))
                 }
                 items(s.data, key = { it.id }) { plan ->
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                    ) {
-                        Column(Modifier.padding(16.dp)) {
+                    GlassCard {
+                        // کارت شیشه‌ای پلن
+                        Column {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(plan.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                                 Text(
