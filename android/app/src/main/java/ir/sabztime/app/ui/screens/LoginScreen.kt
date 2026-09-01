@@ -21,6 +21,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,7 +42,6 @@ import ir.sabztime.app.core.SabzException
 import ir.sabztime.app.core.UiState
 import ir.sabztime.app.data.AuthResponse
 import ir.sabztime.app.ui.Routes
-import ir.sabztime.app.ui.components.collectAsStateSafe
 import ir.sabztime.app.util.Jalali
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -49,8 +49,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class LoginViewModel(private val graph: AppGraph) : ViewModel() {
-    // حالت اولیه باید خنثی باشد؛ نه Loading، در غیر این صورت اسپینر همیشه می‌چرخد
-    // و دکمه ورود/ثبت‌نام برای همیشه غیرفعال می‌ماند.
+    // حالت اولیه «ایdle» (Empty) است؛ Loading فقط در لحظه‌ی ارسال فرم تنظیم می‌شود.
+    // اگر اینجا Loading بود، دکمه تا همیشه غیرفعال و چرخنده تا همیشه فعال می‌ماند.
     private val _state = MutableStateFlow<UiState<AuthResponse>>(UiState.Empty)
     val state: StateFlow<UiState<AuthResponse>> = _state.asStateFlow()
 
@@ -106,8 +106,8 @@ class LoginViewModel(private val graph: AppGraph) : ViewModel() {
     }
 
     fun resetError() {
-        // هنگام جابه‌جایی بین تب ورود/ثبت‌نام، خطای قبلی را پاک و حالت را خنثی می‌کنیم.
-        _state.value = UiState.Empty
+        // به حالت خنثی برمی‌گردیم (نه Loading) تا دکمه دوباره فعال بماند
+        if (_state.value is UiState.Error) _state.value = UiState.Empty
     }
 }
 
@@ -115,7 +115,7 @@ class LoginViewModel(private val graph: AppGraph) : ViewModel() {
 @Composable
 fun LoginScreen(graph: AppGraph, navController: NavHostController) {
     val viewModel: LoginViewModel = viewModel { LoginViewModel(graph) }
-    val state by viewModel.state.collectAsStateSafe()
+    val state by viewModel.state.collectAsState()
 
     var tab by rememberSaveable { mutableStateOf(0) }
     var phone by rememberSaveable { mutableStateOf("") }
