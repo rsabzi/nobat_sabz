@@ -62,4 +62,8 @@ dist/
 *.key
 *.pem
 *.crt
-secrets/
+secrets/# فایل/زیپهای حاوی اسرار تولید
+project.zip
+debog.log
+keystore/
+*.keystore
