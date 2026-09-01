@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -32,7 +34,7 @@ android {
             // با کلید debug امضا می‌شود تا APK قابل نصب بماند.
             val keystorePropsFile = rootProject.file("keystore.properties")
             if (keystorePropsFile.exists()) {
-                val props = java.util.Properties()
+                val props = Properties()
                 keystorePropsFile.inputStream().use { props.load(it) }
                 signingConfig = signingConfigs.create("release") {
                     storeFile = rootProject.file(props.getProperty("storeFile"))
