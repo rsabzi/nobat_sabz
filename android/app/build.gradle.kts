@@ -105,3 +105,57 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
+
+// ---------------------------------------------------------------------------
+// CI diagnostics: mirror gradle stderr (kotlin compile errors) and junit
+// failures into $GITHUB_STEP_SUMMARY so they are readable via the check-run
+// API even when runner logs are not downloadable.
+// ---------------------------------------------------------------------------
+import java.io.File
+import java.io.FileWriter
+import java.io.PrintWriter
+
+val ciSummaryPath: String? = System.getenv("GITHUB_STEP_SUMMARY")
+val ciStderrFile = File(buildDir, "ci-stderr.log")
+
+if (ciSummaryPath != null) {
+    val tee = PrintWriter(FileWriter(ciStderrFile, true), true)
+    logging.addStandardErrorListener(tee)
+    gradle.buildFinished {
+        val summary = File(ciSummaryPath)
+        val failure = it.failure
+        if (failure != null) {
+            summary.appendText("\n## gradle failure\n```\n$failure\n```\n")
+        }
+        if (ciStderrFile.exists() && ciStderrFile.length() > 0) {
+            val lines = ciStderrFile.readLines().filter {
+                it.startsWith("e: ") || it.contains("error:") || it.contains("FAILED")
+            }.distinct()
+            if (lines.isNotEmpty()) {
+                summary.appendText("\n## captured errors\n```\n${lines.take(80).joinToString("\n")}\n```\n")
+            }
+        }
+    }
+}
+
+tasks.withType<Test>().configureEach {
+    finalizedBy("ciExportTestResults")
+}
+
+tasks.register("ciExportTestResults") {
+    doLast {
+        val summary = ciSummaryPath?.let(::File) ?: return@doLast
+        val dir = File(buildDir, "test-results/testDebugUnitTest")
+        val files = dir.listFiles { f -> f.name.endsWith(".xml") } ?: return@doLast
+        summary.appendText("\n## junit results\n")
+        files.forEach { f ->
+            val t = f.readText()
+            Regex("<failure[^>]*message=\"([^\"]*)\"").findAll(t).forEach { m ->
+                summary.appendText("- FAIL: ${m.groupValues[1].take(300)}\n")
+            }
+            Regex("<testcase[^>]*name=\"([^\"]+)\"[^>]*classname=\"([^\"]+)\"").findAll(t).forEach { m ->
+                summary.appendText("- case: ${m.groupValues[2]}#${m.groupValues[1]}\n")
+            }
+        }
+    }
+}
