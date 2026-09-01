@@ -1,7 +1,5 @@
 package ir.sabztime.app.ui.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,12 +10,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -26,10 +25,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import ir.sabztime.app.core.SabzException
@@ -38,32 +33,10 @@ import ir.sabztime.app.core.UiState
 @Composable
 fun LoadingState(modifier: Modifier = Modifier, label: String = "در حال بارگذاری…") {
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Box(
-            modifier = Modifier
-                .size(104.dp)
-                .shadow(elevation = 6.dp, shape = CircleShape)
-                .clip(CircleShape)
-                .background(
-                    Brush.verticalGradient(
-                        listOf(MaterialTheme.glass.cardTop, MaterialTheme.glass.cardBottom)
-                    )
-                )
-                .border(
-                    1.dp,
-                    Brush.verticalGradient(listOf(MaterialTheme.glass.strokeTop, MaterialTheme.glass.strokeBottom)),
-                    CircleShape
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                CircularProgressIndicator(Modifier.size(34.dp))
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    label,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            CircularProgressIndicator()
+            Spacer(Modifier.height(12.dp))
+            Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -77,33 +50,12 @@ fun ErrorState(
 ) {
     Box(modifier = modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(
-                modifier = Modifier
-                    .size(104.dp)
-                    .shadow(elevation = 6.dp, shape = CircleShape)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                MaterialTheme.colorScheme.error.copy(alpha = 0.14f),
-                                MaterialTheme.colorScheme.error.copy(alpha = 0.07f)
-                            )
-                        )
-                    )
-                    .border(
-                        1.dp,
-                        Brush.verticalGradient(listOf(MaterialTheme.glass.strokeTop, MaterialTheme.glass.strokeBottom)),
-                        CircleShape
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = if (kind == SabzException.Kind.NETWORK) Icons.Filled.CloudOff else Icons.Filled.ErrorOutline,
-                    contentDescription = "خطا",
-                    tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(48.dp)
-                )
-            }
+            Icon(
+                imageVector = if (kind == SabzException.Kind.NETWORK) Icons.Filled.CloudOff else Icons.Filled.ErrorOutline,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(56.dp)
+            )
             Spacer(Modifier.height(16.dp))
             Text(
                 message,
@@ -133,14 +85,9 @@ fun EmptyState(
 ) {
     Box(modifier = modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            EmojiBadge3D(icon, size = 88.dp)
-            Spacer(Modifier.height(16.dp))
-            Text(
-                title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
+            Text(icon, style = MaterialTheme.typography.displayMedium)
+            Spacer(Modifier.height(12.dp))
+            Text(title, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
             if (subtitle != null) {
                 Spacer(Modifier.height(8.dp))
                 Text(
@@ -163,7 +110,13 @@ fun SectionCard(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
-    GlassCard(modifier = modifier.fillMaxWidth(), content = { content() })
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) { content() }
+    }
 }
 
 @Composable
