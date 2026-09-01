@@ -1,3 +1,6 @@
+import java.io.File
+import java.io.FileWriter
+
 import java.util.Properties
 
 plugins {
@@ -111,16 +114,14 @@ dependencies {
 // failures into $GITHUB_STEP_SUMMARY so they are readable via the check-run
 // API even when runner logs are not downloadable.
 // ---------------------------------------------------------------------------
-import java.io.File
-import java.io.FileWriter
-import java.io.PrintWriter
-
 val ciSummaryPath: String? = System.getenv("GITHUB_STEP_SUMMARY")
 val ciStderrFile = File(buildDir, "ci-stderr.log")
 
 if (ciSummaryPath != null) {
-    val tee = PrintWriter(FileWriter(ciStderrFile, true), true)
-    logging.addStandardErrorListener(tee)
+    val tee = FileWriter(ciStderrFile, true)
+    logging.addStandardErrorListener { msg ->
+        tee.append(msg); tee.flush()
+    }
     gradle.buildFinished {
         val summary = File(ciSummaryPath)
         val failure = it.failure
@@ -132,9 +133,10 @@ if (ciSummaryPath != null) {
                 it.startsWith("e: ") || it.contains("error:") || it.contains("FAILED")
             }.distinct()
             if (lines.isNotEmpty()) {
-                summary.appendText("\n## captured errors\n```\n${lines.take(80).joinToString("\n")}\n```\n")
+                summary.appendText("\n## captured errors\n```\n" + lines.take(80).joinToString("\n") + "\n```\n")
             }
         }
+        tee.close()
     }
 }
 
@@ -148,13 +150,10 @@ tasks.register("ciExportTestResults") {
         val dir = File(buildDir, "test-results/testDebugUnitTest")
         val files = dir.listFiles { f -> f.name.endsWith(".xml") } ?: return@doLast
         summary.appendText("\n## junit results\n")
-        files.forEach { f ->
-            val t = f.readText()
+        files.forEach { fx ->
+            val t = fx.readText()
             Regex("<failure[^>]*message=\"([^\"]*)\"").findAll(t).forEach { m ->
-                summary.appendText("- FAIL: ${m.groupValues[1].take(300)}\n")
-            }
-            Regex("<testcase[^>]*name=\"([^\"]+)\"[^>]*classname=\"([^\"]+)\"").findAll(t).forEach { m ->
-                summary.appendText("- case: ${m.groupValues[2]}#${m.groupValues[1]}\n")
+                summary.appendText("- FAIL: " + m.groupValues[1].take(300) + "\n")
             }
         }
     }
