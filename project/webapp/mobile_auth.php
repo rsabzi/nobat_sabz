@@ -225,8 +225,10 @@ if (!function_exists('mobile_auth_register_user')) {
                 "INSERT INTO users (telegram_id, first_name, last_name, username, phone, is_active, created_at) 
                  VALUES (?, ?, '', 'app_user', ?, 1, NOW())"
             );
-            // ابتدا با مقدار موقت درج می‌کنیم تا id بگیریم، سپس telegram_id نهایی را می‌سازیم
-            $insertUser->execute([$syntheticBase, $name, $phone]);
+            // ابتدا با مقدار موقت یکتا درج می‌کنیم تا id بگیریم، سپس telegram_id نهایی را می‌سازیم.
+            // مقدار موقت تصادفی است تا ثبت‌نام‌های هم‌زمان با هم تداخل (unique key) نداشته باشند.
+            $tempTelegramId = $syntheticBase + random_int(1, 2000000000);
+            $insertUser->execute([$tempTelegramId, $name, $phone]);
             $linkedUserId = (int)$pdo->lastInsertId();
             $telegramId = $syntheticBase + $linkedUserId;
             $updateUser = $pdo->prepare("UPDATE users SET telegram_id = ? WHERE id = ?");

@@ -49,7 +49,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class LoginViewModel(private val graph: AppGraph) : ViewModel() {
-    private val _state = MutableStateFlow<UiState<AuthResponse>>(UiState.Loading)
+    // حالت اولیه «ایdle» (Empty) است؛ Loading فقط در لحظه‌ی ارسال فرم تنظیم می‌شود.
+    // اگر اینجا Loading بود، دکمه تا همیشه غیرفعال و چرخنده تا همیشه فعال می‌ماند.
+    private val _state = MutableStateFlow<UiState<AuthResponse>>(UiState.Empty)
     val state: StateFlow<UiState<AuthResponse>> = _state.asStateFlow()
 
     var busy = false
@@ -104,7 +106,8 @@ class LoginViewModel(private val graph: AppGraph) : ViewModel() {
     }
 
     fun resetError() {
-        if (_state.value is UiState.Error) _state.value = UiState.Loading
+        // به حالت خنثی برمی‌گردیم (نه Loading) تا دکمه دوباره فعال بماند
+        if (_state.value is UiState.Error) _state.value = UiState.Empty
     }
 }
 

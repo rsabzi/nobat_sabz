@@ -97,7 +97,7 @@ class BookingDetailViewModel(private val graph: AppGraph, private val bookingId:
         val b = (_state.value.booking as? UiState.Success)?.data ?: return
         viewModelScope.launch {
             try {
-                val q = graph.repository.myQueueInfo(b.id)
+                val q = graph.repository.myQueueInfo(b.businessId)
                 _state.value = _state.value.copy(queue = q)
             } catch (e: Exception) {
                 // صف در دسترس نبود — غیرضروری است
@@ -259,6 +259,7 @@ fun BookingDetailScreen(graph: AppGraph, bookingId: Int, navController: NavHostC
                     Spacer(Modifier.height(8.dp))
                 }
             }
+            else -> {}
         }
     }
 

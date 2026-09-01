@@ -34,6 +34,7 @@ data class ApiEnvelope(
 class ApiClient(
     private val baseUrl: String,
     private val tokenProvider: () -> String?,
+    private val onSessionExpired: (() -> Unit)? = null,
     private val json: Json = Json {
         ignoreUnknownKeys = true
         explicitNulls = false
@@ -92,16 +93,23 @@ class ApiClient(
             if (!resp.isSuccessful) {
                 val msg = root["message"]?.jsonPrimitive?.contentOrNull
                     ?: "خطای سرور (HTTP ${resp.code})."
-                throw buildHttpError(msg, root["code"]?.jsonPrimitive?.contentOrNull, resp.code)
+                failWithHttpError(msg, root["code"]?.jsonPrimitive?.contentOrNull, resp.code)
             }
 
             val status = root["status"]?.jsonPrimitive?.contentOrNull
             if (status == "error") {
                 val msg = root["message"]?.jsonPrimitive?.contentOrNull ?: "خطای ناشناخته."
-                throw buildHttpError(msg, root["code"]?.jsonPrimitive?.contentOrNull, resp.code)
+                failWithHttpError(msg, root["code"]?.jsonPrimitive?.contentOrNull, resp.code)
             }
             root
         }
+    }
+
+    /** خطا را می‌سازد، و در صورت انقضای نشست، به لایه بالاتر اطلاع می‌دهد تا کاربر به صفحه ورود برگردد. */
+    private fun failWithHttpError(message: String, code: String?, httpCode: Int): Nothing {
+        val error = buildHttpError(message, code, httpCode)
+        if (error is SabzException.SessionExpired) onSessionExpired?.invoke()
+        throw error
     }
 
     private fun buildHttpError(message: String, code: String?, httpCode: Int): SabzException =

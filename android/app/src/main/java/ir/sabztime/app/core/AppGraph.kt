@@ -4,9 +4,13 @@ import android.content.Context
 import android.os.Build
 import ir.sabztime.app.BuildConfig
 import ir.sabztime.app.data.SabzRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 /** وضعیت نشست کاربر */
@@ -25,9 +29,15 @@ class AppGraph(context: Context) {
         runBlocking { secureStore.token() }
     }
 
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
     val api = ApiClient(
         baseUrl = BuildConfig.API_BASE_URL,
-        tokenProvider = tokenProvider
+        tokenProvider = tokenProvider,
+        onSessionExpired = {
+            // انقضای نشست → پاک‌سازی توکن و بازگشت خودکار به صفحه ورود (AppNav واکنش نشان می‌دهد)
+            appScope.launch { clearSession() }
+        }
     )
 
     val repository = SabzRepository(api)
