@@ -336,12 +336,30 @@ if (!function_exists('mobile_auth_get_profile_aggregate')) {
             }
         } catch (Exception $e) { error_log('mobile me stats: ' . $e->getMessage()); }
 
+        // اطمینان از عددی‌بودن فیلدها در JSON (PDO گاهی رشته برمی‌گرداند)
+        $castInt = function (array $row, array $keys): array {
+            foreach ($keys as $k) {
+                if (array_key_exists($k, $row) && $row[$k] !== null) $row[$k] = (int)$row[$k];
+            }
+            return $row;
+        };
+        $credit = is_array($credit)
+            ? $castInt($credit, ['current_credit', 'total_earned', 'total_deducted'])
+            : null;
+        $businesses = array_map(function ($b) use ($castInt) {
+            return $castInt((array)$b, ['id', 'is_active', 'slot_duration_minutes', 'subscription_plan_id', 'free_reservation_tokens', 'services_count']);
+        }, is_array($businesses) ? $businesses : []);
+        if (is_array($marketer)) {
+            $marketer = $castInt($marketer, ['id', 'total_businesses', 'total_bookings', 'commission_rate', 'total_commission']);
+        }
+        $bookingStats = array_map('intval', is_array($bookingStats) ? $bookingStats : []);
+
         return [
             'user' => [
-                'app_user_id'   => $user['app_user_id'],
+                'app_user_id'   => (int)$user['app_user_id'],
                 'name'          => $user['first_name'],
                 'phone'         => $user['phone'],
-                'telegram_id'   => $user['telegram_id']
+                'telegram_id'   => (int)$user['telegram_id']
             ],
             'credit'       => $credit,
             'businesses'   => $businesses,

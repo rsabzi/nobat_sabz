@@ -1,13 +1,26 @@
 package ir.sabztime.app.data
 
 import ir.sabztime.app.core.ApiClient
+import ir.sabztime.app.core.SabzException
 import ir.sabztime.app.core.jsonBody
 import ir.sabztime.app.core.obj
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.json.JsonObject
 
 /**
  * لایه داده: همه تماس‌ها به API موجود سرور (بدون تغییر منطق سمت سرور).
  */
 class SabzRepository(private val api: ApiClient) {
+
+    /**
+     * decode امن: اگر ساختار پاسخ با مدل هم‌خوان نبود، خطای «سرور» صادقانه
+     * پرتاب می‌شود (نه خطای شبکه) تا کاربر پیام درست ببیند.
+     */
+    private fun <T> decode(serializer: KSerializer<T>, json: JsonObject): T = try {
+        api.serializer.decodeFromJsonElement(serializer, json)
+    } catch (e: Exception) {
+        throw SabzException.Server("پاسخ سرور قابل خواندن نبود.", "BAD_PAYLOAD", 0)
+    }
 
     // --- جستجو (search_api.php) ---
     suspend fun search(
@@ -27,32 +40,32 @@ class SabzRepository(private val api: ApiClient) {
             "page" to page.toString(),
             "limit" to limit.toString()
         ))
-        return api.serializer.decodeFromJsonElement(SearchResponse.serializer(), json)
+        return decode(SearchResponse.serializer(), json)
     }
 
     suspend fun filters(): FiltersData {
         val json = api.get("search_api.php", mapOf("action" to "filters"))
-        val t = api.serializer.decodeFromJsonElement(SearchResponse.serializer(), json)
+        val t = decode(SearchResponse.serializer(), json)
         return t.filters ?: FiltersData()
     }
 
     suspend fun cities(province: String): List<String> {
         val json = api.get("search_api.php", mapOf("action" to "cities", "province" to province))
-        return api.serializer.decodeFromJsonElement(CitiesResponse.serializer(), json).cities
+        return decode(CitiesResponse.serializer(), json).cities
     }
 
     suspend fun businessDetails(id: Int): BusinessDetails? {
         val json = api.get("search_api.php", mapOf("action" to "business_details", "id" to id.toString()))
         val root = json
         val business = root.obj("business")
-        return business?.let { api.serializer.decodeFromJsonElement(BusinessDetails.serializer(), it) }
+        return business?.let { decode(BusinessDetails.serializer(), it) }
     }
 
     // --- api.php: عمومی ---
     suspend fun business(id: Int): BusinessDetails? {
         val json = api.get("api.php", mapOf("action" to "get_business", "id" to id.toString()))
         val data = json.obj("data")
-        return data?.let { api.serializer.decodeFromJsonElement(BusinessDetails.serializer(), it) }
+        return data?.let { decode(BusinessDetails.serializer(), it) }
     }
 
     suspend fun availableDates(businessId: Int): List<DateSlot> {
@@ -60,7 +73,7 @@ class SabzRepository(private val api: ApiClient) {
             "action" to "get_available_dates",
             "id" to businessId.toString()
         ))
-        return api.serializer.decodeFromJsonElement(DatesResponse.serializer(), json).data
+        return decode(DatesResponse.serializer(), json).data
     }
 
     suspend fun availableSlots(businessId: Int, date: String): List<TimeSlot> {
@@ -69,7 +82,7 @@ class SabzRepository(private val api: ApiClient) {
             "id" to businessId.toString(),
             "date" to date
         ))
-        return api.serializer.decodeFromJsonElement(SlotsResponse.serializer(), json).data
+        return decode(SlotsResponse.serializer(), json).data
     }
 
     // --- رزرو ---
@@ -94,7 +107,7 @@ class SabzRepository(private val api: ApiClient) {
             put("customer_notes", customerNotes)
             put("user_id", userId)
         })
-        return api.serializer.decodeFromJsonElement(BookingCreatedResponse.serializer(), json)
+        return decode(BookingCreatedResponse.serializer(), json)
     }
 
     suspend fun myBookings(includeHistory: Boolean = false): List<BookingSummary> {
@@ -102,7 +115,7 @@ class SabzRepository(private val api: ApiClient) {
             put("action", "get_user_bookings")
             if (includeHistory) put("include_history", true)
         })
-        return api.serializer.decodeFromJsonElement(BookingsResponse.serializer(), json).bookings
+        return decode(BookingsResponse.serializer(), json).bookings
     }
 
     suspend fun cancelBooking(bookingId: Int): CancelResponse {
@@ -110,7 +123,7 @@ class SabzRepository(private val api: ApiClient) {
             put("action", "cancel_booking")
             put("booking_id", bookingId)
         })
-        return api.serializer.decodeFromJsonElement(CancelResponse.serializer(), json)
+        return decode(CancelResponse.serializer(), json)
     }
 
     // --- صف ---
@@ -119,7 +132,7 @@ class SabzRepository(private val api: ApiClient) {
             "action" to "get_active_queue",
             "business_id" to businessId.toString()
         ))
-        return api.serializer.decodeFromJsonElement(QueueResponse.serializer(), json)
+        return decode(QueueResponse.serializer(), json)
     }
 
     suspend fun myQueueInfo(businessId: Int): CustomerQueueInfoResponse {
@@ -127,7 +140,7 @@ class SabzRepository(private val api: ApiClient) {
             "action" to "get_customer_queue_info",
             "business_id" to businessId.toString()
         ))
-        return api.serializer.decodeFromJsonElement(CustomerQueueInfoResponse.serializer(), json)
+        return decode(CustomerQueueInfoResponse.serializer(), json)
     }
 
     suspend fun advanceQueue(businessId: Int): QueueActionResponse {
@@ -135,7 +148,7 @@ class SabzRepository(private val api: ApiClient) {
             put("action", "advance_queue")
             put("business_id", businessId)
         })
-        return api.serializer.decodeFromJsonElement(QueueActionResponse.serializer(), json)
+        return decode(QueueActionResponse.serializer(), json)
     }
 
     suspend fun completeBooking(businessId: Int, bookingId: Int): QueueActionResponse {
@@ -144,13 +157,13 @@ class SabzRepository(private val api: ApiClient) {
             put("business_id", businessId)
             put("booking_id", bookingId)
         })
-        return api.serializer.decodeFromJsonElement(QueueActionResponse.serializer(), json)
+        return decode(QueueActionResponse.serializer(), json)
     }
 
     // --- مالک ---
     suspend fun myBusinesses(): List<MyBusinessItem> {
         val json = api.get("api.php", mapOf("action" to "get_my_businesses"))
-        return api.serializer.decodeFromJsonElement(MyBusinessesResponse.serializer(), json).businesses
+        return decode(MyBusinessesResponse.serializer(), json).businesses
     }
 
     suspend fun subscriptionStatus(businessId: Int): SubscriptionStatusResponse {
@@ -158,18 +171,18 @@ class SabzRepository(private val api: ApiClient) {
             put("action", "get_subscription_status")
             put("business_id", businessId)
         })
-        return api.serializer.decodeFromJsonElement(SubscriptionStatusResponse.serializer(), json)
+        return decode(SubscriptionStatusResponse.serializer(), json)
     }
 
     suspend fun subscriptionPlans(): List<Plan> {
         val json = api.post("api.php", body = jsonBody { put("action", "get_subscription_plans") })
-        return api.serializer.decodeFromJsonElement(PlansResponse.serializer(), json).plans
+        return decode(PlansResponse.serializer(), json).plans
     }
 
     // --- بازاریاب ---
     suspend fun marketerDashboard(): MarketerDashboardResponse {
         val json = api.post("api.php", body = jsonBody { put("action", "get_marketer_dashboard") })
-        return api.serializer.decodeFromJsonElement(MarketerDashboardResponse.serializer(), json)
+        return decode(MarketerDashboardResponse.serializer(), json)
     }
 
     // --- احراز هویت و پروفایل (mobile_auth.php) ---
@@ -181,7 +194,7 @@ class SabzRepository(private val api: ApiClient) {
             put("name", name)
             put("device", device)
         })
-        return api.serializer.decodeFromJsonElement(AuthResponse.serializer(), json)
+        return decode(AuthResponse.serializer(), json)
     }
 
     suspend fun login(phone: String, password: String, device: String): AuthResponse {
@@ -191,7 +204,7 @@ class SabzRepository(private val api: ApiClient) {
             put("password", password)
             put("device", device)
         })
-        return api.serializer.decodeFromJsonElement(AuthResponse.serializer(), json)
+        return decode(AuthResponse.serializer(), json)
     }
 
     suspend fun logout() {
@@ -200,7 +213,7 @@ class SabzRepository(private val api: ApiClient) {
 
     suspend fun me(): ProfileData {
         val json = api.post("mobile_auth.php", body = jsonBody { put("action", "me") })
-        return api.serializer.decodeFromJsonElement(ProfileResponse.serializer(), json).let {
+        return decode(ProfileResponse.serializer(), json).let {
             ProfileData(
                 user = it.user ?: UserInfo(),
                 credit = it.credit,
@@ -217,13 +230,13 @@ class SabzRepository(private val api: ApiClient) {
             put("name", name)
             put("phone", phone)
         })
-        return api.serializer.decodeFromJsonElement(ProfileResponse.serializer(), json).let {
+        return decode(ProfileResponse.serializer(), json).let {
             ProfileData(user = it.user ?: UserInfo())
         }
     }
 
     suspend fun notifications(): List<NotificationItem> {
         val json = api.post("mobile_auth.php", body = jsonBody { put("action", "get_notifications") })
-        return api.serializer.decodeFromJsonElement(NotificationsResponse.serializer(), json).notifications
+        return decode(NotificationsResponse.serializer(), json).notifications
     }
 }
