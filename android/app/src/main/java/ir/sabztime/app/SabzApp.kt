@@ -15,9 +15,17 @@ class SabzApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        // رابط کاربری فارسی و راست‌به‌چپ
-        Locale.setDefault(Locale("fa", "IR"))
-        AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("fa"))
+
+        // Force Persian (fa-IR) locale for UI and RTL support
+        val persianLocale = Locale.Builder()
+            .setLanguage("fa")
+            .setRegion("IR")
+            .build()
+
+        Locale.setDefault(persianLocale)
+        AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("fa-IR"))
+
+        // Initialize dependencies and background workers
         graph = AppGraph(this)
         BookingReminderScheduler.schedulePeriodic(this)
     }
