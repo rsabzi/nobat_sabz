@@ -121,7 +121,9 @@ fun ProfileScreen(graph: AppGraph, navController: NavHostController) {
         }
     ) { padding ->
         when (val d = state.data) {
-            is UiState.Loading -> CircularProgressIndicator(Modifier.padding(40.dp).align(Alignment.CenterHorizontally))
+            is UiState.Loading -> Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
             is UiState.Error -> ErrorState(d.message, d.kind, onRetry = viewModel::refresh)
             is UiState.Success -> {
                 val profile = d.data
@@ -198,6 +200,7 @@ fun ProfileScreen(graph: AppGraph, navController: NavHostController) {
                     )
                 }
             }
+            else -> {}
         }
     }
 

@@ -48,7 +48,7 @@ object Jalali {
         return Triple(jy.toInt(), jm, jd)
     }
 
-    /** "2025-02-10" → "۱۴۰۴/۱۱/۲۱" */
+    /** "2025-02-10" → "۱۴۰۳/۱۱/۲۲" */
     fun format(isoDate: String?): String {
         if (isoDate.isNullOrBlank()) return "—"
         val parts = isoDate.trim().split("-").mapNotNull { it.take(4).toIntOrNull() }
@@ -57,7 +57,7 @@ object Jalali {
         return "${persianDigits(jy)}/${persianDigits(jm.toString().padStart(2, '0'))}/${persianDigits(jd.toString().padStart(2, '0'))}"
     }
 
-    /** "2025-02-10" → "۱۴۰۴ بهمن ۲۱" */
+    /** "2025-02-10" → "۲۲ بهمن ۱۴۰۳" */
     fun formatLong(isoDate: String?): String {
         if (isoDate.isNullOrBlank()) return "—"
         val parts = isoDate.trim().split("-").mapNotNull { it.take(4).toIntOrNull() }

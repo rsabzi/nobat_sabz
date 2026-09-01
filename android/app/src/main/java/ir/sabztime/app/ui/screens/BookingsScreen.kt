@@ -144,7 +144,7 @@ fun BookingsScreen(graph: AppGraph, navController: NavHostController) {
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(ui.data, key = { it.id }) { b ->
-                        BookingCard(b) { navController.navigate(Routes.booking(b.id)) }
+                        BookingCard(b, onClick = { navController.navigate(Routes.booking(b.id)) })
                     }
                 }
             }

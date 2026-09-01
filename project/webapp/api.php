@@ -1078,6 +1078,13 @@ function handle_get_request($pdo, $internal_user_id) {
                 if ($avgDuration <= 0) $avgDuration = 20;
             }
 
+            // مدت استاندارد اسلات کسب‌وکار (برای محاسبه زمان تقریبی)
+            $bizStmt = $pdo->prepare("SELECT slot_duration_minutes FROM businesses WHERE id = ?");
+            $bizStmt->execute([$business_id]);
+            $biz = $bizStmt->fetch(PDO::FETCH_ASSOC);
+            $slotDuration = (int)($biz['slot_duration_minutes'] ?? 0);
+            if ($slotDuration <= 0) $slotDuration = max(5, (int)round($avgDuration));
+
             // صف فعال
             $queueStmt = $pdo->prepare("SELECT b.id, b.user_id, u.telegram_id as user_telegram_id, b.customer_phone, b.queue_status, b.progress_updated_at, b.duration_minutes FROM bookings b LEFT JOIN users u ON b.user_id = u.id WHERE b.business_id = ? AND b.status != 'cancelled' AND b.booking_date >= CURDATE() AND b.queue_status IN ('waiting','in_progress') ORDER BY b.booking_date ASC, b.start_time ASC, b.id ASC");
             $queueStmt->execute([$business_id]);

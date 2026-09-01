@@ -253,6 +253,7 @@ fun BookingDetailScreen(graph: AppGraph, bookingId: Int, navController: NavHostC
                     Spacer(Modifier.height(8.dp))
                 }
             }
+            else -> {}
         }
     }
 

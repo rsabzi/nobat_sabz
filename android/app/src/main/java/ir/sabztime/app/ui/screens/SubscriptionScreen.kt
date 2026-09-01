@@ -1,6 +1,7 @@
 package ir.sabztime.app.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -85,7 +86,9 @@ fun SubscriptionScreen(graph: AppGraph, businessId: Int, navController: NavHostC
         }
     ) { padding ->
         when (val s = state) {
-            is UiState.Loading -> CircularProgressIndicator(Modifier.padding(40.dp).align(Alignment.CenterHorizontally))
+            is UiState.Loading -> Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
             is UiState.Error -> ErrorState(s.message, s.kind, onRetry = viewModel::load)
             UiState.Empty -> EmptyState(icon = "💳", title = "پلنی تعریف نشده")
             is UiState.Success -> LazyColumn(

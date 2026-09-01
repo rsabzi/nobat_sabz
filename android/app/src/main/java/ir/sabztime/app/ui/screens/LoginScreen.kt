@@ -41,6 +41,7 @@ import ir.sabztime.app.core.SabzException
 import ir.sabztime.app.core.UiState
 import ir.sabztime.app.data.AuthResponse
 import ir.sabztime.app.ui.Routes
+import ir.sabztime.app.ui.components.collectAsStateSafe
 import ir.sabztime.app.util.Jalali
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -48,9 +49,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class LoginViewModel(private val graph: AppGraph) : ViewModel() {
-    // حالت اولیه باید خنثی (Idle) باشد؛ نه Loading،
-    // در غیر این صورت اسپینر همیشه می‌چرخد و دکمه ورود/ثبت‌نام برای همیشه غیرفعال می‌ماند.
-    private val _state = MutableStateFlow<UiState<AuthResponse>>(UiState.Idle)
+    // حالت اولیه باید خنثی باشد؛ نه Loading، در غیر این صورت اسپینر همیشه می‌چرخد
+    // و دکمه ورود/ثبت‌نام برای همیشه غیرفعال می‌ماند.
+    private val _state = MutableStateFlow<UiState<AuthResponse>>(UiState.Empty)
     val state: StateFlow<UiState<AuthResponse>> = _state.asStateFlow()
 
     var busy = false
@@ -106,7 +107,7 @@ class LoginViewModel(private val graph: AppGraph) : ViewModel() {
 
     fun resetError() {
         // هنگام جابه‌جایی بین تب ورود/ثبت‌نام، خطای قبلی را پاک و حالت را خنثی می‌کنیم.
-        _state.value = UiState.Idle
+        _state.value = UiState.Empty
     }
 }
 
@@ -126,7 +127,7 @@ fun LoginScreen(graph: AppGraph, navController: NavHostController) {
 
     // ورود موفق → صفحه اصلی
     androidx.compose.runtime.LaunchedEffect(state) {
-        if (state is UiState.Success) {
+        if (state is UiState.Success<*>) {
             navController.navigate(Routes.MAIN) {
                 popUpTo(Routes.LOGIN) { inclusive = true }
                 launchSingleTop = true

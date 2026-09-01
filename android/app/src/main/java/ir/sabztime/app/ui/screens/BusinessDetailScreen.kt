@@ -218,7 +218,7 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
                     CircularProgressIndicator()
                 }
             }
-            is UiState.Error -> ErrorState(bState.message, bState.kind) { viewModel.load() }
+            is UiState.Error -> ErrorState(bState.message, bState.kind, onRetry = { viewModel.load() })
             is UiState.Success -> {
                 val b = bState.data
                 LazyColumn(
@@ -341,6 +341,7 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
                     item { Spacer(Modifier.height(8.dp)) }
                 }
             }
+            else -> {}
         }
     }
 

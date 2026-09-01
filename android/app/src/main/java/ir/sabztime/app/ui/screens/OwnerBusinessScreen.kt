@@ -1,6 +1,7 @@
 package ir.sabztime.app.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -190,7 +191,11 @@ fun OwnerBusinessScreen(graph: AppGraph, businessId: Int, navController: NavHost
             }
 
             when (val q = state.queue) {
-                is UiState.Loading -> item { CircularProgressIndicator(Modifier.padding(24.dp).align(Alignment.CenterHorizontally)) }
+                is UiState.Loading -> item {
+                    Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                }
                 is UiState.Error -> item { ErrorState(q.message, q.kind, onRetry = viewModel::refreshQueue) }
                 UiState.Empty -> item {
                     EmptyState(

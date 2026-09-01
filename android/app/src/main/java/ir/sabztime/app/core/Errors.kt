@@ -39,10 +39,9 @@ sealed interface UiState<out T> {
     data object Loading : UiState<Nothing>
     data class Success<T>(val data: T) : UiState<T>
     data class Error(val message: String, val kind: SabzException.Kind = SabzException.Kind.UNKNOWN) : UiState<Nothing>
-    data object Empty : UiState<Nothing>
 
-    /** حالت اولیه/خنثی: هنوز درخواستی ارسال نشده (مثلاً صفحه ورود قبل از فشردن دکمه). */
-    data object Idle : UiState<Nothing>
+    /** بدون داده یا حالت اولیه/خنثی (مثلاً صفحه ورود قبل از فشردن دکمه). */
+    data object Empty : UiState<Nothing>
 }
 
 fun <T> Result<T>.toUiState(): UiState<T> = fold(
