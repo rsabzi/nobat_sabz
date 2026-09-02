@@ -1,5 +1,6 @@
 package ir.sabztime.app.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,8 +24,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clickable
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -49,6 +50,7 @@ fun MainScreen(graph: AppGraph, navController: NavHostController) {
         TabItem("پروفایل", Icons.Filled.AccountCircle)
     )
     val dark = isSystemInDarkTheme()
+    val barShape = RoundedCornerShape(26.dp)
 
     GlassBackground {
         Scaffold(
@@ -57,42 +59,47 @@ fun MainScreen(graph: AppGraph, navController: NavHostController) {
                 Box(
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                    contentAlignment = Alignment.BottomCenter
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
                 ) {
-                    NavigationBar(
-                        shape = RoundedCornerShape(26.dp),
-                        containerColor = if (dark) Color.White.copy(alpha = 0.09f) else Color.White.copy(alpha = 0.85f),
-                        tonalElevation = 0.dp,
-                        elevation = 8.dp
+                    // در Material3 1.2 نوار ناوبری «shape» ندارد؛ گوشه‌ها و سایه
+                    // با clip + shadow روی خودِ Box اعمال می‌شوند.
+                    Box(
+                        Modifier
+                            .shadow(10.dp, barShape)
+                            .clip(barShape)
                     ) {
-                        tabs.forEachIndexed { index, tab ->
-                            val selected = selectedTab == index
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .clickable { selectedTab = index },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    IconTile(
-                                        icon = tab.icon,
-                                        tileSize = 40.dp,
-                                        selected = selected,
-                                        contentDescription = tab.label
-                                    )
-                                    Spacer(Modifier.height(4.dp))
-                                    Text(
-                                        tab.label,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (selected) {
-                                            MaterialTheme.colorScheme.onSurface
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant
-                                        }
-                                    )
+                        NavigationBar(
+                            containerColor = if (dark) Color.White.copy(alpha = 0.09f) else Color.White.copy(alpha = 0.85f),
+                            tonalElevation = 0.dp
+                        ) {
+                            tabs.forEachIndexed { index, tab ->
+                                val selected = selectedTab == index
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(20.dp))
+                                        .clickable { selectedTab = index },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        IconTile(
+                                            icon = tab.icon,
+                                            tileSize = 40.dp,
+                                            selected = selected,
+                                            contentDescription = tab.label
+                                        )
+                                        Spacer(Modifier.height(4.dp))
+                                        Text(
+                                            tab.label,
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (selected) {
+                                                MaterialTheme.colorScheme.onSurface
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }

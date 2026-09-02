@@ -2,6 +2,8 @@ package ir.sabztime.app.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,7 +25,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clickable
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
@@ -76,8 +77,10 @@ fun IconTile(
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(Color.White.copy(alpha = if (dark) 0.14f else 0.30f), Color.White.copy(alpha = 0f)),
-                        levels = floatArrayOf(0f, 0.55f)
+                        colors = listOf(
+                            Color.White.copy(alpha = if (dark) 0.14f else 0.30f),
+                            Color.White.copy(alpha = 0f)
+                        )
                     ),
                     shape = shape
                 )
@@ -198,6 +201,59 @@ fun SegmentedControl(
                     }
                 }
             }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// چیپ شیشه‌ای (جایگزین FilterChip با کنترل کامل رنگ‌ها)
+// ---------------------------------------------------------------------------
+
+/**
+ * چیپ انتخابی شیشه‌ای — حالت انتخاب‌شده با گرادیان سبز، غیرانتخاب‌شده شفاف.
+ */
+@Composable
+fun GlassChip(
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable RowScope.() -> Unit
+) {
+    val dark = isSystemInDarkTheme()
+    val shape = RoundedCornerShape(50)
+    Box(
+        modifier = modifier
+            .clip(shape)
+            .border(
+                width = if (selected) 0.dp else 1.dp,
+                color = when {
+                    selected -> Color.Transparent
+                    dark -> Color.White.copy(alpha = 0.18f)
+                    else -> Color(0xFFC9D4CC)
+                },
+                shape = shape
+            )
+            .background(
+                if (selected) {
+                    Brush.verticalGradient(listOf(Color(0xFF35C985), Color(0xFF0C7C47)))
+                } else {
+                    Brush.verticalGradient(
+                        listOf(
+                            if (dark) Color.White.copy(alpha = 0.07f) else Color.White.copy(alpha = 0.7f),
+                            if (dark) Color.White.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.5f)
+                        )
+                    )
+                },
+                shape
+            )
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            Modifier.padding(horizontal = 16.dp, vertical = 9.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            content()
         }
     }
 }

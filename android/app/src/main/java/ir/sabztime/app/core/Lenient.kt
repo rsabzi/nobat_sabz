@@ -8,6 +8,8 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.longOrNull
 
@@ -25,7 +27,7 @@ object LenientInt : KSerializer<Int> {
     override fun deserialize(decoder: Decoder): Int {
         val element = (decoder as? JsonDecoder)?.decodeJsonElement() ?: return decoder.decodeInt()
         val primitive = element as? JsonPrimitive ?: return 0
-        return primitive.intOrNull() ?: primitive.contentOrNull?.trim()?.toIntOrNull() ?: 0
+        return primitive.intOrNull ?: primitive.contentOrNull?.trim()?.toIntOrNull() ?: 0
     }
 }
 
@@ -38,7 +40,7 @@ object LenientLong : KSerializer<Long> {
     override fun deserialize(decoder: Decoder): Long {
         val element = (decoder as? JsonDecoder)?.decodeJsonElement() ?: return decoder.decodeLong()
         val primitive = element as? JsonPrimitive ?: return 0L
-        return primitive.longOrNull() ?: primitive.contentOrNull?.trim()?.toLongOrNull() ?: 0L
+        return primitive.longOrNull ?: primitive.contentOrNull?.trim()?.toLongOrNull() ?: 0L
     }
 }
 
@@ -54,6 +56,6 @@ object LenientDouble : KSerializer<Double> {
     override fun deserialize(decoder: Decoder): Double {
         val element = (decoder as? JsonDecoder)?.decodeJsonElement() ?: return decoder.decodeDouble()
         val primitive = element as? JsonPrimitive ?: return 0.0
-        return primitive.doubleOrNull() ?: primitive.contentOrNull?.trim()?.toDoubleOrNull() ?: 0.0
+        return primitive.doubleOrNull ?: primitive.contentOrNull?.trim()?.toDoubleOrNull() ?: 0.0
     }
 }

@@ -1,5 +1,7 @@
 package ir.sabztime.app.ui.screens
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -115,7 +117,7 @@ fun SubscriptionScreen(graph: AppGraph, businessId: Int, navController: NavHostC
                         GlassCard(shape = RoundedCornerShape(24.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 IconTile(
-                                    icon = androidx.compose.material.icons.Icons.Filled.Star,
+                                    icon = Icons.Filled.Star,
                                     tileSize = 44.dp,
                                     palette = TilePalette.AMBER,
                                     contentDescription = null

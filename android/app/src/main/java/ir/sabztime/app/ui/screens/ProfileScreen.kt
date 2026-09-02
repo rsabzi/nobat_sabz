@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.align
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -29,7 +30,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Storefront
-import androidx.compose.material.icons.filled.Sun
+import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -155,6 +156,10 @@ fun ProfileScreen(graph: AppGraph, navController: NavHostController) {
     val themeMode by graph.themeManager.mode.collectAsState()
     var showLogoutDialog by remember { mutableStateOf(false) }
 
+    // مقادیر در val محلی: smart cast روی property دلیگیت‌شده ممکن نیست
+    val error = state.error
+    val profile = state.profile
+
     GlassBackground {
         androidx.compose.material3.Scaffold(
             containerColor = Color.Transparent,
@@ -178,13 +183,13 @@ fun ProfileScreen(graph: AppGraph, navController: NavHostController) {
         ) { padding ->
             when {
                 state.loading -> LoadingState(Modifier.fillMaxSize().padding(padding))
-                state.error != null && state.profile == null -> ErrorState(
-                    state.error,
+                error != null && profile == null -> ErrorState(
+                    error,
                     state.errorKind,
                     onRetry = viewModel::refresh
                 )
                 else -> {
-                    state.profile?.let { profile ->
+                    profile?.let { profile ->
                         Column(
                             Modifier
                                 .fillMaxSize()
@@ -286,7 +291,7 @@ fun ProfileScreen(graph: AppGraph, navController: NavHostController) {
                                     options = listOf("خودکار", "روشن", "تاریک"),
                                     selected = themeMode.ordinal,
                                     onSelect = { viewModel.setThemeMode(ThemeMode.values()[it]) },
-                                    icons = listOf(Icons.Filled.BrightnessAuto, Icons.Filled.Sun, Icons.Filled.DarkMode)
+                                    icons = listOf(Icons.Filled.BrightnessAuto, Icons.Filled.WbSunny, Icons.Filled.DarkMode)
                                 )
                             }
 

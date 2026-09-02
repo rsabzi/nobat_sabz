@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -60,6 +61,7 @@ import androidx.navigation.NavHostController
 import ir.sabztime.app.core.AppGraph
 import ir.sabztime.app.core.SabzException
 import ir.sabztime.app.core.UiState
+import ir.sabztime.app.core.networkMessage
 import ir.sabztime.app.data.AuthResponse
 import ir.sabztime.app.ui.Routes
 import ir.sabztime.app.ui.theme.GlassBackground
@@ -172,6 +174,7 @@ fun LoginScreen(graph: AppGraph, navController: NavHostController) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .verticalScroll(rememberScrollState())
                 .imePadding()
                 .padding(horizontal = 20.dp),
@@ -357,17 +360,17 @@ private fun GlassTextField(
         isError = isError,
         supportingText = if (errorText != null) ({ Text(errorText) }) else null,
         shape = RoundedCornerShape(18.dp),
-        colors = OutlinedTextFieldDefaults.outlinedTextFieldColors(
-            containerColor = if (dark) Color.White.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.65f),
+        // فقط پارامترهایی که در همه‌ی نسخه‌های M3 1.x وجود دارند (سازگار با 1.2.1)
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = if (dark) Color.White.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.65f),
+            unfocusedContainerColor = if (dark) Color.White.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.65f),
             cursorColor = MaterialTheme.colorScheme.primary,
             focusedBorderColor = MaterialTheme.colorScheme.primary,
             unfocusedBorderColor = if (dark) Color.White.copy(alpha = 0.15f) else MaterialTheme.colorScheme.outlineVariant,
             focusedLabelColor = MaterialTheme.colorScheme.primary,
-            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            textColor = MaterialTheme.colorScheme.onSurface,
-            errorBorderColor = MaterialTheme.colorScheme.error,
             errorLabelColor = MaterialTheme.colorScheme.error,
-            errorSupportedTextColor = MaterialTheme.colorScheme.error
+            errorBorderColor = MaterialTheme.colorScheme.error,
+            errorSupportingTextColor = MaterialTheme.colorScheme.error
         )
     )
 }

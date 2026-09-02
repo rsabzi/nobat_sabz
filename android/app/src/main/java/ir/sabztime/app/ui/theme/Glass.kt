@@ -17,7 +17,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -69,12 +68,12 @@ fun GlassBackground(
 }
 
 private fun DrawScope.drawRadialBlob(center: Offset, radius: Float, color: Color) {
-    val shader = Brush.radialGradient(
+    val brush = Brush.radialGradient(
         colors = listOf(color, color.copy(alpha = 0f)),
         center = center,
         radius = radius
-    ).createShader(size.width, size.height)
-    drawCircle(shader = shader, center = center, radius = radius, style = Fill)
+    )
+    drawCircle(brush = brush, center = center, radius = radius)
 }
 
 /**

@@ -133,7 +133,7 @@ data class SlotsResponse(val status: String = "", val data: List<TimeSlot> = emp
 
 /** تبدیل رشته قیمت (از دیتابیس) به عدد؛ "250000.00" / "250000" / "250,000" همگی معتبرند */
 fun parsePrice(raw: String?): Long? {
-    val s = raw?.replace(",", "").trim() ?: return null
+    val s = raw?.replace(",", "")?.trim() ?: return null
     return s.toDoubleOrNull()?.toLong()
 }
 

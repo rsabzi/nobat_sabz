@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -24,11 +25,9 @@ import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -38,9 +37,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.pulltorefresh.PullToRefreshIndicator
-import androidx.compose.material3.pulltorefresh.pullToRefresh
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -68,6 +64,7 @@ import ir.sabztime.app.ui.components.EmptyState
 import ir.sabztime.app.ui.components.ErrorState
 import ir.sabztime.app.ui.theme.GlassBackground
 import ir.sabztime.app.ui.components.GlassCard
+import ir.sabztime.app.ui.components.GlassChip
 import ir.sabztime.app.ui.components.IconTile
 import ir.sabztime.app.ui.components.NotificationIconButton
 import ir.sabztime.app.ui.components.businessTypeIcon
@@ -88,8 +85,7 @@ data class HomeUiState(
     val selectedProvince: String = "",
     val results: UiState<List<BusinessSummary>> = UiState.Loading,
     val filters: FiltersData = FiltersData(),
-    val filtersLoaded: Boolean = false,
-    val isRefreshing: Boolean = false
+    val filtersLoaded: Boolean = false
 )
 
 class HomeViewModel(private val graph: AppGraph) : ViewModel() {
@@ -131,7 +127,7 @@ class HomeViewModel(private val graph: AppGraph) : ViewModel() {
     fun refresh() {
         viewModelScope.launch {
             if (!_state.value.filtersLoaded) loadFilters()
-            doSearch(refreshing = true)
+            doSearch()
         }
     }
 
@@ -151,9 +147,9 @@ class HomeViewModel(private val graph: AppGraph) : ViewModel() {
         }
     }
 
-    private suspend fun doSearch(refreshing: Boolean = false) {
+    private suspend fun doSearch() {
         val cur = _state.value
-        _state.value = cur.copy(results = UiState.Loading, isRefreshing = refreshing)
+        _state.value = cur.copy(results = UiState.Loading)
         try {
             val result = graph.repository.search(
                 query = cur.query.trim(),
@@ -162,22 +158,19 @@ class HomeViewModel(private val graph: AppGraph) : ViewModel() {
             )
             val list = result.data
             _state.value = _state.value.copy(
-                results = if (list.isEmpty()) UiState.Empty else UiState.Success(list),
-                isRefreshing = false
+                results = if (list.isEmpty()) UiState.Empty else UiState.Success(list)
             )
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             val s = classify(e)
             _state.value = _state.value.copy(
-                results = UiState.Error(s.message, s.kind),
-                isRefreshing = false
+                results = UiState.Error(s.message, s.kind)
             )
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(graph: AppGraph, navController: NavHostController) {
     val viewModel: HomeViewModel = viewModel { HomeViewModel(graph) }
@@ -196,7 +189,7 @@ fun HomeScreen(graph: AppGraph, navController: NavHostController) {
     }
 
     Scaffold(containerColor = Color.Transparent) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
+        Column(Modifier.fillMaxSize().statusBarsPadding().padding(padding)) {
             // --- سرصفحه: سلام + تاریخ جلالی ---
             Row(
                 Modifier
@@ -213,6 +206,9 @@ fun HomeScreen(graph: AppGraph, navController: NavHostController) {
                     )
                 }
                 NotificationIconButton { navController.navigate(Routes.NOTIFICATIONS) }
+                IconButton(onClick = viewModel::refresh) {
+                    Icon(Icons.Filled.Refresh, contentDescription = "تازه‌سازی")
+                }
             }
 
             // --- جستجو ---
@@ -233,15 +229,14 @@ fun HomeScreen(graph: AppGraph, navController: NavHostController) {
                 singleLine = true,
                 shape = RoundedCornerShape(22.dp),
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
-                colors = OutlinedTextFieldDefaults.outlinedTextFieldColors(
-                    containerColor = if (dark) Color.White.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.7f),
+                // فقط پارامترهایی که در همه‌ی نسخه‌های M3 1.x وجود دارند (سازگار با 1.2.1)
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = if (dark) Color.White.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.7f),
+                    unfocusedContainerColor = if (dark) Color.White.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.7f),
                     cursorColor = MaterialTheme.colorScheme.primary,
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
                     unfocusedBorderColor = if (dark) Color.White.copy(alpha = 0.15f) else Color.Transparent,
-                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                    placeholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    leadingIconColor = MaterialTheme.colorScheme.primary,
-                    textColor = MaterialTheme.colorScheme.onSurface
+                    focusedLabelColor = MaterialTheme.colorScheme.primary
                 )
             )
 
@@ -251,26 +246,44 @@ fun HomeScreen(graph: AppGraph, navController: NavHostController) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 item {
-                    FilterChip(
+                    GlassChip(
                         selected = state.selectedCategory.isNotBlank(),
-                        onClick = { categoryMenu = true },
-                        label = { Text(if (state.selectedCategory.isBlank()) "دسته‌بندی" else state.selectedCategory) },
-                        leadingIcon = {
-                            Icon(Icons.Filled.Category, contentDescription = null, modifier = Modifier.width(18.dp).height(18.dp))
-                        },
-                        colors = filterChipColors(dark)
-                    )
+                        onClick = { categoryMenu = true }
+                    ) {
+                        Icon(
+                            Icons.Filled.Category,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = if (state.selectedCategory.isNotBlank()) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            if (state.selectedCategory.isBlank()) "دسته‌بندی" else state.selectedCategory,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = if (state.selectedCategory.isNotBlank()) FontWeight.Bold else FontWeight.Medium,
+                            color = if (state.selectedCategory.isNotBlank()) Color.White else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 }
                 item {
-                    FilterChip(
+                    GlassChip(
                         selected = state.selectedProvince.isNotBlank(),
-                        onClick = { provinceMenu = true },
-                        label = { Text(if (state.selectedProvince.isBlank()) "استان" else state.selectedProvince) },
-                        leadingIcon = {
-                            Icon(Icons.Filled.Place, contentDescription = null, modifier = Modifier.width(18.dp).height(18.dp))
-                        },
-                        colors = filterChipColors(dark)
-                    )
+                        onClick = { provinceMenu = true }
+                    ) {
+                        Icon(
+                            Icons.Filled.Place,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = if (state.selectedProvince.isNotBlank()) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            if (state.selectedProvince.isBlank()) "استان" else state.selectedProvince,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = if (state.selectedProvince.isNotBlank()) FontWeight.Bold else FontWeight.Medium,
+                            color = if (state.selectedProvince.isNotBlank()) Color.White else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 }
                 if (state.selectedCategory.isNotBlank() || state.selectedProvince.isNotBlank()) {
                     item {
@@ -283,17 +296,14 @@ fun HomeScreen(graph: AppGraph, navController: NavHostController) {
             Spacer(Modifier.height(4.dp))
 
             // --- نتایج ---
-            val refreshState = rememberPullToRefreshState()
             when (val r = state.results) {
-                is UiState.Loading -> if (!state.isRefreshing) {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 60.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                    }
+                is UiState.Loading -> Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 60.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
                 is UiState.Error -> ErrorState(r.message, r.kind, onRetry = viewModel::refresh)
                 UiState.Empty -> EmptyState(
@@ -302,20 +312,7 @@ fun HomeScreen(graph: AppGraph, navController: NavHostController) {
                     subtitle = "عبارت دیگری را امتحان کنید یا فیلترها را حذف کنید."
                 )
                 is UiState.Success -> LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .pullToRefresh(
-                            isRefreshing = state.isRefreshing,
-                            onRefresh = { viewModel.refresh() },
-                            state = refreshState
-                        ),
-                    indicator = {
-                        PullToRefreshIndicator(
-                            isRefreshing = state.isRefreshing,
-                            state = refreshState,
-                            modifier = Modifier.align(Alignment.TopCenter)
-                        )
-                    },
+                    modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(20.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
@@ -345,16 +342,6 @@ fun HomeScreen(graph: AppGraph, navController: NavHostController) {
         )
     }
 }
-
-@Composable
-private fun filterChipColors(dark: Boolean) = FilterChipDefaults.filterChipColors(
-    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-    selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-    containerColor = if (dark) Color.White.copy(alpha = 0.06f) else Color.White.copy(alpha = 0.65f),
-    labelColor = MaterialTheme.colorScheme.onSurface,
-    iconColor = MaterialTheme.colorScheme.onSurfaceVariant
-)
 
 @Composable
 private fun SelectionDialog(

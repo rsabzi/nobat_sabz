@@ -31,9 +31,6 @@ import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -46,6 +43,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -72,6 +70,7 @@ import ir.sabztime.app.ui.components.EmptyState
 import ir.sabztime.app.ui.components.ErrorState
 import ir.sabztime.app.ui.theme.GlassBackground
 import ir.sabztime.app.ui.components.GlassCard
+import ir.sabztime.app.ui.components.GlassChip
 import ir.sabztime.app.ui.components.GlassTopBar
 import ir.sabztime.app.ui.components.GradientButton
 import ir.sabztime.app.ui.components.IconTile
@@ -214,7 +213,6 @@ class BusinessDetailViewModel(private val graph: AppGraph, private val businessI
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHostController) {
     val viewModel: BusinessDetailViewModel = viewModel(key = "biz-$businessId") {
@@ -345,20 +343,24 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
                                 )
                                 else -> LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     items(state.dates, key = { it.date }) { d ->
-                                        FilterChip(
-                                            selected = state.selectedDate?.date == d.date,
-                                            onClick = { viewModel.selectDate(d) },
-                                            label = {
-                                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                                    Text(Jalali.format(d.date), fontWeight = FontWeight.Bold)
-                                                    Text(
-                                                        d.dayName ?: Jalali.weekdayName(d.date),
-                                                        style = MaterialTheme.typography.labelSmall
-                                                    )
-                                                }
-                                            },
-                                            colors = chipColors()
-                                        )
+                                        val sel = state.selectedDate?.date == d.date
+                                        GlassChip(
+                                            selected = sel,
+                                            onClick = { viewModel.selectDate(d) }
+                                        ) {
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Text(
+                                                    Jalali.format(d.date),
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (sel) Color.White else MaterialTheme.colorScheme.onSurface
+                                                )
+                                                Text(
+                                                    d.dayName ?: Jalali.weekdayName(d.date),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = if (sel) Color.White.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -433,14 +435,6 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
     }
 }
 
-@Composable
-private fun chipColors() = FilterChipDefaults.filterChipColors(
-    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-    containerColor = if (isSystemInDarkTheme()) Color.White.copy(alpha = 0.06f) else Color.White.copy(alpha = 0.6f),
-    labelColor = MaterialTheme.colorScheme.onSurface
-)
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TimeSlotGrid(slots: List<TimeSlot>, selected: String?, onSelect: (TimeSlot) -> Unit) {
@@ -449,12 +443,15 @@ private fun TimeSlotGrid(slots: List<TimeSlot>, selected: String?, onSelect: (Ti
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         slots.forEach { slot ->
-            FilterChip(
-                selected = selected == slot.startTime,
-                onClick = { onSelect(slot) },
-                label = { Text(Jalali.persianDigits(slot.startTime)) },
-                colors = chipColors()
-            )
+            val sel = selected == slot.startTime
+            GlassChip(selected = sel, onClick = { onSelect(slot) }) {
+                Text(
+                    Jalali.persianDigits(slot.startTime),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium,
+                    color = if (sel) Color.White else MaterialTheme.colorScheme.onSurface
+                )
+            }
         }
     }
 }
