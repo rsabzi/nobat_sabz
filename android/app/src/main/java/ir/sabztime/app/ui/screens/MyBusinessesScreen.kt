@@ -130,14 +130,8 @@ fun MyBusinessesScreen(graph: AppGraph, navController: NavHostController) {
                 )
             }
         ) { padding ->
-            when (val s = state) {
-                is UiState.Loading -> {
-                    Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                        androidx.compose.material3.CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                    }
-                }
-                is UiState.Error -> ErrorState(s.message, s.kind, onRetry = viewModel::load)
-                else -> Column(Modifier.fillMaxSize().padding(padding)) {
+            Column(Modifier.fillMaxSize().padding(padding)) {
+                if (state != UiState.Loading && state !is UiState.Error) {
                     Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp)) {
                         GradientButton(
                             onClick = { showAddDialog = true },
@@ -148,17 +142,24 @@ fun MyBusinessesScreen(graph: AppGraph, navController: NavHostController) {
                             Text("افزودن کسب‌وکار", fontWeight = FontWeight.Bold)
                         }
                     }
-                    when (s) {
-                        UiState.Empty -> EmptyState(
-                            icon = "🏪",
-                            title = "هنوز کسب‌وکاری ثبت نکرده‌اید",
-                            subtitle = "برای شروع، اطلاعات کسب‌وکار خود را در بالا وارد کنید."
-                        )
-                        is UiState.Success -> LazyColumn(
-                            modifier = Modifier.weight(1f),
-                            contentPadding = PaddingValues(20.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
+                }
+                when (val s = state) {
+                    is UiState.Loading -> {
+                        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                            androidx.compose.material3.CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                    is UiState.Error -> ErrorState(s.message, s.kind, onRetry = viewModel::load)
+                    UiState.Empty -> EmptyState(
+                        icon = "🏪",
+                        title = "هنوز کسب‌وکاری ثبت نکرده‌اید",
+                        subtitle = "برای شروع، اطلاعات کسب‌وکار خود را در بالا وارد کنید."
+                    )
+                    is UiState.Success -> LazyColumn(
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
                     items(s.data, key = { it.id }) { b ->
                         GlassCard(onClick = { navController.navigate(Routes.owner(b.id)) }) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -209,8 +210,6 @@ fun MyBusinessesScreen(graph: AppGraph, navController: NavHostController) {
                         }
                     }
                     item { Spacer(Modifier.height(8.dp)) }
-                    }
-                }
                 }
             }
         }
@@ -224,6 +223,7 @@ fun MyBusinessesScreen(graph: AppGraph, navController: NavHostController) {
                     showAddDialog = false
                 }
             )
+        }
         }
     }
 }
