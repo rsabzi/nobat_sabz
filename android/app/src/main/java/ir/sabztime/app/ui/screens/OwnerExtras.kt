@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -265,7 +268,7 @@ fun LinkCard(
             if (fullLink != null) {
                 IconButton(onClick = { onCopy(fullLink) }) {
                     Icon(
-                        androidx.compose.material.icons.Icons.Filled.ContentCopy,
+                        Icons.Filled.ContentCopy,
                         contentDescription = "کپی لینک",
                         tint = cs.primary
                     )
@@ -273,7 +276,7 @@ fun LinkCard(
             }
             IconButton(onClick = onEdit, enabled = !busy) {
                 Icon(
-                    androidx.compose.material.icons.Icons.Outlined.Edit,
+                    Icons.Outlined.Edit,
                     contentDescription = "ویرایش لینک",
                     tint = cs.primary
                 )

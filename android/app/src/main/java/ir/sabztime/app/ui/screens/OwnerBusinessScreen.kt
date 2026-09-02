@@ -43,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -384,6 +385,7 @@ fun OwnerBusinessScreen(graph: AppGraph, businessId: Int, navController: NavHost
     var showEditDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showLinkDialog by remember { mutableStateOf(false) }
+    val clipboard = LocalClipboardManager.current
 
     GlassBackground {
         Scaffold(
@@ -502,9 +504,7 @@ fun OwnerBusinessScreen(graph: AppGraph, businessId: Int, navController: NavHost
                         busy = state.actionBusy,
                         onEdit = { showLinkDialog = true },
                         onCopy = { link ->
-                            androidx.compose.ui.platform.LocalClipboardManager.current.setText(
-                                androidx.compose.ui.text.AnnotatedString(link)
-                            )
+                            clipboard.setText(androidx.compose.ui.text.AnnotatedString(link))
                         }
                     )
                 }
