@@ -1,6 +1,8 @@
 package ir.sabztime.app.ui.screens
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,29 +13,30 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.Campaign
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,6 +44,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -51,20 +58,36 @@ import androidx.navigation.NavHostController
 import ir.sabztime.app.BuildConfig
 import ir.sabztime.app.core.AppGraph
 import ir.sabztime.app.core.SabzException
-import ir.sabztime.app.core.UiState
+import ir.sabztime.app.core.ThemeMode
+import ir.sabztime.app.core.classify
 import ir.sabztime.app.data.ProfileData
 import ir.sabztime.app.ui.Routes
-import ir.sabztime.app.ui.components.EmptyState
 import ir.sabztime.app.ui.components.ErrorState
-import ir.sabztime.app.ui.components.SectionCard
+import ir.sabztime.app.ui.theme.GlassBackground
+import ir.sabztime.app.ui.components.GlassCard
+import ir.sabztime.app.ui.components.GlassTopBar
+import ir.sabztime.app.ui.components.IconTile
+import ir.sabztime.app.ui.components.LoadingState
+import ir.sabztime.app.ui.components.NotificationIconButton
+import ir.sabztime.app.ui.components.SegmentedControl
+import ir.sabztime.app.ui.components.StatItem
+import ir.sabztime.app.ui.components.TilePalette
 import ir.sabztime.app.util.Jalali
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 data class ProfileUiState(
-    val data: UiState<ProfileData> = UiState.Loading,
+    val profile: ProfileData? = null,
+    val loading: Boolean = true,
+    val refreshBusy: Boolean = false,
+    val error: String? = null,
+    val errorKind: SabzException.Kind = SabzException.Kind.UNKNOWN,
+    /** خطا رخ داده ولی آخرین پروفایل بارگذاری‌شده هنوز نمایش داده می‌شود */
+    val offline: Boolean = false,
     val logoutBusy: Boolean = false
 )
 
@@ -72,19 +95,37 @@ class ProfileViewModel(private val graph: AppGraph) : ViewModel() {
     private val _state = MutableStateFlow(ProfileUiState())
     val state: StateFlow<ProfileUiState> = _state.asStateFlow()
 
+    private var loadJob: Job? = null
+
     init {
+        // بارگذاری فقط یک‌بار؛ تغییر تب دیگر درخواست تکراری ایجاد نمی‌کند
         refresh()
     }
 
     fun refresh() {
-        _state.value = _state.value.copy(data = UiState.Loading)
-        viewModelScope.launch {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
+            val had = _state.value.profile != null
+            _state.value = _state.value.copy(
+                loading = !had,
+                refreshBusy = had,
+                error = null,
+                offline = false
+            )
             try {
                 val d = graph.repository.me()
-                _state.value = _state.value.copy(data = UiState.Success(d))
+                _state.value = _state.value.copy(profile = d, loading = false, refreshBusy = false)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                val sabz = e as? SabzException ?: SabzException.Network(e)
-                _state.value = _state.value.copy(data = UiState.Error(sabz.toFriendlyMessage(), sabz.kind))
+                val s = classify(e)
+                _state.value = _state.value.copy(
+                    loading = false,
+                    refreshBusy = false,
+                    error = s.message,
+                    errorKind = s.kind,
+                    offline = _state.value.profile != null
+                )
             }
         }
     }
@@ -92,120 +133,190 @@ class ProfileViewModel(private val graph: AppGraph) : ViewModel() {
     fun logout(onDone: () -> Unit) {
         _state.value = _state.value.copy(logoutBusy = true)
         viewModelScope.launch {
-            try { graph.repository.logout() } catch (e: Exception) { /* توکن محلی هم پاک می‌شود */ }
+            try {
+                graph.repository.logout()
+            } catch (e: Exception) {
+                // توکن محلی هم پاک می‌شود
+            }
             graph.clearSession()
             _state.value = _state.value.copy(logoutBusy = false)
             onDone()
         }
     }
+
+    fun setThemeMode(mode: ThemeMode) {
+        viewModelScope.launch { graph.themeManager.setMode(mode) }
+    }
 }
 
-private data class MenuItem(val label: String, val icon: ImageVector, val route: String?)
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(graph: AppGraph, navController: NavHostController) {
     val viewModel: ProfileViewModel = viewModel { ProfileViewModel(graph) }
     val state by viewModel.state.collectAsState()
+    val themeMode by graph.themeManager.mode.collectAsState()
     var showLogoutDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) { if (state.data !is UiState.Success) viewModel.refresh() }
+    // مقادیر در val محلی: smart cast روی property دلیگیت‌شده ممکن نیست
+    val error = state.error
+    val profile = state.profile
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("پروفایل", fontWeight = FontWeight.Bold) },
-                actions = { NotificationBadgeButton { navController.navigate(Routes.NOTIFICATIONS) } }
-            )
-        }
-    ) { padding ->
-        when (val d = state.data) {
-            is UiState.Loading -> Box(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-            is UiState.Error -> ErrorState(d.message, d.kind, onRetry = viewModel::refresh)
-            UiState.Empty -> EmptyState(
-                icon = "👤",
-                title = "پروفایلی یافت نشد",
-                modifier = Modifier.padding(padding),
-                action = { androidx.compose.material3.Button(onClick = viewModel::refresh) { Text("تلاش دوباره") } }
-            )
-            is UiState.Success -> {
-                val profile = d.data
-                Column(
-                    Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .verticalScroll(rememberScrollState())
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // کارت کاربر
-                    SectionCard {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            androidx.compose.material3.Surface(
-                                shape = androidx.compose.foundation.shape.CircleShape,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(56.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(profile.user.name.take(1).ifBlank { "👤" }, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onPrimary)
-                                }
-                            }
-                            Spacer(Modifier.size(12.dp))
-                            Column {
-                                Text(profile.user.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                                Text(Jalali.persianDigits(profile.user.phone), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                    }
-
-                    // امتیاز اعتباری
-                    profile.credit?.let { credit ->
-                        SectionCard {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("⭐ اعتبار شما", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                Spacer(Modifier.weight(1f))
-                                Text(
-                                    "${Jalali.persianDigits(credit.currentCredit)} امتیاز",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
+    GlassBackground {
+        androidx.compose.material3.Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                GlassTopBar(
+                    title = "پروفایل",
+                    actions = {
+                        NotificationIconButton { navController.navigate(Routes.NOTIFICATIONS) }
+                        if (state.profile != null) {
+                            IconButton(onClick = viewModel::refresh) {
+                                Icon(
+                                    Icons.Filled.Refresh,
+                                    contentDescription = "تازه‌سازی",
+                                    modifier = if (state.refreshBusy) Modifier.size(18.dp) else Modifier
                                 )
                             }
-                            Spacer(Modifier.height(8.dp))
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                                StatItem("کل رزرو", profile.bookingStats.total)
-                                StatItem("پیش رو", profile.bookingStats.upcoming)
-                                StatItem("انجام‌شده", profile.bookingStats.completed)
-                                StatItem("کسب امتیاز", credit.totalEarned)
+                        }
+                    }
+                )
+            }
+        ) { padding ->
+            when {
+                state.loading -> LoadingState(Modifier.fillMaxSize().padding(padding))
+                error != null && profile == null -> ErrorState(
+                    error,
+                    state.errorKind,
+                    onRetry = viewModel::refresh
+                )
+                else -> {
+                    profile?.let { profile ->
+                        Column(
+                            Modifier
+                                .fillMaxSize()
+                                .padding(padding)
+                                .verticalScroll(rememberScrollState())
+                                .padding(20.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            // نوار آفلاین
+                            if (state.offline) {
+                                OfflineBanner()
+                            }
+
+                            // --- کارت کاربر ---
+                            GlassCard {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Avatar(profile.user.name)
+                                    Spacer(Modifier.width(14.dp))
+                                    Column(Modifier.weight(1f)) {
+                                        Text(
+                                            profile.user.name,
+                                            style = MaterialTheme.typography.titleLarge,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Spacer(Modifier.height(2.dp))
+                                        Text(
+                                            Jalali.persianDigits(profile.user.phone),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+
+                            // --- اعتبار ---
+                            profile.credit?.let { credit ->
+                                GlassCard {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        IconTile(
+                                            icon = Icons.Filled.Star,
+                                            tileSize = 48.dp,
+                                            palette = TilePalette.AMBER,
+                                            contentDescription = null
+                                        )
+                                        Spacer(Modifier.width(12.dp))
+                                        Column(Modifier.weight(1f)) {
+                                            Text("اعتبار شما", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                            Text(
+                                                Jalali.persianDigits(credit.currentCredit) + " امتیاز",
+                                                style = MaterialTheme.typography.titleLarge,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                    Spacer(Modifier.height(12.dp))
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                                        StatItem("کل رزرو", Jalali.persianDigits(profile.bookingStats.total))
+                                        StatItem("پیش رو", Jalali.persianDigits(profile.bookingStats.upcoming))
+                                        StatItem("انجام‌شده", Jalali.persianDigits(profile.bookingStats.completed))
+                                        StatItem("کسب امتیاز", Jalali.persianDigits(credit.totalEarned))
+                                    }
+                                }
+                            }
+
+                            // --- منو ---
+                            GlassCard {
+                                MenuRow(
+                                    icon = Icons.Filled.Storefront,
+                                    label = "کسب‌وکارهای من",
+                                    onClick = { navController.navigate(Routes.MY_BUSINESSES) }
+                                )
+                                RowDivider()
+                                MenuRow(
+                                    icon = Icons.Filled.Campaign,
+                                    label = "داشبورد بازاریاب",
+                                    palette = TilePalette.AMBER,
+                                    onClick = { navController.navigate(Routes.MARKETER) }
+                                )
+                                RowDivider()
+                                MenuRow(
+                                    icon = Icons.Filled.Notifications,
+                                    label = "اعلان‌ها",
+                                    onClick = { navController.navigate(Routes.NOTIFICATIONS) }
+                                )
+                                RowDivider()
+                                MenuRow(
+                                    icon = Icons.Filled.Help,
+                                    label = "راهنما",
+                                    onClick = { navController.navigate(Routes.HELP) }
+                                )
+                            }
+
+                            // --- پوسته ---
+                            GlassCard {
+                                Text("پوسته برنامه", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.height(10.dp))
+                                SegmentedControl(
+                                    options = listOf("خودکار", "روشن", "تاریک"),
+                                    selected = themeMode.ordinal,
+                                    onSelect = { viewModel.setThemeMode(ThemeMode.values()[it]) },
+                                    icons = listOf(Icons.Filled.BrightnessAuto, Icons.Filled.WbSunny, Icons.Filled.DarkMode)
+                                )
+                            }
+
+                            // --- خروج ---
+                            GlassCard {
+                                MenuRow(
+                                    icon = Icons.Filled.Logout,
+                                    label = "خروج از حساب",
+                                    palette = TilePalette.ERROR,
+                                    onClick = { showLogoutDialog = true }
+                                )
+                            }
+
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    "نوبت‌سبز — نسخه ${Jalali.persianDigits(BuildConfig.VERSION_NAME)}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
                     }
-
-                    // منو
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                    ) {
-                        Column {
-                            MenuRow("کسب‌وکارهای من", Icons.Filled.Storefront, Routes.MY_BUSINESSES) { navController.navigate(Routes.MY_BUSINESSES) }
-                            MenuRow("داشبورد بازاریاب", Icons.Filled.Campaign, Routes.MARKETER) { navController.navigate(Routes.MARKETER) }
-                            MenuRow("اعلان‌ها", Icons.Filled.Notifications, Routes.NOTIFICATIONS) { navController.navigate(Routes.NOTIFICATIONS) }
-                            MenuRow("راهنما", Icons.Filled.Help, Routes.HELP) { navController.navigate(Routes.HELP) }
-                            MenuRow("خروج از حساب", Icons.Filled.Logout, null) { showLogoutDialog = true }
-                        }
-                    }
-
-                    Text(
-                        "نسخه ${Jalali.persianDigits(BuildConfig.VERSION_NAME)} — نوبت‌سبز",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.align(Alignment.CenterHorizontally)
-                    )
                 }
             }
         }
@@ -214,7 +325,8 @@ fun ProfileScreen(graph: AppGraph, navController: NavHostController) {
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
-            title = { Text("خروج") },
+            shape = RoundedCornerShape(28.dp),
+            title = { Text("خروج", fontWeight = FontWeight.Bold) },
             text = { Text("آیا از حساب خود خارج می‌شوید؟") },
             confirmButton = {
                 TextButton(onClick = {
@@ -225,7 +337,9 @@ fun ProfileScreen(graph: AppGraph, navController: NavHostController) {
                             launchSingleTop = true
                         }
                     }
-                }) { Text("خروج") }
+                }) {
+                    Text("خروج", color = MaterialTheme.colorScheme.error)
+                }
             },
             dismissButton = { TextButton(onClick = { showLogoutDialog = false }) { Text("منصرف شدم") } }
         )
@@ -233,19 +347,83 @@ fun ProfileScreen(graph: AppGraph, navController: NavHostController) {
 }
 
 @Composable
-private fun StatItem(label: String, value: Int) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(Jalali.persianDigits(value), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun Avatar(name: String) {
+    val initial = name.trim().take(1).ifBlank { "؟" }
+    Box(
+        Modifier
+            .size(64.dp)
+            .shadow(6.dp, CircleShape)
+            .clip(CircleShape)
+            .background(
+                Brush.verticalGradient(
+                    colors = if (isSystemInDarkTheme()) {
+                        listOf(Color(0xFF43D694), Color(0xFF159159))
+                    } else {
+                        listOf(Color(0xFF35C985), Color(0xFF0C7C47))
+                    }
+                )
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            initial,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = Color.White
+        )
     }
 }
 
 @Composable
-private fun MenuRow(label: String, icon: ImageVector, route: String?, onClick: () -> Unit) {
-    ListItem(
-        headlineContent = { Text(label) },
-        leadingContent = { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = null) },
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
+private fun OfflineBanner() {
+    Text(
+        "اتصال برقرار نیست — آخرین اطلاعات ذخیره‌شده نمایش داده می‌شود.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onTertiaryContainer,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.tertiaryContainer)
+            .padding(horizontal = 12.dp, vertical = 10.dp)
     )
+}
+
+@Composable
+private fun RowDivider() {
+    Spacer(Modifier.height(2.dp))
+    androidx.compose.material3.HorizontalDivider(
+        color = if (isSystemInDarkTheme()) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.05f)
+    )
+    Spacer(Modifier.height(2.dp))
+}
+
+@Composable
+private fun MenuRow(
+    icon: ImageVector,
+    label: String,
+    palette: TilePalette = TilePalette.GREEN,
+    onClick: () -> Unit
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconTile(icon = icon, tileSize = 40.dp, palette = palette, contentDescription = null)
+        Spacer(Modifier.width(12.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f)
+        )
+        Icon(
+            Icons.Filled.ChevronLeft,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
 }

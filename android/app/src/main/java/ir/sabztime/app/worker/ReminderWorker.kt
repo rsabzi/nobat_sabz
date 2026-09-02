@@ -35,9 +35,11 @@ class ReminderWorker(
             val now = java.time.ZonedDateTime.now()
             for (b in myBookings) {
                 val start = try {
+                    // پشتیبانی از فرمت‌های "9:30" و "09:30"
+                    val parts = b.startTime.split(":")
                     java.time.ZonedDateTime.of(
                         LocalDate.parse(b.bookingDate),
-                        LocalTime.parse(b.startTime),
+                        LocalTime.of(parts.getOrNull(0)?.toIntOrNull() ?: 0, parts.getOrNull(1)?.toIntOrNull() ?: 0),
                         java.time.ZoneId.of("Asia/Tehran")
                     )
                 } catch (e: Exception) { continue }

@@ -1,20 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- آیکون سه‌بعدی: برگ زمردی با گرادیان، جیغ روشن و سایه -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- برگ سبز + خط تقویم -->
-    <group
-        android:translateX="22"
-        android:translateY="22"
-        android:scaleX="2.6"
-        android:scaleY="2.6">
-        <path
-            android:fillColor="#FFFFFFFF"
-            android:pathData="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10s10,-4.48 10,-10S17.52,2 12,2z" />
-        <path
-            android:fillColor="#FF1B7F4D"
-            android:pathData="M7.5,12.5l2.8,2.8l6.2,-6.2l-1.4,-1.4l-4.8,4.8l-1.4,-1.4z" />
-    </group>
+
+    <!-- سایه‌ی محو زیر برگ (عمق سه‌بعدی) -->
+    <path
+        android:fillColor="#33000000"
+        android:pathData="M54 32 C 36 44, 32 66, 54 84 C 76 66, 72 44, 54 32 Z" />
+
+    <!-- برگ اصلی با گرادیان عمودی -->
+    <path android:pathData="M54 28 C 36 40, 32 62, 54 80 C 76 62, 72 40, 54 28 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="54"
+                android:startY="28"
+                android:endX="54"
+                android:endY="80"
+                android:startColor="#7DF2BB"
+                android:endColor="#0E8A52" />
+        </aapt:attr>
+    </path>
+
+    <!-- رگبرگ اصلی -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#B3FFFFFF"
+        android:strokeWidth="2.4"
+        android:strokeLineCap="round"
+        android:pathData="M54 34 L54 74" />
+
+    <!-- رگبرگ‌های جانبی -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#80FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M54 48 L45 41 M54 48 L63 41 M54 60 L46 52 M54 60 L62 52" />
 </vector>

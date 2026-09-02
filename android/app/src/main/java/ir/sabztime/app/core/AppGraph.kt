@@ -31,6 +31,9 @@ class AppGraph(context: Context) {
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
+    /** مدیریت پوسته‌ی روشن/تاریک/خودکار (ماندگار) */
+    val themeManager = ThemeManager(appContext, appScope)
+
     val api = ApiClient(
         baseUrl = BuildConfig.API_BASE_URL,
         tokenProvider = tokenProvider,

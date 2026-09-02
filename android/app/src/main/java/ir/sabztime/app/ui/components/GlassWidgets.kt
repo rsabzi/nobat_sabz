@@ -1,0 +1,259 @@
+package ir.sabztime.app.ui.components
+
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+
+// ---------------------------------------------------------------------------
+// پالت‌های آیکون سه‌بعدی
+// ---------------------------------------------------------------------------
+
+enum class TilePalette { GREEN, MUTED, ERROR, AMBER }
+
+private fun tileColors(palette: TilePalette, selected: Boolean, dark: Boolean): Pair<Color, Color> = when {
+    !selected -> if (dark) Color(0xFF5A675E) to Color(0xFF434E46) else Color(0xFFA9BFAD) to Color(0xFF86A08E)
+    palette == TilePalette.ERROR -> if (dark) Color(0xFFEF9A93) to Color(0xFFB3362B) else Color(0xFFF28B82) to Color(0xFFC62828)
+    palette == TilePalette.AMBER -> if (dark) Color(0xFFFFC766) to Color(0xFFB26A00) else Color(0xFFFFB74D) to Color(0xFFEF8C00)
+    else -> if (dark) Color(0xFF43D694) to Color(0xFF159159) else Color(0xFF35C985) to Color(0xFF0C7C47)
+}
+
+/**
+ * آیکون «سه‌بعدی» — کاشی گرادیانی با جیغ (gloss) بالا و سایه،
+ * که به رابط بصری اپ حس عمق و مدرن می‌دهد.
+ */
+@Composable
+fun IconTile(
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    tileSize: Dp = 44.dp,
+    selected: Boolean = true,
+    palette: TilePalette = TilePalette.GREEN,
+    contentDescription: String? = null
+) {
+    val dark = isSystemInDarkTheme()
+    val (top, bottom) = tileColors(palette, selected, dark)
+    val shape = RoundedCornerShape(tileSize * 0.30f)
+    Box(modifier = modifier.size(tileSize), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .shadow(3.dp, shape)
+                .background(Brush.verticalGradient(listOf(top, bottom)), shape)
+        )
+        // لایه‌ی gloss (نور از بالا)
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = if (dark) 0.14f else 0.30f),
+                            Color.White.copy(alpha = 0f)
+                        )
+                    ),
+                    shape = shape
+                )
+        )
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            modifier = Modifier.size(tileSize * 0.52f),
+            tint = Color.White
+        )
+    }
+}
+
+// ---------------------------------------------------------------------------
+// دکمه گرادیانی (CTA اصلی)
+// ---------------------------------------------------------------------------
+
+@Composable
+fun GradientButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    palette: TilePalette = TilePalette.GREEN,
+    shape: Shape = MaterialTheme.shapes.medium,
+    content: @Composable RowScope.() -> Unit
+) {
+    val dark = isSystemInDarkTheme()
+    val (top, bottom) = tileColors(palette, enabled, dark)
+    val textColor = if (enabled) Color.White else if (dark) Color(0xFF8B948C) else Color(0xFF5C6B62)
+    Box(
+        modifier = modifier
+            .shadow(if (enabled) 5.dp else 0.dp, shape)
+            .background(Brush.verticalGradient(listOf(top, bottom)), shape)
+            .clip(shape)
+            .clickable(onClick = onClick, enabled = enabled),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            Modifier.padding(horizontal = 22.dp, vertical = 15.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            content()
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// کارت شیشه‌ای
+// ---------------------------------------------------------------------------
+
+/**
+ * کارت شیشه‌ای اصلی رابط — شفاف، با خط دور نازک، جیغ محو و سایه‌ی نرم.
+ */
+@Composable
+fun GlassCard(
+    modifier: Modifier = Modifier,
+    shape: Shape = MaterialTheme.shapes.large,
+    onClick: (() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    val m = if (onClick != null) modifier.fillMaxWidth().clickable(onClick = onClick) else modifier.fillMaxWidth()
+    ir.sabztime.app.ui.theme.GlassSurface(modifier = m, shape = shape) {
+        Column(Modifier.padding(16.dp)) { content() }
+    }
+}
+
+/**
+ * «کنترل قطعه‌ای» (Segmented control) برای انتخاب‌های دو/چندتایی
+ * مثل ورود/ثبت‌نام یا حالت پوسته.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SegmentedControl(
+    options: List<String>,
+    selected: Int,
+    onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    icons: List<ImageVector?> = emptyList()
+) {
+    val dark = isSystemInDarkTheme()
+    val shape = RoundedCornerShape(14.dp)
+    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        options.forEachIndexed { i, label ->
+            val sel = i == selected
+            val gradient = Brush.verticalGradient(listOf(Color(0xFF35C985), Color(0xFF0C7C47)))
+            Surface(
+                onClick = { onSelect(i) },
+                modifier = Modifier.weight(1f),
+                shape = shape,
+                color = when {
+                    sel -> Color.Transparent
+                    dark -> Color.White.copy(alpha = 0.06f)
+                    else -> Color.White.copy(alpha = 0.55f)
+                },
+                border = if (sel) BorderStroke(1.dp, Color.Transparent)
+                else BorderStroke(1.dp, if (dark) Color.White.copy(alpha = 0.16f) else Color(0xFFC1C9C1)),
+                tonalElevation = 0.dp,
+                contentColor = if (sel) Color.White else MaterialTheme.colorScheme.onSurface
+            ) {
+                Box(Modifier.fillMaxWidth().padding(vertical = 10.dp), contentAlignment = Alignment.Center) {
+                    if (sel) Box(Modifier.matchParentSize().background(gradient, shape))
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                        icons.getOrNull(i)?.let { ic ->
+                            Icon(
+                                ic,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = if (sel) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            SpacerW(6)
+                        }
+                        Text(
+                            label,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// چیپ شیشه‌ای (جایگزین FilterChip با کنترل کامل رنگ‌ها)
+// ---------------------------------------------------------------------------
+
+/**
+ * چیپ انتخابی شیشه‌ای — حالت انتخاب‌شده با گرادیان سبز، غیرانتخاب‌شده شفاف.
+ */
+@Composable
+fun GlassChip(
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable RowScope.() -> Unit
+) {
+    val dark = isSystemInDarkTheme()
+    val shape = RoundedCornerShape(50)
+    Box(
+        modifier = modifier
+            .clip(shape)
+            .border(
+                width = if (selected) 0.dp else 1.dp,
+                color = when {
+                    selected -> Color.Transparent
+                    dark -> Color.White.copy(alpha = 0.18f)
+                    else -> Color(0xFFC9D4CC)
+                },
+                shape = shape
+            )
+            .background(
+                if (selected) {
+                    Brush.verticalGradient(listOf(Color(0xFF35C985), Color(0xFF0C7C47)))
+                } else {
+                    Brush.verticalGradient(
+                        listOf(
+                            if (dark) Color.White.copy(alpha = 0.07f) else Color.White.copy(alpha = 0.7f),
+                            if (dark) Color.White.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.5f)
+                        )
+                    )
+                },
+                shape
+            )
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            Modifier.padding(horizontal = 16.dp, vertical = 9.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            content()
+        }
+    }
+}

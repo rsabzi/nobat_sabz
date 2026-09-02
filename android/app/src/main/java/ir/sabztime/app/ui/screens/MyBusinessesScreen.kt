@@ -7,33 +7,38 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -44,14 +49,21 @@ import androidx.navigation.NavHostController
 import ir.sabztime.app.core.AppGraph
 import ir.sabztime.app.core.SabzException
 import ir.sabztime.app.core.UiState
+import ir.sabztime.app.core.classify
 import ir.sabztime.app.data.MyBusinessItem
 import ir.sabztime.app.ui.Routes
 import ir.sabztime.app.ui.components.EmptyState
 import ir.sabztime.app.ui.components.ErrorState
+import ir.sabztime.app.ui.theme.GlassBackground
+import ir.sabztime.app.ui.components.GlassCard
+import ir.sabztime.app.ui.components.GlassTopBar
+import ir.sabztime.app.ui.components.GradientButton
+import ir.sabztime.app.ui.components.IconTile
 import ir.sabztime.app.ui.components.InfoRow
-import ir.sabztime.app.ui.components.SectionCard
 import ir.sabztime.app.ui.components.StatusChip
+import ir.sabztime.app.ui.components.businessTypeIcon
 import ir.sabztime.app.util.Jalali
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -61,16 +73,60 @@ class MyBusinessesViewModel(private val graph: AppGraph) : ViewModel() {
     private val _state = MutableStateFlow<UiState<List<MyBusinessItem>>>(UiState.Loading)
     val state: StateFlow<UiState<List<MyBusinessItem>>> = _state.asStateFlow()
 
-    init { load() }
+    private val _deleteBusy = MutableStateFlow(false)
+    val deleteBusy: StateFlow<Boolean> = _deleteBusy.asStateFlow()
 
-    fun addBusiness(name: String, type: String, phone: String, province: String, city: String, address: String, onCreated: (Int) -> Unit) {
+    private val _message = MutableStateFlow<String?>(null)
+    val message: StateFlow<String?> = _message.asStateFlow()
+
+    private val _messageError = MutableStateFlow(false)
+    val messageError: StateFlow<Boolean> = _messageError.asStateFlow()
+
+    init {
+        load()
+    }
+
+    /** ثبت کسب‌وکار جدید؛ در موفقیت به صفحه مدیریت همان کسب‌وکار می‌رود. */
+    fun addBusiness(
+        name: String,
+        type: String,
+        phone: String,
+        province: String,
+        city: String,
+        address: String,
+        onCreated: (Int) -> Unit
+    ) {
         viewModelScope.launch {
             try {
                 val result = graph.repository.addBusiness(name, type, phone, province, city, address)
                 result.businessId?.let(onCreated) ?: load()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                val sabz = e as? SabzException ?: SabzException.Network(e)
-                _state.value = UiState.Error(sabz.toFriendlyMessage(), sabz.kind)
+                val s = classify(e)
+                _state.value = UiState.Error(s.message, s.kind)
+            }
+        }
+    }
+
+    /** حذف کامل یک کسب‌وکار (هم‌منطق ربات)؛ فهرست پس از موفقیت تازه می‌شود. */
+    fun deleteBusiness(b: MyBusinessItem, onDone: () -> Unit) {
+        _deleteBusy.value = true
+        viewModelScope.launch {
+            try {
+                graph.repository.deleteBusiness(b.id)
+                _message.value = "«${b.name}» حذف شد. ✅"
+                _messageError.value = false
+                onDone()
+                load()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val s = classify(e)
+                _message.value = s.message
+                _messageError.value = true
+            } finally {
+                _deleteBusy.value = false
             }
         }
     }
@@ -81,136 +137,243 @@ class MyBusinessesViewModel(private val graph: AppGraph) : ViewModel() {
             try {
                 val list = graph.repository.myBusinesses()
                 _state.value = if (list.isEmpty()) UiState.Empty else UiState.Success(list)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                val sabz = e as? SabzException ?: SabzException.Network(e)
-                _state.value = UiState.Error(sabz.toFriendlyMessage(), sabz.kind)
+                val s = classify(e)
+                _state.value = UiState.Error(s.message, s.kind)
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyBusinessesScreen(graph: AppGraph, navController: NavHostController) {
     val viewModel: MyBusinessesViewModel = viewModel { MyBusinessesViewModel(graph) }
     val state by viewModel.state.collectAsState()
-    var showAddDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    val deleteBusy by viewModel.deleteBusy.collectAsState()
+    val message by viewModel.message.collectAsState()
+    val messageError by viewModel.messageError.collectAsState()
+    var showAddDialog by remember { mutableStateOf(false) }
+    var deleteTarget by remember { mutableStateOf<MyBusinessItem?>(null) }
 
-    Scaffold(
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { showAddDialog = true },
-                icon = { Text("+") },
-                text = { Text("افزودن کسب‌وکار") }
-            )
-        },
-        topBar = {
-            TopAppBar(
-                title = { Text("کسب‌وکارهای من", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "بازگشت")
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        when (val s = state) {
-            is UiState.Loading -> Box(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
+    GlassBackground {
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                GlassTopBar(
+                    title = "کسب‌وکارهای من",
+                    onBack = { navController.popBackStack() }
+                )
             }
-            is UiState.Error -> ErrorState(s.message, s.kind, onRetry = viewModel::load)
-            UiState.Empty -> EmptyState(
-                icon = "🏪",
-                title = "هنوز کسب‌وکاری ثبت نکرده‌اید",
-                subtitle = "برای شروع، اطلاعات کسب‌وکار خود را وارد کنید.",
-                action = { Button(onClick = { showAddDialog = true }) { Text("ثبت کسب‌وکار") } }
-            )
-            is UiState.Success -> LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(s.data, key = { it.id }) { b ->
-                    Card(
-                        onClick = { navController.navigate(Routes.owner(b.id)) },
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                    ) {
-                        Column(Modifier.padding(16.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(b.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                StatusChip(
-                                    if (b.isActive == 1) "فعال" else "غیرفعال",
-                                    if (b.isActive == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                                    if (b.isActive == 1) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer
-                                )
-                            }
-                            Spacer(Modifier.height(6.dp))
-                            InfoRow("خدمات", Jalali.persianDigits(b.servicesCount))
-                            InfoRow("کل رزروها", Jalali.persianDigits(b.bookingsCount))
-                            InfoRow(
-                                "اشتراک",
-                                b.subscriptionPlanName ?: "پایه (رایگان)"
-                            )
-                            Spacer(Modifier.height(8.dp))
-                            Text("مدیریت نوبت‌ها و صف ←", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.align(Alignment.End))
+        ) { padding ->
+            Column(Modifier.fillMaxSize().padding(padding)) {
+                message?.let { msg ->
+                    Text(
+                        msg,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (messageError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
+                    )
+                }
+                if (state != UiState.Loading && state !is UiState.Error) {
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp)) {
+                        GradientButton(
+                            onClick = { showAddDialog = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Filled.Add, contentDescription = null, tint = Color.White)
+                            Spacer(Modifier.width(8.dp))
+                            Text("افزودن کسب‌وکار", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
-            }
-        }
-    }
-
-    if (showAddDialog) {
-        AddBusinessDialog(
-            onDismiss = { showAddDialog = false },
-            onSubmit = { name, type, phone, province, city, address ->
-                viewModel.addBusiness(name, type, phone, province, city, address) { id ->
-                    showAddDialog = false
-                    navController.navigate(Routes.owner(id))
+                when (val s = state) {
+                    is UiState.Loading -> {
+                        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                            androidx.compose.material3.CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                    is UiState.Error -> ErrorState(s.message, s.kind, onRetry = viewModel::load)
+                    UiState.Empty -> EmptyState(
+                        icon = "🏪",
+                        title = "هنوز کسب‌وکاری ثبت نکرده‌اید",
+                        subtitle = "برای شروع، اطلاعات کسب‌وکار خود را در بالا وارد کنید."
+                    )
+                    is UiState.Success -> LazyColumn(
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                    items(s.data, key = { it.id }) { b ->
+                        GlassCard(onClick = { navController.navigate(Routes.owner(b.id)) }) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconTile(
+                                    icon = businessTypeIcon(b.businessType),
+                                    tileSize = 52.dp,
+                                    contentDescription = null
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        b.name,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Spacer(Modifier.height(6.dp))
+                                    StatusChip(
+                                        if (b.isActive == 1) "فعال" else "غیرفعال",
+                                        if (b.isActive == 1) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer,
+                                        if (b.isActive == 1) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer
+                                    )
+                                }
+                                IconButton(onClick = { deleteTarget = b }) {
+                                    Icon(
+                                        Icons.Filled.Delete,
+                                        contentDescription = "حذف کسب‌وکار",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.height(10.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                                InfoRow("خدمات", Jalali.persianDigits(b.servicesCount))
+                                InfoRow("کل رزروها", Jalali.persianDigits(b.bookingsCount))
+                            }
+                            InfoRow("اشتراک", b.subscriptionPlanName ?: "پایه (رایگان)")
+                            Spacer(Modifier.height(8.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    "مدیریت نوبت‌ها و صف",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Icon(
+                                    Icons.Filled.ChevronLeft,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                    item { Spacer(Modifier.height(8.dp)) }
                 }
             }
-        )
+        }
+        if (showAddDialog) {
+            AddBusinessDialog(
+                onDismiss = { showAddDialog = false },
+                onSubmit = { name, type, phone, province, city, address ->
+                    viewModel.addBusiness(name, type, phone, province, city, address) { id ->
+                        navController.navigate(Routes.owner(id))
+                    }
+                    showAddDialog = false
+                }
+            )
+        }
+        deleteTarget?.let { target ->
+            AlertDialog(
+                onDismissRequest = { if (!deleteBusy) deleteTarget = null },
+                title = { Text("حذف کسب‌وکار", fontWeight = FontWeight.Bold) },
+                text = {
+                    Text(
+                        "با حذف «${target.name}» همهٔ رزروها و تنظیمات آن برای همیشه پاک می‌شود. این عمل قابل بازگشت نیست."
+                    )
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        viewModel.deleteBusiness(target) { deleteTarget = null }
+                    }, enabled = !deleteBusy) {
+                        Text(if (deleteBusy) "در حال حذف…" else "حذف کامل")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { deleteTarget = null }, enabled = !deleteBusy) { Text("انصراف") }
+                }
+            )
+        }
+        }
     }
 }
 
 @Composable
-private fun AddBusinessDialog(onDismiss: () -> Unit, onSubmit: (String, String, String, String, String, String) -> Unit) {
-    var name by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
-    var type by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
-    var phone by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
-    var province by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
-    var city by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
-    var address by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+private fun AddBusinessDialog(
+    onDismiss: () -> Unit,
+    onSubmit: (String, String, String, String, String, String) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var type by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var province by remember { mutableStateOf("") }
+    var city by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("ثبت کسب‌وکار جدید") },
+        title = { Text("ثبت کسب‌وکار جدید", fontWeight = FontWeight.Bold) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(name, { name = it }, label = { Text("نام کسب‌وکار") }, singleLine = true)
-                OutlinedTextField(type, { type = it }, label = { Text("نوع کسب‌وکار") }, singleLine = true)
-                OutlinedTextField(phone, { phone = it }, label = { Text("شماره تماس (۰۹…) ") }, singleLine = true)
-                OutlinedTextField(province, { province = it }, label = { Text("استان") }, singleLine = true)
-                OutlinedTextField(city, { city = it }, label = { Text("شهر") }, singleLine = true)
-                OutlinedTextField(address, { address = it }, label = { Text("نشانی (اختیاری)") }, singleLine = true)
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("نام کسب‌وکار") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = type,
+                    onValueChange = { type = it },
+                    label = { Text("نوع کسب‌وکار") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = phone,
+                    onValueChange = { phone = it },
+                    label = { Text("شماره تماس (۰۹…)") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone),
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = province,
+                    onValueChange = { province = it },
+                    label = { Text("استان") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = city,
+                    onValueChange = { city = it },
+                    label = { Text("شهر") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = address,
+                    onValueChange = { address = it },
+                    label = { Text("نشانی (اختیاری)") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         },
         confirmButton = {
-            Button(onClick = { onSubmit(name, type, phone, province, city, address) }, enabled = listOf(name, type, phone, province, city).all { it.isNotBlank() }) { Text("ثبت و مدیریت خدمات") }
+            Button(
+                onClick = { onSubmit(name, type, phone, province, city, address) },
+                enabled = listOf(name, type, phone, province, city).all { it.isNotBlank() }
+            ) { Text("ثبت و مدیریت خدمات") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }
     )
-}
-
-@Composable
-fun SubscriptionSummaryCard(item: MyBusinessItem) {
-    SectionCard {
-        InfoRow("تعداد نوبت‌های رایگان", Jalali.persianDigits(item.freeReservationTokens ?: 0))
-        InfoRow("پلن فعال", item.subscriptionPlanName ?: "—")
-        InfoRow("انقضای پلن", Jalali.formatLong(item.subscriptionExpiryDate))
-    }
 }

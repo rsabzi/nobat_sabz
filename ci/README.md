@@ -5,7 +5,7 @@ workflows:
 
 - `android-build.yml` — Gradle 8.7 + Temurin 17: unit tests, release APK build,
   emulator smoke test (api 30, `continue-on-error`), and commits the APK back
-  as the versioned `sabztime-v1.1.0-release-apk` artifact.
+  to the branch as `release/sabztime-v1.0.0.apk`.
 - `backend-test.yml` — MySQL 8 service, `php -l`, schema seed
   `create_tables.sql` + `database_init.php`, then `php -S 127.0.0.1:8090` plus
   `tests/api_smoke.sh` end-to-end API run.
@@ -43,4 +43,4 @@ git add .github/workflows && git commit -m "ci: activate workflows"
 git push origin arena/01a05c23-nobat-sabz
 ```
 
-پس از activate، در تب **Actions** اجرای **Android Build & Test** را مشاهده می‌کنید (واحد تست → APK → شبیه‌ساز). فایل خروجی را فقط از artifact اجرای همان کامیت دانلود کنید: **`sabztime-v1.1.0-release-apk`**.
+پس از activate، در تب **Actions** اجرای **Android Build & Test** را مشاهده می‌کنید (واحد تست → APK → شبیه‌ساز). خروجی نهایی APK در شاخه: **`android/release/sabztime-v1.0.0.apk`**
