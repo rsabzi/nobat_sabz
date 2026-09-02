@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.align
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -305,12 +304,16 @@ fun ProfileScreen(graph: AppGraph, navController: NavHostController) {
                                 )
                             }
 
-                            Text(
-                                "نوبت‌سبز — نسخه ۱٫۰٫۰",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.align(Alignment.CenterHorizontally)
-                            )
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    "نوبت‌سبز — نسخه ۱٫۰٫۰",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }
@@ -381,7 +384,6 @@ private fun OfflineBanner() {
             .clip(RoundedCornerShape(14.dp))
             .background(MaterialTheme.colorScheme.tertiaryContainer)
             .padding(horizontal = 12.dp, vertical = 10.dp)
-            .align(Alignment.CenterHorizontally)
     )
 }
 
