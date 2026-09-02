@@ -1496,6 +1496,74 @@ function handle_get_request($pdo, $internal_user_id) {
         }
     }
     
+    if ($action === 'get_business_bookings') {
+        // لیست رزروهای یک کسب‌وکار برای مالک (هم‌منطق نمایش ربات)
+        if (!$pdo) {
+            send_json_response('error', 'Database connection required.', [], 500);
+        }
+        $business_id = $_GET['business_id'] ?? null;
+        if (empty($business_id)) {
+            send_json_response('error', 'شناسه کسب‌وکار الزامی است.', [], 400);
+        }
+        $show_all = !empty($_GET['show_all']);
+        try {
+            // اطمینان از وجود ستون queue_status (هم‌منطق get_active_queue)
+            try {
+                $colStmt = $pdo->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bookings' AND COLUMN_NAME = 'queue_status'");
+                $colStmt->execute();
+                if ($colStmt->fetchColumn() == 0) {
+                    $pdo->exec("ALTER TABLE bookings ADD COLUMN queue_status ENUM('waiting','in_progress','completed') NOT NULL DEFAULT 'waiting', ADD COLUMN progress_updated_at DATETIME NULL");
+                }
+            } catch (PDOException $e) {
+                // نادیده گرفتن
+            }
+            
+            $ownerStmt = $pdo->prepare("SELECT id FROM businesses WHERE id = ? AND owner_id = ?");
+            $ownerStmt->execute([$business_id, $internal_user_id]);
+            if (!$ownerStmt->fetch()) {
+                send_json_response('error', 'کسب‌وکار یافت نشد یا شما مالک آن نیستید.', [], 403);
+            }
+            
+            $limit = $show_all ? "LIMIT 50" : "LIMIT 10";
+            $dateFilter = $show_all ? "" : "AND b.booking_date >= CURDATE()";
+            
+            $bookingsStmt = $pdo->prepare("\n                SELECT b.id, b.confirmation_code, b.customer_name, b.customer_phone,\n                       b.booking_date, b.start_time, b.end_time, b.status, b.queue_status,\n                       u.first_name as user_first_name,\n                       ba.attendance_status,\n                       COALESCE(cc.current_credit, 0) as customer_credit\n                FROM bookings b\n                LEFT JOIN users u ON b.user_id = u.id\n                LEFT JOIN booking_attendance ba ON ba.booking_id = b.id\n                LEFT JOIN customer_credits cc ON cc.user_id = u.id\n                WHERE b.business_id = ? {$dateFilter}\n                ORDER BY b.booking_date DESC, b.start_time DESC\n                {$limit}\n            ");
+            $bookingsStmt->execute([$business_id]);
+            $rows = $bookingsStmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            $bookings = [];
+            foreach ($rows as $r) {
+                $name = $r['customer_name'] ?: $r['user_first_name'] ?: 'مشتری';
+                $bookings[] = [
+                    'id' => (int)$r['id'],
+                    'confirmation_code' => $r['confirmation_code'],
+                    'customer_name' => $name,
+                    'customer_phone' => $r['customer_phone'],
+                    'booking_date' => $r['booking_date'],
+                    'jalali_date' => convertToJalali($r['booking_date']),
+                    'day_name' => getDayName($r['booking_date']),
+                    'start_time' => $r['start_time'],
+                    'end_time' => $r['end_time'],
+                    'status' => $r['status'],
+                    'queue_status' => $r['queue_status'] ?? 'waiting',
+                    'attendance_status' => $r['attendance_status'] ?? null,
+                    'customer_credit' => (int)$r['customer_credit']
+                ];
+            }
+            
+            $totalStmt = $pdo->prepare("SELECT COUNT(*) FROM bookings WHERE business_id = ? AND status != 'cancelled'");
+            $totalStmt->execute([$business_id]);
+            
+            send_json_response('success', 'لیست رزروها دریافت شد.', [
+                'bookings' => $bookings,
+                'total_active' => (int)$totalStmt->fetchColumn()
+            ]);
+        } catch (PDOException $e) {
+            error_log('Error in get_business_bookings: ' . $e->getMessage());
+            send_json_response('error', 'خطا در دریافت لیست رزروها.', [], 500);
+        }
+    }
+    
     send_json_response('error', 'Invalid GET action.', [], 400);
 } 
 
@@ -3851,6 +3919,134 @@ function handle_post_request($pdo, $internal_user_id) {
              error_log("General error in purchase plan: " . $e->getMessage());
              send_json_response('error', 'خطا در فرآیند خرید پکیج.', [], 500);
          }
+     }
+     elseif ($action === 'record_attendance') {
+        // ثبت حضور/عدم حضور رزرو توسط مالک کسب‌وکار (هم‌منطق ربات)
+        if (!$pdo) {
+            send_json_response('error', 'Database connection required.', [], 500);
+        }
+        $business_id = $formData['business_id'] ?? null;
+        $booking_id = $formData['booking_id'] ?? null;
+        $attendance_status = $formData['attendance_status'] ?? '';
+        if (empty($business_id) || empty($booking_id)) {
+            send_json_response('error', 'شناسه کسب‌وکار و رزرو الزامی است.', [], 400);
+        }
+        if (!in_array($attendance_status, ['attended', 'no_show'], true)) {
+            send_json_response('error', 'وضعیت حضور نامعتبر است.', [], 400);
+        }
+        try {
+            // بررسی مالکیت کسب‌وکار
+            $ownerStmt = $pdo->prepare("SELECT owner_id FROM businesses WHERE id = ?");
+            $ownerStmt->execute([$business_id]);
+            $owner = $ownerStmt->fetch(PDO::FETCH_ASSOC);
+            if (!$owner || (int)$owner['owner_id'] !== (int)$internal_user_id) {
+                send_json_response('error', 'دسترسی غیرمجاز.', [], 403);
+            }
+            
+            // یافتن رزرو
+            $bookingStmt = $pdo->prepare("SELECT id, user_id, status FROM bookings WHERE id = ? AND business_id = ?");
+            $bookingStmt->execute([$booking_id, $business_id]);
+            $booking = $bookingStmt->fetch(PDO::FETCH_ASSOC);
+            if (!$booking) {
+                send_json_response('error', 'رزرو یافت نشد.', [], 404);
+            }
+            
+            $pdo->beginTransaction();
+            
+            // اطمینان از وجود جدول booking_attendance
+            $tableCheck = $pdo->query("SHOW TABLES LIKE 'booking_attendance'");
+            if ($tableCheck->rowCount() == 0) {
+                $pdo->exec("
+                    CREATE TABLE `booking_attendance` (
+                        `id` INT(11) PRIMARY KEY AUTO_INCREMENT,
+                        `booking_id` INT(11) NOT NULL,
+                        `user_id` INT(11) NOT NULL,
+                        `business_id` INT(11) NOT NULL,
+                        `attendance_status` VARCHAR(50) DEFAULT 'pending',
+                        `confirmed_by` INT(11) DEFAULT NULL,
+                        `confirmation_date` TIMESTAMP NULL DEFAULT NULL,
+                        `notes` TEXT,
+                        `credit_processed` TINYINT(1) DEFAULT 0,
+                        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        UNIQUE KEY (booking_id)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+                ");
+            }
+            
+            // ثبت یا به‌روزرسانی وضعیت حضور
+            $upsertStmt = $pdo->prepare("\n                INSERT INTO booking_attendance \n                (booking_id, user_id, business_id, attendance_status, confirmed_by, confirmation_date, notes)\n                VALUES (?, ?, ?, ?, ?, NOW(), ?)\n                ON DUPLICATE KEY UPDATE \n                    attendance_status = VALUES(attendance_status),\n                    confirmed_by = VALUES(confirmed_by),\n                    confirmation_date = NOW(),\n                    notes = VALUES(notes),\n                    credit_processed = 0\n            ");
+            $upsertStmt->execute([
+                $booking_id, $booking['user_id'], $business_id,
+                $attendance_status, $internal_user_id, ''
+            ]);
+            
+            // به‌روزرسانی وضعیت رزرو
+            $newStatus = $attendance_status === 'attended' ? 'completed' : 'cancelled';
+            $statusStmt = $pdo->prepare("UPDATE bookings SET status = ?, updated_at = NOW() WHERE id = ? AND business_id = ? AND status != 'cancelled'");
+            $statusStmt->execute([$newStatus, $booking_id, $business_id]);
+            
+            // پردازش امتیاز مشتری (هم‌منطق customer_credit_api.php)
+            $creditChange = $attendance_status === 'attended' ? 1 : -1;
+            $changeType = $attendance_status === 'attended' ? 'attendance' : 'no_show';
+            $reason = $attendance_status === 'attended' ? 'اضافه کردن امتیاز به دلیل حضور به موقع' : 'کسر امتیاز به دلیل عدم حضور';
+            $customerId = (int)$booking['user_id'];
+            
+            // اطمینان از وجود رکورد امتیاز
+            $creditCheck = $pdo->prepare("SELECT id FROM customer_credits WHERE user_id = ? LIMIT 1");
+            $creditCheck->execute([$customerId]);
+            if (!$creditCheck->fetch()) {
+                $creditInit = $pdo->prepare("INSERT INTO customer_credits (user_id, current_credit, total_earned, total_deducted, total_spent, last_updated, updated_at) VALUES (?, 0, 0, 0, 0, NOW(), NOW())");
+                $creditInit->execute([$customerId]);
+            }
+            
+            $creditResult = null;
+            $newCredit = null;
+            try {
+                // تلاش با stored procedure
+                $spStmt = $pdo->prepare("CALL UpdateCustomerCredit(?, ?, ?, ?, ?, ?, ?)");
+                $spStmt->execute([$customerId, $creditChange, $changeType, $reason, $booking_id, $internal_user_id, $business_id]);
+                if (method_exists($spStmt, 'closeCursor')) $spStmt->closeCursor();
+                $creditStmt = $pdo->prepare("SELECT current_credit FROM customer_credits WHERE user_id = ?");
+                $creditStmt->execute([$customerId]);
+                $newCredit = (int)$creditStmt->fetchColumn();
+                $creditResult = ['success' => true, 'new_credit' => $newCredit];
+            } catch (Exception $spEx) {
+                // fallback: SQL مستقیم
+                $beforeStmt = $pdo->prepare("SELECT current_credit FROM customer_credits WHERE user_id = ?");
+                $beforeStmt->execute([$customerId]);
+                $before = (int)$beforeStmt->fetchColumn();
+                $after = $before + $creditChange;
+                $earnedDelta = $creditChange > 0 ? $creditChange : 0;
+                $deductedDelta = $creditChange < 0 ? abs($creditChange) : 0;
+                $updStmt = $pdo->prepare("UPDATE customer_credits SET current_credit = ?, total_earned = total_earned + ?, total_deducted = total_deducted + ?, last_updated = NOW() WHERE user_id = ?");
+                $updStmt->execute([$after, $earnedDelta, $deductedDelta, $customerId]);
+                $histStmt = $pdo->prepare("INSERT INTO credit_history (user_id, change_type, credit_change, credit_before, credit_after, reason, booking_id, admin_id, business_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $histStmt->execute([$customerId, $changeType, $creditChange, $before, $after, $reason, $booking_id, $internal_user_id, $business_id]);
+                $newCredit = $after;
+                $creditResult = ['success' => true, 'new_credit' => $newCredit];
+            }
+            
+            if ($creditResult && $creditResult['success']) {
+                $markStmt = $pdo->prepare("UPDATE booking_attendance SET credit_processed = 1 WHERE booking_id = ?");
+                $markStmt->execute([$booking_id]);
+            }
+            
+            $pdo->commit();
+            send_json_response('success', 'وضعیت حضور با موفقیت ثبت شد.', [
+                'booking_id' => (int)$booking_id,
+                'attendance_status' => $attendance_status,
+                'new_credit' => $newCredit
+            ]);
+        } catch (PDOException $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            error_log('Error in record_attendance: ' . $e->getMessage());
+            send_json_response('error', 'خطا در ثبت وضعیت حضور.', [], 500);
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            error_log('General error in record_attendance: ' . $e->getMessage());
+            send_json_response('error', 'خطا در ثبت وضعیت حضور.', [], 500);
+        }
      }
      else {
          send_json_response('error', 'Invalid action specified.', [], 400);

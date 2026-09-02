@@ -281,6 +281,116 @@ class RepositoryTest {
     }
 
     @Test
+    fun `business bookings decode with attendance status`() = runTest {
+        server.enqueue(
+            MockResponse().setBody(
+                """{"status":"success","bookings":[
+                  {"id":"11","customer_name":"علی","customer_phone":"09123456789",
+                   "booking_date":"2026-09-10","jalali_date":"19 شهریور 1405","day_name":"دوشنبه",
+                   "start_time":"10:00","end_time":"10:30","status":"confirmed","queue_status":"waiting",
+                   "attendance_status":null,"customer_credit":"3"},
+                  {"id":"12","customer_name":"سارا","booking_date":"2026-09-09",
+                   "start_time":"11:00","end_time":"11:30","status":"completed","queue_status":"completed",
+                   "attendance_status":"attended","customer_credit":"5"}
+                 ],"total_active":"7"}"""
+            )
+        )
+        val res = repo.businessBookings(5, showAll = true)
+        assertEquals(7, res.totalActive)
+        assertEquals(2, res.bookings.size)
+        assertEquals("علی", res.bookings[0].customerName)
+        org.junit.Assert.assertNull(res.bookings[0].attendanceStatus)
+        assertEquals("attended", res.bookings[1].attendanceStatus)
+        assertEquals(5, res.bookings[1].customerCredit)
+        val path = server.takeRequest().path ?: ""
+        assertTrue(path.contains("action=get_business_bookings"))
+        assertTrue(path.contains("business_id=5"))
+        assertTrue(path.contains("show_all=1"))
+    }
+
+    @Test
+    fun `record attendance posts proper payload and decodes credit`() = runTest {
+        server.enqueue(
+            MockResponse().setBody(
+                """{"status":"success","message":"وضعیت حضور با موفقیت ثبت شد.","booking_id":11,"attendance_status":"attended","new_credit":4}"""
+            )
+        )
+        val res = repo.recordAttendance(5, 11, "attended")
+        assertEquals("attended", res.attendanceStatus)
+        assertEquals(4, res.newCredit)
+        val body = server.takeRequest().body.readUtf8()
+        assertTrue(body.contains("\"action\":\"record_attendance\""))
+        assertTrue(body.contains("\"booking_id\":11"))
+        assertTrue(body.contains("\"attendance_status\":\"attended\""))
+    }
+
+    @Test
+    fun `delete business posts proper payload`() = runTest {
+        server.enqueue(
+            MockResponse().setBody("""{"status":"success","message":"کسب‌وکار با موفقیت حذف شد.","business_name":"آرایشگاه نمونه"}""")
+        )
+        val res = repo.deleteBusiness(5)
+        assertEquals("آرایشگاه نمونه", res.businessName)
+        val body = server.takeRequest().body.readUtf8()
+        assertTrue(body.contains("\"action\":\"delete_business\""))
+        assertTrue(body.contains("\"business_id\":5"))
+    }
+
+    @Test
+    fun `update link alias decodes full link`() = runTest {
+        server.enqueue(
+            MockResponse().setBody(
+                """{"status":"success","link_alias":"my_salon","full_link":"https://webnovo.ir/start/my_salon"}"""
+            )
+        )
+        val res = repo.updateLinkAlias(5, "my_salon")
+        assertEquals("https://webnovo.ir/start/my_salon", res.fullLink)
+        val body = server.takeRequest().body.readUtf8()
+        assertTrue(body.contains("\"action\":\"update_link_alias\""))
+        assertTrue(body.contains("\"link_alias\":\"my_salon\""))
+    }
+
+    @Test
+    fun `get schedule decodes weekly days`() = runTest {
+        server.enqueue(
+            MockResponse().setBody(
+                """{"status":"success","data":{"slot_duration_minutes":"30","schedules":[
+                  {"business_id":"5","day_of_week":"6","start_time":"09:00","end_time":"18:00","is_active":"1"},
+                  {"business_id":"5","day_of_week":"5","start_time":null,"end_time":null,"is_active":"0"}
+                 ],"overrides":[]}}"""
+            )
+        )
+        val s = repo.getSchedule(5)
+        assertEquals(30, s.slotDurationMinutes)
+        assertEquals(2, s.schedules.size)
+        assertEquals(6, s.schedules[0].dayOfWeek)
+        assertEquals("09:00", s.schedules[0].startTime)
+        assertEquals(0, s.schedules[1].isActive)
+        val path = server.takeRequest().path ?: ""
+        assertTrue(path.contains("action=get_schedule"))
+        assertTrue(path.contains("business_id=5"))
+    }
+
+    @Test
+    fun `save schedule posts weekly array with day numbering`() = runTest {
+        server.enqueue(MockResponse().setBody("""{"status":"success","message":"ok"}"""))
+        repo.saveSchedule(
+            5,
+            30,
+            listOf(
+                DaySchedule(dayOfWeek = 6, startTime = "09:00", endTime = "18:00", isActive = 1),
+                DaySchedule(dayOfWeek = 5, startTime = null, endTime = null, isActive = 0)
+            )
+        )
+        val body = server.takeRequest().body.readUtf8()
+        assertTrue(body.contains("\"action\":\"update_schedule\""))
+        assertTrue(body.contains("\"slot_duration_minutes\":30"))
+        assertTrue(body.contains("\"day_of_week\":6"))
+        assertTrue(body.contains("\"start_time\":\"09:00\""))
+        assertTrue(body.contains("\"is_active\":true"))
+    }
+
+    @Test
     fun `create booking posts proper payload`() = runTest {
         server.enqueue(
             MockResponse().setBody("""{"status":"success","message":"ok","booking_id":9,"confirmation_code":"XYZ99"}""")

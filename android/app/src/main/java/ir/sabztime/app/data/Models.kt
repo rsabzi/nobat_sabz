@@ -297,6 +297,70 @@ data class BusinessCreatedResponse(
 )
 
 @Serializable
+data class BusinessBooking(
+    @Serializable(with = LenientInt::class) val id: Int,
+    @SerialName("confirmation_code") val confirmationCode: String? = null,
+    @SerialName("customer_name") val customerName: String = "",
+    @SerialName("customer_phone") val customerPhone: String? = null,
+    @SerialName("booking_date") val bookingDate: String = "",
+    @SerialName("jalali_date") val jalaliDate: String? = null,
+    @SerialName("day_name") val dayName: String? = null,
+    @SerialName("start_time") val startTime: String = "",
+    @SerialName("end_time") val endTime: String = "",
+    val status: String = "",
+    @SerialName("queue_status") val queueStatus: String = "waiting",
+    @SerialName("attendance_status") val attendanceStatus: String? = null,
+    @SerialName("customer_credit") @Serializable(with = LenientInt::class) val customerCredit: Int = 0
+)
+
+@Serializable
+data class BusinessBookingsResponse(
+    val status: String = "",
+    val message: String? = null,
+    val bookings: List<BusinessBooking> = emptyList(),
+    @SerialName("total_active") @Serializable(with = LenientInt::class) val totalActive: Int = 0
+)
+
+@Serializable
+data class AttendanceResponse(
+    val status: String = "",
+    val message: String? = null,
+    @SerialName("booking_id") @Serializable(with = LenientInt::class) val bookingId: Int? = null,
+    @SerialName("attendance_status") val attendanceStatus: String? = null,
+    @SerialName("new_credit") @Serializable(with = LenientInt::class) val newCredit: Int? = null
+)
+
+/** روز کاری هفتگی؛ dayOfWeek همان date('w') سرور است: 0=یکشنبه … 6=شنبه */
+@Serializable
+data class DaySchedule(
+    @SerialName("day_of_week") @Serializable(with = LenientInt::class) val dayOfWeek: Int,
+    @SerialName("start_time") val startTime: String? = null,
+    @SerialName("end_time") val endTime: String? = null,
+    @SerialName("is_active") @Serializable(with = LenientInt::class) val isActive: Int = 1
+)
+
+@Serializable
+data class ScheduleData(
+    @SerialName("slot_duration_minutes") @Serializable(with = LenientInt::class) val slotDurationMinutes: Int = 30,
+    val schedules: List<DaySchedule> = emptyList()
+)
+
+@Serializable
+data class LinkAliasResponse(
+    val status: String = "",
+    val message: String? = null,
+    @SerialName("link_alias") val linkAlias: String? = null,
+    @SerialName("full_link") val fullLink: String? = null
+)
+
+@Serializable
+data class DeleteBusinessResponse(
+    val status: String = "",
+    val message: String? = null,
+    @SerialName("business_name") val businessName: String? = null
+)
+
+@Serializable
 data class ManagedServicesResponse(
     val status: String = "",
     val message: String? = null,

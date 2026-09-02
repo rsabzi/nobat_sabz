@@ -252,6 +252,108 @@ class SabzRepository(private val api: ApiClient) {
         }
     }
 
+    /** ویرایش اطلاعات پایهٔ کسب‌وکار (اندپوینت update_business بک‌اند). */
+    suspend fun updateBusiness(
+        businessId: Int,
+        name: String,
+        type: String,
+        phone: String,
+        province: String,
+        city: String,
+        address: String
+    ) {
+        api.post("api.php", body = jsonBody {
+            put("action", "update_business")
+            put("business_id", businessId)
+            put("name", name)
+            put("type", type)
+            put("phone", phone)
+            put("province", province)
+            put("city", city)
+            put("address", address)
+        })
+    }
+
+    /** حذف کامل کسب‌وکار (اندپوینت delete_business بک‌اند). */
+    suspend fun deleteBusiness(businessId: Int): DeleteBusinessResponse {
+        val json = api.post("api.php", body = jsonBody {
+            put("action", "delete_business")
+            put("business_id", businessId)
+        })
+        return decode(DeleteBusinessResponse.serializer(), json, DeleteBusinessResponse())
+    }
+
+    /** ذخیرهٔ برنامهٔ کاری هفتگی (اندپوینت update_schedule بک‌اند). */
+    suspend fun saveSchedule(businessId: Int, slotDurationMinutes: Int, days: List<DaySchedule>) {
+        api.post("api.php", body = jsonBody {
+            put("action", "update_schedule")
+            put("business_id", businessId)
+            put("slot_duration_minutes", slotDurationMinutes)
+            putArray(
+                "schedules",
+                JsonArray(days.map { d ->
+                    buildJsonObject {
+                        put("day_of_week", d.dayOfWeek)
+                        put("start_time", d.startTime ?: "")
+                        put("end_time", d.endTime ?: "")
+                        put("is_active", d.isActive == 1)
+                    }
+                })
+            )
+        })
+    }
+
+    /** برنامهٔ کاری هفتگی فعلی (اندپوینت get_schedule بک‌اند). */
+    suspend fun getSchedule(businessId: Int): ScheduleData {
+        val json = api.get("api.php", mapOf(
+            "action" to "get_schedule",
+            "business_id" to businessId.toString()
+        ))
+        // پاسخ سرور داده‌ها را زیر کلید «data» می‌فرستد
+        val data = json.obj("data") ?: json
+        return decode(ScheduleData.serializer(), data, ScheduleData())
+    }
+
+    /** لیست رزروهای کسب‌وکار برای مالک (اندپوینت get_business_bookings بک‌اند). */
+    suspend fun businessBookings(businessId: Int, showAll: Boolean): BusinessBookingsResponse {
+        val json = api.get("api.php", mapOf(
+            "action" to "get_business_bookings",
+            "business_id" to businessId.toString(),
+            "show_all" to (if (showAll) "1" else "0")
+        ))
+        return decode(BusinessBookingsResponse.serializer(), json, BusinessBookingsResponse())
+    }
+
+    /** ثبت حضور/عدم‌حضور یک رزرو (اندپوینت record_attendance بک‌اند). */
+    suspend fun recordAttendance(businessId: Int, bookingId: Int, attendanceStatus: String): AttendanceResponse {
+        val json = api.post("api.php", body = jsonBody {
+            put("action", "record_attendance")
+            put("business_id", businessId)
+            put("booking_id", bookingId)
+            put("attendance_status", attendanceStatus)
+        })
+        return decode(AttendanceResponse.serializer(), json, AttendanceResponse())
+    }
+
+    /** ذخیرهٔ نامک لینک اختصاصی (اندپوینت update_link_alias بک‌اند). */
+    suspend fun updateLinkAlias(businessId: Int, alias: String): LinkAliasResponse {
+        val json = api.post("api.php", body = jsonBody {
+            put("action", "update_link_alias")
+            put("business_id", businessId)
+            put("link_alias", alias)
+        })
+        return decode(LinkAliasResponse.serializer(), json, LinkAliasResponse())
+    }
+
+    /** اطلاعات کسب‌وکار برای فرم ویرایش (اندپوینت get_business_for_edit بک‌اند). */
+    suspend fun businessForEdit(businessId: Int): BusinessDetails? {
+        val json = api.get("api.php", mapOf(
+            "action" to "get_business_for_edit",
+            "business_id" to businessId.toString()
+        ))
+        return json.obj("data")?.let { decodeOrNull(BusinessDetails.serializer(), it) }
+    }
+
     suspend fun subscriptionStatus(businessId: Int): SubscriptionStatusResponse {
         val json = api.post("api.php", body = jsonBody {
             put("action", "get_subscription_status")

@@ -19,10 +19,12 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -71,6 +73,15 @@ class MyBusinessesViewModel(private val graph: AppGraph) : ViewModel() {
     private val _state = MutableStateFlow<UiState<List<MyBusinessItem>>>(UiState.Loading)
     val state: StateFlow<UiState<List<MyBusinessItem>>> = _state.asStateFlow()
 
+    private val _deleteBusy = MutableStateFlow(false)
+    val deleteBusy: StateFlow<Boolean> = _deleteBusy.asStateFlow()
+
+    private val _message = MutableStateFlow<String?>(null)
+    val message: StateFlow<String?> = _message.asStateFlow()
+
+    private val _messageError = MutableStateFlow(false)
+    val messageError: StateFlow<Boolean> = _messageError.asStateFlow()
+
     init {
         load()
     }
@@ -98,6 +109,28 @@ class MyBusinessesViewModel(private val graph: AppGraph) : ViewModel() {
         }
     }
 
+    /** حذف کامل یک کسب‌وکار (هم‌منطق ربات)؛ فهرست پس از موفقیت تازه می‌شود. */
+    fun deleteBusiness(b: MyBusinessItem, onDone: () -> Unit) {
+        _deleteBusy.value = true
+        viewModelScope.launch {
+            try {
+                graph.repository.deleteBusiness(b.id)
+                _message.value = "«${b.name}» حذف شد. ✅"
+                _messageError.value = false
+                onDone()
+                load()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val s = classify(e)
+                _message.value = s.message
+                _messageError.value = true
+            } finally {
+                _deleteBusy.value = false
+            }
+        }
+    }
+
     fun load() {
         _state.value = UiState.Loading
         viewModelScope.launch {
@@ -118,7 +151,11 @@ class MyBusinessesViewModel(private val graph: AppGraph) : ViewModel() {
 fun MyBusinessesScreen(graph: AppGraph, navController: NavHostController) {
     val viewModel: MyBusinessesViewModel = viewModel { MyBusinessesViewModel(graph) }
     val state by viewModel.state.collectAsState()
+    val deleteBusy by viewModel.deleteBusy.collectAsState()
+    val message by viewModel.message.collectAsState()
+    val messageError by viewModel.messageError.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
+    var deleteTarget by remember { mutableStateOf<MyBusinessItem?>(null) }
 
     GlassBackground {
         Scaffold(
@@ -131,6 +168,14 @@ fun MyBusinessesScreen(graph: AppGraph, navController: NavHostController) {
             }
         ) { padding ->
             Column(Modifier.fillMaxSize().padding(padding)) {
+                message?.let { msg ->
+                    Text(
+                        msg,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (messageError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
+                    )
+                }
                 if (state != UiState.Loading && state !is UiState.Error) {
                     Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp)) {
                         GradientButton(
@@ -184,6 +229,13 @@ fun MyBusinessesScreen(graph: AppGraph, navController: NavHostController) {
                                         if (b.isActive == 1) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer
                                     )
                                 }
+                                IconButton(onClick = { deleteTarget = b }) {
+                                    Icon(
+                                        Icons.Filled.Delete,
+                                        contentDescription = "حذف کسب‌وکار",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
                             }
                             Spacer(Modifier.height(10.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
@@ -221,6 +273,27 @@ fun MyBusinessesScreen(graph: AppGraph, navController: NavHostController) {
                         navController.navigate(Routes.owner(id))
                     }
                     showAddDialog = false
+                }
+            )
+        }
+        deleteTarget?.let { target ->
+            AlertDialog(
+                onDismissRequest = { if (!deleteBusy) deleteTarget = null },
+                title = { Text("حذف کسب‌وکار", fontWeight = FontWeight.Bold) },
+                text = {
+                    Text(
+                        "با حذف «${target.name}» همهٔ رزروها و تنظیمات آن برای همیشه پاک می‌شود. این عمل قابل بازگشت نیست."
+                    )
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        viewModel.deleteBusiness(target) { deleteTarget = null }
+                    }, enabled = !deleteBusy) {
+                        Text(if (deleteBusy) "در حال حذف…" else "حذف کامل")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { deleteTarget = null }, enabled = !deleteBusy) { Text("انصراف") }
                 }
             )
         }
