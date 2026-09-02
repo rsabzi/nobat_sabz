@@ -16,6 +16,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -44,6 +47,7 @@ import ir.sabztime.app.core.UiState
 import ir.sabztime.app.data.QueueItem
 import ir.sabztime.app.data.QueueResponse
 import ir.sabztime.app.data.SubscriptionStatusResponse
+import ir.sabztime.app.data.Service
 import ir.sabztime.app.ui.components.EmptyState
 import ir.sabztime.app.ui.components.ErrorState
 import ir.sabztime.app.ui.components.InfoRow
@@ -99,6 +103,24 @@ class OwnerBusinessViewModel(private val graph: AppGraph, private val businessId
         }
     }
 
+    fun addService(name: String, price: Long, durationMinutes: Int, onDone: () -> Unit) {
+        _state.value = _state.value.copy(actionBusy = true, actionMessage = null)
+        viewModelScope.launch {
+            try {
+                val existing = graph.repository.businessDetails(businessId)?.services.orEmpty()
+                graph.repository.updateServices(
+                    businessId,
+                    existing + Service(id = 0, name = name, price = price.toString(), durationMinutes = durationMinutes)
+                )
+                _state.value = _state.value.copy(actionBusy = false, actionMessage = "خدمت جدید ذخیره شد. ✅")
+                onDone()
+            } catch (e: Exception) {
+                val sabz = e as? SabzException ?: SabzException.Network(e)
+                _state.value = _state.value.copy(actionBusy = false, actionMessage = sabz.toFriendlyMessage())
+            }
+        }
+    }
+
     fun advance() {
         _state.value = _state.value.copy(actionBusy = true, actionMessage = null)
         viewModelScope.launch {
@@ -133,6 +155,7 @@ class OwnerBusinessViewModel(private val graph: AppGraph, private val businessId
 fun OwnerBusinessScreen(graph: AppGraph, businessId: Int, navController: NavHostController) {
     val viewModel: OwnerBusinessViewModel = viewModel(key = "own-$businessId") { OwnerBusinessViewModel(graph, businessId) }
     val state by viewModel.state.collectAsState()
+    var showServiceDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -177,6 +200,18 @@ fun OwnerBusinessScreen(graph: AppGraph, businessId: Int, navController: NavHost
             }
 
             item {
+                SectionCard {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("خدمات کسب‌وکار", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text("خدمت و مدت زمان قابل رزرو را مستقیماً از اپ اضافه کنید.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        OutlinedButton(onClick = { showServiceDialog = true }) { Text("افزودن خدمت") }
+                    }
+                }
+            }
+
+            item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("صف امروز", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                     Button(
@@ -214,6 +249,40 @@ fun OwnerBusinessScreen(graph: AppGraph, businessId: Int, navController: NavHost
             }
         }
     }
+
+    if (showServiceDialog) {
+        AddServiceDialog(
+            onDismiss = { showServiceDialog = false },
+            onSubmit = { name, price, duration ->
+                viewModel.addService(name, price, duration) { showServiceDialog = false }
+            }
+        )
+    }
+}
+
+@Composable
+private fun AddServiceDialog(onDismiss: () -> Unit, onSubmit: (String, Long, Int) -> Unit) {
+    var name by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+    var price by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+    var duration by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("30") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("افزودن خدمت") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(name, { name = it }, label = { Text("نام خدمت") }, singleLine = true)
+                OutlinedTextField(price, { price = it }, label = { Text("قیمت (تومان)") }, singleLine = true)
+                OutlinedTextField(duration, { duration = it }, label = { Text("مدت (دقیقه)") }, singleLine = true)
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onSubmit(name, price.toLongOrNull() ?: 0, duration.toIntOrNull() ?: 30) },
+                enabled = name.isNotBlank() && (duration.toIntOrNull() ?: 0) > 0
+            ) { Text("ذخیره خدمت") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }
+    )
 }
 
 @Composable

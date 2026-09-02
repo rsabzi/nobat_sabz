@@ -3,6 +3,7 @@ package ir.sabztime.app.data
 import ir.sabztime.app.core.ApiClient
 import ir.sabztime.app.core.jsonBody
 import ir.sabztime.app.core.obj
+import kotlinx.serialization.json.put
 
 /**
  * لایه داده: همه تماس‌ها به API موجود سرور (بدون تغییر منطق سمت سرور).
@@ -153,6 +154,46 @@ class SabzRepository(private val api: ApiClient) {
         return api.serializer.decodeFromJsonElement(MyBusinessesResponse.serializer(), json).businesses
     }
 
+    suspend fun addBusiness(
+        name: String,
+        type: String,
+        phone: String,
+        province: String,
+        city: String,
+        address: String,
+        marketerCode: String = ""
+    ): BusinessCreatedResponse {
+        val json = api.post("api.php", body = jsonBody {
+            put("action", "add_business")
+            put("name", name)
+            put("type", type)
+            put("phone", phone)
+            put("province", province)
+            put("city", city)
+            put("address", address)
+            put("marketer_code", marketerCode)
+        })
+        return api.serializer.decodeFromJsonElement(BusinessCreatedResponse.serializer(), json)
+    }
+
+    suspend fun updateServices(businessId: Int, services: List<Service>): List<Service> {
+        val json = api.post("api.php", body = jsonBody {
+            put("action", "update_services")
+            put("business_id", businessId)
+            putArray("services", kotlinx.serialization.json.JsonArray(services.map { service ->
+                kotlinx.serialization.json.buildJsonObject {
+                    put("id", service.id)
+                    put("name", service.name)
+                    put("description", service.description ?: "")
+                    put("price", service.priceValue ?: 0)
+                    put("duration_minutes", service.durationMinutes ?: 30)
+                    put("is_active", service.isActive)
+                }
+            }))
+        })
+        return api.serializer.decodeFromJsonElement(ManagedServicesResponse.serializer(), json).data?.services.orEmpty()
+    }
+
     suspend fun subscriptionStatus(businessId: Int): SubscriptionStatusResponse {
         val json = api.post("api.php", body = jsonBody {
             put("action", "get_subscription_status")
@@ -170,6 +211,11 @@ class SabzRepository(private val api: ApiClient) {
     suspend fun marketerDashboard(): MarketerDashboardResponse {
         val json = api.post("api.php", body = jsonBody { put("action", "get_marketer_dashboard") })
         return api.serializer.decodeFromJsonElement(MarketerDashboardResponse.serializer(), json)
+    }
+
+    suspend fun registerMarketer(): MarketerRegistrationResponse {
+        val json = api.post("api.php", body = jsonBody { put("action", "register_marketer") })
+        return api.serializer.decodeFromJsonElement(MarketerRegistrationResponse.serializer(), json)
     }
 
     // --- احراز هویت و پروفایل (mobile_auth.php) ---
