@@ -38,12 +38,10 @@ import androidx.navigation.NavHostController
 import ir.sabztime.app.core.AppGraph
 import ir.sabztime.app.core.SabzException
 import ir.sabztime.app.core.UiState
-import ir.sabztime.app.core.toSabzException
 import ir.sabztime.app.data.MyBusinessItem
 import ir.sabztime.app.ui.Routes
 import ir.sabztime.app.ui.components.EmptyState
 import ir.sabztime.app.ui.components.ErrorState
-import ir.sabztime.app.ui.components.GlassCard
 import ir.sabztime.app.ui.components.InfoRow
 import ir.sabztime.app.ui.components.LoadingState
 import ir.sabztime.app.ui.components.SectionCard
@@ -67,7 +65,7 @@ class MyBusinessesViewModel(private val graph: AppGraph) : ViewModel() {
                 val list = graph.repository.myBusinesses()
                 _state.value = if (list.isEmpty()) UiState.Empty else UiState.Success(list)
             } catch (e: Exception) {
-                val sabz = e.toSabzException()
+                val sabz = e as? SabzException ?: SabzException.Network(e)
                 _state.value = UiState.Error(sabz.toFriendlyMessage(), sabz.kind)
             }
         }
@@ -81,7 +79,6 @@ fun MyBusinessesScreen(graph: AppGraph, navController: NavHostController) {
     val state by viewModel.state.collectAsState()
 
     Scaffold(
-        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text("کسب‌وکارهای من", fontWeight = FontWeight.Bold) },
@@ -108,10 +105,12 @@ fun MyBusinessesScreen(graph: AppGraph, navController: NavHostController) {
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(s.data, key = { it.id }) { b ->
-                    GlassCard(
-                        onClick = { navController.navigate(Routes.owner(b.id)) }
+                    Card(
+                        onClick = { navController.navigate(Routes.owner(b.id)) },
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                     ) {
-                        Column {
+                        Column(Modifier.padding(16.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(b.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 StatusChip(

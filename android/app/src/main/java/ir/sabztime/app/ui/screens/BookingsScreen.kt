@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -39,14 +38,10 @@ import androidx.navigation.NavHostController
 import ir.sabztime.app.core.AppGraph
 import ir.sabztime.app.core.SabzException
 import ir.sabztime.app.core.UiState
-import ir.sabztime.app.core.toSabzException
 import ir.sabztime.app.data.BookingSummary
 import ir.sabztime.app.ui.Routes
-import androidx.compose.foundation.layout.width
-import ir.sabztime.app.ui.components.EmojiBadge3D
 import ir.sabztime.app.ui.components.EmptyState
 import ir.sabztime.app.ui.components.ErrorState
-import ir.sabztime.app.ui.components.GlassCard
 import ir.sabztime.app.ui.components.StatusChip
 import ir.sabztime.app.util.Jalali
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -86,7 +81,7 @@ class BookingsViewModel(private val graph: AppGraph) : ViewModel() {
                     upcoming = if (list.isEmpty()) UiState.Empty else UiState.Success(list)
                 )
             } catch (e: Exception) {
-                val sabz = e.toSabzException()
+                val sabz = e as? SabzException ?: SabzException.Network(e)
                 _state.value = _state.value.copy(upcoming = UiState.Error(sabz.toFriendlyMessage(), sabz.kind))
             }
         }
@@ -101,7 +96,7 @@ class BookingsViewModel(private val graph: AppGraph) : ViewModel() {
                     history = if (list.isEmpty()) UiState.Empty else UiState.Success(list)
                 )
             } catch (e: Exception) {
-                val sabz = e.toSabzException()
+                val sabz = e as? SabzException ?: SabzException.Network(e)
                 _state.value = _state.value.copy(history = UiState.Error(sabz.toFriendlyMessage(), sabz.kind))
             }
         }
@@ -116,7 +111,6 @@ fun BookingsScreen(graph: AppGraph, navController: NavHostController) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
 
     Scaffold(
-        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text("نوبت‌های من", fontWeight = FontWeight.Bold) },
@@ -159,30 +153,34 @@ fun BookingsScreen(graph: AppGraph, navController: NavHostController) {
 
 @Composable
 fun BookingCard(b: BookingSummary, onClick: () -> Unit, badge: (@Composable () -> Unit)? = null) {
-    GlassCard(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = onClick
+    Card(
+        onClick = onClick,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            EmojiBadge3D("🗓", size = 48.dp)
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(b.businessName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    "${Jalali.formatLong(b.bookingDate)} — ${Jalali.persianDigits(b.startTime)}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(Modifier.height(4.dp))
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(b.businessName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "${Jalali.formatLong(b.bookingDate)} — ${Jalali.persianDigits(b.startTime)}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                if (badge != null) badge()
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     "کد: ${Jalali.persianDigits(b.confirmationCode)}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
                 )
+                StatusChip(statusText(b.status), statusColor(b.status), statusContainer(b.status))
             }
-            if (badge != null) badge()
-            StatusChip(statusText(b.status), statusColor(b.status), statusContainer(b.status))
         }
     }
 }
