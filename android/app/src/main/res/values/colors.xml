@@ -1,8 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="brand_green">#1B7F4D</color>
-    <color name="brand_green_dark">#0E5A33</color>
-    <color name="brand_green_light">#E6F4EC</color>
-    <color name="ic_launcher_background">#1B7F4D</color>
-    <color name="dark_background">#0C1310</color>
+    <!-- پالت لوکس «نوبت‌سبز» -->
+    <color name="midnight_deep">#070C1C</color>
+    <color name="midnight">#0B1329</color>
+    <color name="charcoal">#12141A</color>
+    <color name="gold">#D8B569</color>
+    <color name="gold_light">#F6E3B4</color>
+    <color name="burgundy">#5A1026</color>
+    <color name="cream">#F4EADA</color>
+
+    <!-- سازگاری با منابع قدیمی -->
+    <color name="brand_green">#D8B569</color>
+    <color name="brand_green_dark">#8A6C2E</color>
+    <color name="brand_green_light">#0B1329</color>
+    <color name="ic_launcher_background">#0B1329</color>
+    <color name="dark_background">#070C1C</color>
 </resources>

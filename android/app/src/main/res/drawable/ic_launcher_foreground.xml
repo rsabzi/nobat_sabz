@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- آیکون سه‌بعدی: برگ زمردی با گرادیان، جیغ روشن و سایه -->
+<!-- آیکون سه‌بعدی: برگ طلایی برس‌خورده با گرادیان و سایه -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
@@ -21,15 +21,15 @@
                 android:startY="28"
                 android:endX="54"
                 android:endY="80"
-                android:startColor="#7DF2BB"
-                android:endColor="#0E8A52" />
+                android:startColor="#F6E3B4"
+                android:endColor="#8A6C2E" />
         </aapt:attr>
     </path>
 
     <!-- رگبرگ اصلی -->
     <path
         android:fillColor="#00000000"
-        android:strokeColor="#B3FFFFFF"
+        android:strokeColor="#B30B1329"
         android:strokeWidth="2.4"
         android:strokeLineCap="round"
         android:pathData="M54 34 L54 74" />
@@ -37,7 +37,7 @@
     <!-- رگبرگ‌های جانبی -->
     <path
         android:fillColor="#00000000"
-        android:strokeColor="#80FFFFFF"
+        android:strokeColor="#800B1329"
         android:strokeWidth="2"
         android:strokeLineCap="round"
         android:pathData="M54 48 L45 41 M54 48 L63 41 M54 60 L46 52 M54 60 L62 52" />

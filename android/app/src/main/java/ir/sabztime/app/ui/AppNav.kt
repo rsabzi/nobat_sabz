@@ -72,7 +72,9 @@ fun AppNav(graph: AppGraph) {
             MainScreen(graph, navController)
         }
         composable(Routes.PROFILE) {
-            ProfileScreen(graph, navController)
+            ir.sabztime.app.ui.theme.GlassBackground {
+                ProfileScreen(graph, navController)
+            }
         }
         composable(Routes.BUSINESS) { backStackEntry ->
             val id = backStackEntry.arguments?.getString("id")?.toIntOrNull() ?: 0

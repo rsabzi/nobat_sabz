@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -181,29 +182,27 @@ fun LoginScreen(graph: AppGraph, navController: NavHostController) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // لوگوی سه‌بعدی
+            // نشان طلایی برند
             IconTile(
-                icon = Icons.Filled.Spa,
-                tileSize = 72.dp,
-                contentDescription = null,
-                modifier = Modifier.shadow(6.dp, RoundedCornerShape(22.dp))
+                icon = Icons.Filled.ContentCut,
+                tileSize = 84.dp,
+                contentDescription = null
             )
-            Spacer(Modifier.height(14.dp))
-            Text(
-                "نوبت‌سبز",
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+            Spacer(Modifier.height(16.dp))
+            ir.sabztime.app.ui.components.GoldText(
+                text = "نوبت‌سبز",
+                style = MaterialTheme.typography.headlineLarge
             )
+            Spacer(Modifier.height(6.dp))
             Text(
-                "جستجو، رزرو و مدیریت نوبت در یک اپلیکیشن",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                "جستجو، رزرو و مدیریت نوبت — با تجربه‌ای لوکس",
+                style = MaterialTheme.typography.bodySmall,
+                color = ir.sabztime.app.ui.theme.PureWhite.copy(alpha = 0.6f),
                 textAlign = TextAlign.Center
             )
             Spacer(Modifier.height(22.dp))
 
-            GlassCard {
+            GlassCard(contentPadding = 20.dp) {
                 SegmentedControl(
                     options = listOf("ورود", "ثبت‌نام"),
                     selected = tab,
@@ -263,7 +262,11 @@ fun LoginScreen(graph: AppGraph, navController: NavHostController) {
                         Modifier.fillMaxWidth().padding(bottom = 10.dp),
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = ir.sabztime.app.ui.theme.Gold,
+                            strokeWidth = 2.dp
+                        )
                     }
                     else -> {}
                 }
@@ -283,18 +286,20 @@ fun LoginScreen(graph: AppGraph, navController: NavHostController) {
 
                 Spacer(Modifier.height(10.dp))
 
-                OutlinedButton(
+                ir.sabztime.app.ui.components.OutlineGoldButton(
                     onClick = { tab = if (tab == 0) 1 else 0; viewModel.resetError() },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp)
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(if (tab == 0) "حساب ندارید؟ ثبت‌نام کنید" else "قبلاً ثبت‌نام کرده‌اید؟ وارد شوید")
+                    Text(
+                        if (tab == 0) "حساب ندارید؟ ثبت‌نام کنید" else "قبلاً ثبت‌نام کرده‌اید؟ وارد شوید",
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
 
             Spacer(Modifier.height(12.dp))
             TextButton(onClick = { navController.navigate(Routes.HELP) }) {
-                Text("درباره سرویس نوبت‌سبز", color = MaterialTheme.colorScheme.primary)
+                Text("درباره سرویس نوبت‌سبز", color = ir.sabztime.app.ui.theme.GoldLight)
             }
             Text(
                 "نکته: اطلاعات شما با حساب تلگرام و سیستم رزرو نوبت‌سبز یکپارچه است.",
@@ -311,14 +316,12 @@ fun LoginScreen(graph: AppGraph, navController: NavHostController) {
 /** نشان‌خطای درون فرم */
 @Composable
 private fun ErrorBanner(message: String) {
-    val dark = isSystemInDarkTheme()
     Box(
         Modifier
             .fillMaxWidth()
             .padding(bottom = 10.dp)
             .background(
-                if (dark) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
-                else MaterialTheme.colorScheme.errorContainer,
+                MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.45f),
                 RoundedCornerShape(14.dp)
             )
     ) {
@@ -346,7 +349,6 @@ private fun GlassTextField(
     isError: Boolean = false,
     errorText: String? = null
 ) {
-    val dark = isSystemInDarkTheme()
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
@@ -362,11 +364,16 @@ private fun GlassTextField(
         shape = RoundedCornerShape(18.dp),
         // فقط پارامترهایی که در همه‌ی نسخه‌های M3 1.x وجود دارند (سازگار با 1.2.1)
         colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = if (dark) Color.White.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.65f),
-            unfocusedContainerColor = if (dark) Color.White.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.65f),
+            focusedContainerColor = Color.White.copy(alpha = 0.06f),
+            unfocusedContainerColor = Color.White.copy(alpha = 0.04f),
+            focusedTextColor = ir.sabztime.app.ui.theme.Cream,
+            unfocusedTextColor = ir.sabztime.app.ui.theme.Cream,
             cursorColor = MaterialTheme.colorScheme.primary,
             focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = if (dark) Color.White.copy(alpha = 0.15f) else MaterialTheme.colorScheme.outlineVariant,
+            unfocusedBorderColor = Color.White.copy(alpha = 0.16f),
+            focusedLeadingIconColor = ir.sabztime.app.ui.theme.Gold,
+            unfocusedLeadingIconColor = ir.sabztime.app.ui.theme.TextMuted,
+            unfocusedLabelColor = ir.sabztime.app.ui.theme.TextMuted,
             focusedLabelColor = MaterialTheme.colorScheme.primary,
             errorLabelColor = MaterialTheme.colorScheme.error,
             errorBorderColor = MaterialTheme.colorScheme.error,

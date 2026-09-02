@@ -4,16 +4,11 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
-import ir.sabztime.app.core.ThemeMode
 import ir.sabztime.app.ui.AppNav
 import ir.sabztime.app.ui.theme.SabzTheme
 
@@ -23,23 +18,17 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         val graph = (application as SabzApp).graph
         setContent {
-            // حالت پوسته از انتخاب کاربر (یا سیستم) خوانده می‌شود
-            val themeMode by graph.themeManager.mode.collectAsState()
-            val darkTheme = when (themeMode) {
-                ThemeMode.SYSTEM -> isSystemInDarkTheme()
-                ThemeMode.LIGHT -> false
-                ThemeMode.DARK -> true
-            }
-
-            SabzTheme(darkTheme = darkTheme) {
-                LaunchedEffect(darkTheme) {
-                    // رنگ آیکون‌های نوار وضعیت متناسب با تم
-                    WindowCompat.getInsetsController(window, window.decorView)
-                        .isAppearanceLightStatusBars = !darkTheme
+            // هویت بصری «پرایم» همیشه تیره‌ی لوکس است
+            SabzTheme {
+                LaunchedEffect(Unit) {
+                    // آیکون‌های نوار وضعیت روشن روی پس‌زمینه‌ی سرمه‌ای تیره
+                    val controller = WindowCompat.getInsetsController(window, window.decorView)
+                    controller.isAppearanceLightStatusBars = false
+                    controller.isAppearanceLightNavigationBars = false
                 }
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
+                    color = ir.sabztime.app.ui.theme.Midnight
                 ) {
                     AppNav(graph)
                 }

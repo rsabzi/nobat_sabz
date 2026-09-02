@@ -1,8 +1,6 @@
 package ir.sabztime.app.ui.screens
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,27 +11,22 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.Campaign
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.Help
+import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storefront
-import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -45,10 +38,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -62,16 +53,27 @@ import ir.sabztime.app.core.ThemeMode
 import ir.sabztime.app.core.classify
 import ir.sabztime.app.data.ProfileData
 import ir.sabztime.app.ui.Routes
+import ir.sabztime.app.ui.components.BottomBarSpacer
 import ir.sabztime.app.ui.components.ErrorState
-import ir.sabztime.app.ui.theme.GlassBackground
+import ir.sabztime.app.ui.components.GhostIconButton
 import ir.sabztime.app.ui.components.GlassCard
-import ir.sabztime.app.ui.components.GlassTopBar
-import ir.sabztime.app.ui.components.IconTile
+import ir.sabztime.app.ui.components.GoldDivider
+import ir.sabztime.app.ui.components.GoldText
 import ir.sabztime.app.ui.components.LoadingState
-import ir.sabztime.app.ui.components.NotificationIconButton
-import ir.sabztime.app.ui.components.SegmentedControl
-import ir.sabztime.app.ui.components.StatItem
+import ir.sabztime.app.ui.components.LuxMenuRow
+import ir.sabztime.app.ui.components.ProfileHeroCard
+import ir.sabztime.app.ui.components.SectionTitle
+import ir.sabztime.app.ui.components.SoftBanner
 import ir.sabztime.app.ui.components.TilePalette
+import ir.sabztime.app.ui.theme.Cream
+import ir.sabztime.app.ui.theme.CreamDim
+import ir.sabztime.app.ui.theme.Gold
+import ir.sabztime.app.ui.theme.GoldLight
+import ir.sabztime.app.ui.theme.LuxCardShape
+import ir.sabztime.app.ui.theme.MidnightSoft
+import ir.sabztime.app.ui.theme.NavyCardDeep
+import ir.sabztime.app.ui.theme.PureWhite
+import ir.sabztime.app.ui.theme.TextMuted
 import ir.sabztime.app.util.Jalali
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -98,7 +100,6 @@ class ProfileViewModel(private val graph: AppGraph) : ViewModel() {
     private var loadJob: Job? = null
 
     init {
-        // بارگذاری فقط یک‌بار؛ تغییر تب دیگر درخواست تکراری ایجاد نمی‌کند
         refresh()
     }
 
@@ -136,7 +137,7 @@ class ProfileViewModel(private val graph: AppGraph) : ViewModel() {
             try {
                 graph.repository.logout()
             } catch (e: Exception) {
-                // توکن محلی هم پاک می‌شود
+                // توکن محلی در هر صورت پاک می‌شود
             }
             graph.clearSession()
             _state.value = _state.value.copy(logoutBusy = false)
@@ -149,174 +150,183 @@ class ProfileViewModel(private val graph: AppGraph) : ViewModel() {
     }
 }
 
+/**
+ * صفحه‌ی پروفایل — کارت داشبورد زرشکی عمیق:
+ *  ردیف هویت (ستاره‌ی طلایی، نام، امتیاز/سطح، آواتار دایره‌ای)
+ *  + لیست منو (کسب‌وکارهای من، داشبورد بازاریاب، اعلان‌ها، تنظیمات)
+ */
 @Composable
 fun ProfileScreen(graph: AppGraph, navController: NavHostController) {
     val viewModel: ProfileViewModel = viewModel { ProfileViewModel(graph) }
     val state by viewModel.state.collectAsState()
-    val themeMode by graph.themeManager.mode.collectAsState()
     var showLogoutDialog by remember { mutableStateOf(false) }
 
-    // مقادیر در val محلی: smart cast روی property دلیگیت‌شده ممکن نیست
     val error = state.error
     val profile = state.profile
 
-    GlassBackground {
-        androidx.compose.material3.Scaffold(
-            containerColor = Color.Transparent,
-            topBar = {
-                GlassTopBar(
-                    title = "پروفایل",
-                    actions = {
-                        NotificationIconButton { navController.navigate(Routes.NOTIFICATIONS) }
-                        if (state.profile != null) {
-                            IconButton(onClick = viewModel::refresh) {
-                                Icon(
-                                    Icons.Filled.Refresh,
-                                    contentDescription = "تازه‌سازی",
-                                    modifier = if (state.refreshBusy) Modifier.size(18.dp) else Modifier
-                                )
-                            }
+    Scaffold(containerColor = Color.Transparent) { padding ->
+        when {
+            state.loading -> LoadingState(
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            )
+
+            error != null && profile == null -> ErrorState(
+                error,
+                state.errorKind,
+                onRetry = viewModel::refresh
+            )
+
+            else -> profile?.let { p ->
+                val credit = p.credit
+                // امتیاز نمایشی از اعتبار کاربر (۰ تا ۵) — سطح ممتاز از تعداد نوبت‌های انجام‌شده
+                val score = ((credit?.currentCredit ?: 0).coerceAtMost(100) / 20.0)
+                    .coerceAtLeast(0.0)
+                val scoreText = "${Jalali.persianDigits(String.format(java.util.Locale.US, "%.1f", score))}/۵"
+                val level = when {
+                    p.bookingStats.completed >= 20 -> "سطح ممتاز"
+                    p.bookingStats.completed >= 8 -> "سطح طلایی"
+                    p.bookingStats.completed >= 3 -> "سطح نقره‌ای"
+                    else -> "کاربر تازه‌وارد"
+                }
+
+                Column(
+                    Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                        .padding(padding)
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 22.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Spacer(Modifier.height(4.dp))
+
+                    // ── سرصفحه ──
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                "پروفایل",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Cream
+                            )
+                            Text(
+                                Jalali.persianDigits(p.user.phone),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = PureWhite.copy(alpha = 0.55f)
+                            )
+                        }
+                        GhostIconButton(
+                            icon = Icons.Filled.Refresh,
+                            contentDescription = "تازه‌سازی",
+                            onClick = viewModel::refresh
+                        )
+                    }
+
+                    if (state.offline) {
+                        SoftBanner("اتصال برقرار نیست — آخرین اطلاعات ذخیره‌شده نمایش داده می‌شود.")
+                    }
+
+                    // ── کارت داشبورد زرشکی ──
+                    ProfileHeroCard(
+                        name = p.user.name.ifBlank { "کاربر نوبت‌سبز" },
+                        rating = "$scoreText ($level)",
+                        level = "امتیاز"
+                    ) {
+                        Column {
+                            LuxMenuRow(
+                                icon = Icons.Filled.Storefront,
+                                label = "کسب‌وکارهای من",
+                                trailing = if (p.businesses.isNotEmpty())
+                                    Jalali.persianDigits(p.businesses.size) else null,
+                                onClick = { navController.navigate(Routes.MY_BUSINESSES) }
+                            )
+                            GoldDivider()
+                            LuxMenuRow(
+                                icon = Icons.Filled.Campaign,
+                                label = "داشبورد بازاریاب",
+                                onClick = { navController.navigate(Routes.MARKETER) }
+                            )
+                            GoldDivider()
+                            LuxMenuRow(
+                                icon = Icons.Filled.Notifications,
+                                label = "اعلان‌ها",
+                                onClick = { navController.navigate(Routes.NOTIFICATIONS) }
+                            )
+                            GoldDivider()
+                            LuxMenuRow(
+                                icon = Icons.Filled.Settings,
+                                label = "تنظیمات",
+                                onClick = { navController.navigate(Routes.HELP) }
+                            )
                         }
                     }
-                )
-            }
-        ) { padding ->
-            when {
-                state.loading -> LoadingState(Modifier.fillMaxSize().padding(padding))
-                error != null && profile == null -> ErrorState(
-                    error,
-                    state.errorKind,
-                    onRetry = viewModel::refresh
-                )
-                else -> {
-                    profile?.let { profile ->
-                        Column(
-                            Modifier
-                                .fillMaxSize()
-                                .padding(padding)
-                                .verticalScroll(rememberScrollState())
-                                .padding(20.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            // نوار آفلاین
-                            if (state.offline) {
-                                OfflineBanner()
-                            }
 
-                            // --- کارت کاربر ---
-                            GlassCard {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Avatar(profile.user.name)
-                                    Spacer(Modifier.width(14.dp))
-                                    Column(Modifier.weight(1f)) {
-                                        Text(
-                                            profile.user.name,
-                                            style = MaterialTheme.typography.titleLarge,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Spacer(Modifier.height(2.dp))
-                                        Text(
-                                            Jalali.persianDigits(profile.user.phone),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
+                    // ── اعتبار و آمار ──
+                    if (credit != null) {
+                        GlassCard(pattern = true, contentPadding = 18.dp) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        "اعتبار شما",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = CreamDim
+                                    )
+                                    Spacer(Modifier.height(4.dp))
+                                    GoldText(
+                                        text = "${Jalali.persianDigits(credit.currentCredit)} امتیاز",
+                                        style = MaterialTheme.typography.headlineSmall
+                                    )
                                 }
-                            }
-
-                            // --- اعتبار ---
-                            profile.credit?.let { credit ->
-                                GlassCard {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        IconTile(
-                                            icon = Icons.Filled.Star,
-                                            tileSize = 48.dp,
-                                            palette = TilePalette.AMBER,
-                                            contentDescription = null
-                                        )
-                                        Spacer(Modifier.width(12.dp))
-                                        Column(Modifier.weight(1f)) {
-                                            Text("اعتبار شما", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                            Text(
-                                                Jalali.persianDigits(credit.currentCredit) + " امتیاز",
-                                                style = MaterialTheme.typography.titleLarge,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.primary
-                                            )
-                                        }
-                                    }
-                                    Spacer(Modifier.height(12.dp))
-                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                                        StatItem("کل رزرو", Jalali.persianDigits(profile.bookingStats.total))
-                                        StatItem("پیش رو", Jalali.persianDigits(profile.bookingStats.upcoming))
-                                        StatItem("انجام‌شده", Jalali.persianDigits(profile.bookingStats.completed))
-                                        StatItem("کسب امتیاز", Jalali.persianDigits(credit.totalEarned))
-                                    }
-                                }
-                            }
-
-                            // --- منو ---
-                            GlassCard {
-                                MenuRow(
-                                    icon = Icons.Filled.Storefront,
-                                    label = "کسب‌وکارهای من",
-                                    onClick = { navController.navigate(Routes.MY_BUSINESSES) }
-                                )
-                                RowDivider()
-                                MenuRow(
+                                ir.sabztime.app.ui.components.IconTile(
                                     icon = Icons.Filled.Campaign,
-                                    label = "داشبورد بازاریاب",
-                                    palette = TilePalette.AMBER,
-                                    onClick = { navController.navigate(Routes.MARKETER) }
-                                )
-                                RowDivider()
-                                MenuRow(
-                                    icon = Icons.Filled.Notifications,
-                                    label = "اعلان‌ها",
-                                    onClick = { navController.navigate(Routes.NOTIFICATIONS) }
-                                )
-                                RowDivider()
-                                MenuRow(
-                                    icon = Icons.Filled.Help,
-                                    label = "راهنما",
-                                    onClick = { navController.navigate(Routes.HELP) }
+                                    tileSize = 48.dp,
+                                    palette = TilePalette.GOLD,
+                                    contentDescription = null
                                 )
                             }
-
-                            // --- پوسته ---
-                            GlassCard {
-                                Text("پوسته برنامه", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                Spacer(Modifier.height(10.dp))
-                                SegmentedControl(
-                                    options = listOf("خودکار", "روشن", "تاریک"),
-                                    selected = themeMode.ordinal,
-                                    onSelect = { viewModel.setThemeMode(ThemeMode.values()[it]) },
-                                    icons = listOf(Icons.Filled.BrightnessAuto, Icons.Filled.WbSunny, Icons.Filled.DarkMode)
-                                )
-                            }
-
-                            // --- خروج ---
-                            GlassCard {
-                                MenuRow(
-                                    icon = Icons.Filled.Logout,
-                                    label = "خروج از حساب",
-                                    palette = TilePalette.ERROR,
-                                    onClick = { showLogoutDialog = true }
-                                )
-                            }
-
-                            Box(
-                                modifier = Modifier.fillMaxWidth(),
-                                contentAlignment = Alignment.Center
+                            Spacer(Modifier.height(16.dp))
+                            GoldDivider()
+                            Spacer(Modifier.height(14.dp))
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
-                                Text(
-                                    "نوبت‌سبز — نسخه ${Jalali.persianDigits(BuildConfig.VERSION_NAME)}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                LuxStat("کل رزرو", Jalali.persianDigits(p.bookingStats.total))
+                                LuxStat("پیش رو", Jalali.persianDigits(p.bookingStats.upcoming))
+                                LuxStat("انجام‌شده", Jalali.persianDigits(p.bookingStats.completed))
+                                LuxStat("کسب امتیاز", Jalali.persianDigits(credit.totalEarned))
                             }
                         }
                     }
+
+                    // ── پشتیبانی ──
+                    SectionTitle("پشتیبانی و حساب")
+                    GlassCard(contentPadding = 12.dp) {
+                        LuxMenuRow(
+                            icon = Icons.Filled.HelpOutline,
+                            label = "راهنما و پرسش‌های متداول",
+                            onClick = { navController.navigate(Routes.HELP) }
+                        )
+                        GoldDivider()
+                        LuxMenuRow(
+                            icon = Icons.Filled.Logout,
+                            label = "خروج از حساب",
+                            palette = TilePalette.ERROR,
+                            onClick = { showLogoutDialog = true }
+                        )
+                    }
+
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Text(
+                            "نوبت‌سبز — نسخه ${Jalali.persianDigits(BuildConfig.VERSION_NAME)}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextMuted.copy(alpha = 0.7f)
+                        )
+                    }
+
+                    BottomBarSpacer()
                 }
             }
         }
@@ -325,9 +335,12 @@ fun ProfileScreen(graph: AppGraph, navController: NavHostController) {
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
-            shape = RoundedCornerShape(28.dp),
-            title = { Text("خروج", fontWeight = FontWeight.Bold) },
-            text = { Text("آیا از حساب خود خارج می‌شوید؟") },
+            shape = LuxCardShape,
+            containerColor = MidnightSoft,
+            titleContentColor = GoldLight,
+            textContentColor = Cream,
+            title = { Text("خروج از حساب", fontWeight = FontWeight.Bold) },
+            text = { Text("آیا از حساب کاربری خود خارج می‌شوید؟") },
             confirmButton = {
                 TextButton(onClick = {
                     showLogoutDialog = false
@@ -338,92 +351,37 @@ fun ProfileScreen(graph: AppGraph, navController: NavHostController) {
                         }
                     }
                 }) {
-                    Text("خروج", color = MaterialTheme.colorScheme.error)
+                    Text("خروج", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
                 }
             },
-            dismissButton = { TextButton(onClick = { showLogoutDialog = false }) { Text("منصرف شدم") } }
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("منصرف شدم", color = Gold)
+                }
+            }
         )
     }
 }
 
+/** آمار کوچک لوکس: عدد طلایی + برچسب کم‌رنگ */
 @Composable
-private fun Avatar(name: String) {
-    val initial = name.trim().take(1).ifBlank { "؟" }
-    Box(
-        Modifier
-            .size(64.dp)
-            .shadow(6.dp, CircleShape)
-            .clip(CircleShape)
-            .background(
-                Brush.verticalGradient(
-                    colors = if (isSystemInDarkTheme()) {
-                        listOf(Color(0xFF43D694), Color(0xFF159159))
-                    } else {
-                        listOf(Color(0xFF35C985), Color(0xFF0C7C47))
-                    }
+private fun LuxStat(label: String, value: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            Modifier
+                .clip(RoundedCornerShape(14.dp))
+                .background(
+                    Brush.verticalGradient(listOf(Color(0x1FFFFFFF), Color(0x0AFFFFFF)))
                 )
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            initial,
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = Color.White
-        )
-    }
-}
-
-@Composable
-private fun OfflineBanner() {
-    Text(
-        "اتصال برقرار نیست — آخرین اطلاعات ذخیره‌شده نمایش داده می‌شود.",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onTertiaryContainer,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.tertiaryContainer)
-            .padding(horizontal = 12.dp, vertical = 10.dp)
-    )
-}
-
-@Composable
-private fun RowDivider() {
-    Spacer(Modifier.height(2.dp))
-    androidx.compose.material3.HorizontalDivider(
-        color = if (isSystemInDarkTheme()) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.05f)
-    )
-    Spacer(Modifier.height(2.dp))
-}
-
-@Composable
-private fun MenuRow(
-    icon: ImageVector,
-    label: String,
-    palette: TilePalette = TilePalette.GREEN,
-    onClick: () -> Unit
-) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconTile(icon = icon, tileSize = 40.dp, palette = palette, contentDescription = null)
-        Spacer(Modifier.width(12.dp))
+                .padding(horizontal = 12.dp, vertical = 6.dp)
+        ) {
+            GoldText(text = value, style = MaterialTheme.typography.titleMedium)
+        }
+        Spacer(Modifier.height(5.dp))
         Text(
             label,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.weight(1f)
-        )
-        Icon(
-            Icons.Filled.ChevronLeft,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
+            style = MaterialTheme.typography.labelSmall,
+            color = TextMuted
         )
     }
 }

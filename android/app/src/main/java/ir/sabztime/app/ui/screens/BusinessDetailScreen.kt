@@ -526,7 +526,7 @@ private fun BookingDialog(
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(28.dp),
-            color = if (dark) Color(0xFF1E2521) else Color(0xFFFBFDFC)
+            color = ir.sabztime.app.ui.theme.MidnightSoft
         ) {
             Column(
                 Modifier

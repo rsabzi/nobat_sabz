@@ -1,7 +1,7 @@
 package ir.sabztime.app.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,34 +9,25 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Category
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -45,9 +36,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.ViewModel
@@ -60,17 +52,27 @@ import ir.sabztime.app.core.classify
 import ir.sabztime.app.data.BusinessSummary
 import ir.sabztime.app.data.FiltersData
 import ir.sabztime.app.ui.Routes
+import ir.sabztime.app.ui.components.BottomBarSpacer
 import ir.sabztime.app.ui.components.EmptyState
 import ir.sabztime.app.ui.components.ErrorState
-import ir.sabztime.app.ui.theme.GlassBackground
-import ir.sabztime.app.ui.components.GlassCard
-import ir.sabztime.app.ui.components.GlassChip
-import ir.sabztime.app.ui.components.IconTile
-import ir.sabztime.app.ui.components.NotificationIconButton
+import ir.sabztime.app.ui.components.FilterRow
+import ir.sabztime.app.ui.components.GhostIconButton
+import ir.sabztime.app.ui.components.GoldDivider
+import ir.sabztime.app.ui.components.LuxSearchBar
+import ir.sabztime.app.ui.components.SectionTitle
+import ir.sabztime.app.ui.components.VipBusinessCard
 import ir.sabztime.app.ui.components.businessTypeIcon
+import ir.sabztime.app.ui.theme.Cream
+import ir.sabztime.app.ui.theme.Gold
+import ir.sabztime.app.ui.theme.GoldDim
+import ir.sabztime.app.ui.theme.GoldLight
+import ir.sabztime.app.ui.theme.LuxCardShape
+import ir.sabztime.app.ui.theme.MidnightSoft
+import ir.sabztime.app.ui.theme.NavyCardDeep
+import ir.sabztime.app.ui.theme.PureWhite
+import ir.sabztime.app.ui.theme.TextMuted
 import ir.sabztime.app.util.Jalali
 import java.time.LocalDate
-import java.time.LocalTime
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -85,7 +87,9 @@ data class HomeUiState(
     val selectedProvince: String = "",
     val results: UiState<List<BusinessSummary>> = UiState.Loading,
     val filters: FiltersData = FiltersData(),
-    val filtersLoaded: Boolean = false
+    val filtersLoaded: Boolean = false,
+    /** نام کاربر برای خوش‌آمدگویی سرصفحه */
+    val userName: String = ""
 )
 
 class HomeViewModel(private val graph: AppGraph) : ViewModel() {
@@ -97,6 +101,7 @@ class HomeViewModel(private val graph: AppGraph) : ViewModel() {
     init {
         viewModelScope.launch { loadFilters() }
         viewModelScope.launch { doSearch() }
+        viewModelScope.launch { loadUser() }
     }
 
     /** جستجو با مهلت (debounce)؛ درخواست قبلی لغو می‌شود تا پاسخ‌ها با هم رقابت نکنند */
@@ -127,6 +132,7 @@ class HomeViewModel(private val graph: AppGraph) : ViewModel() {
     fun refresh() {
         viewModelScope.launch {
             if (!_state.value.filtersLoaded) loadFilters()
+            if (_state.value.userName.isBlank()) loadUser()
             doSearch()
         }
     }
@@ -134,6 +140,17 @@ class HomeViewModel(private val graph: AppGraph) : ViewModel() {
     private fun restartSearch() {
         searchJob?.cancel()
         searchJob = viewModelScope.launch { doSearch() }
+    }
+
+    private suspend fun loadUser() {
+        try {
+            val me = graph.repository.me()
+            _state.value = _state.value.copy(userName = me.user.name.trim())
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // نام کاربر اختیاری است؛ سرصفحه بدون نام هم درست کار می‌کند
+        }
     }
 
     private suspend fun loadFilters() {
@@ -164,146 +181,125 @@ class HomeViewModel(private val graph: AppGraph) : ViewModel() {
             throw e
         } catch (e: Exception) {
             val s = classify(e)
-            _state.value = _state.value.copy(
-                results = UiState.Error(s.message, s.kind)
-            )
+            _state.value = _state.value.copy(results = UiState.Error(s.message, s.kind))
         }
     }
 }
 
+/**
+ * صفحه‌ی خانه — سرصفحه‌ی خوش‌آمدگویی، سرچ‌بار لوکس، دو دکمه‌ی فیلتر
+ * (استان در راست، دسته‌بندی در چپ) و فهرست کارت‌های کسب‌وکار.
+ */
 @Composable
 fun HomeScreen(graph: AppGraph, navController: NavHostController) {
     val viewModel: HomeViewModel = viewModel { HomeViewModel(graph) }
     val state by viewModel.state.collectAsState()
-    val dark = isSystemInDarkTheme()
 
     var categoryMenu by remember { mutableStateOf(false) }
     var provinceMenu by remember { mutableStateOf(false) }
 
     val today = LocalDate.now().toString()
-    val hour = LocalTime.now().hour
-    val greeting = when {
-        hour in 5..11 -> "صبح بخیر"
-        hour in 12..16 -> "روز بخیر"
-        else -> "شب بخیر"
-    }
+    val dateLine = "${Jalali.weekdayName(today)}، ${Jalali.formatLong(today)}"
+    val name = state.userName.ifBlank { "مهمان" }
 
     Scaffold(containerColor = Color.Transparent) { padding ->
-        Column(Modifier.fillMaxSize().statusBarsPadding().padding(padding)) {
-            // --- سرصفحه: سلام + تاریخ جلالی ---
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text(greeting + " 👋", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text(
-                        "${Jalali.weekdayName(today)}، ${Jalali.formatLong(today)}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+        Column(
+            Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .padding(padding)
+        ) {
+            // ── سرصفحه: درود، {نام} 👋 + تاریخ جلالی ──
+            ir.sabztime.app.ui.components.WelcomeHeader(
+                name = name,
+                dateLine = dateLine,
+                actions = {
+                    GhostIconButton(
+                        icon = Icons.Filled.Notifications,
+                        contentDescription = "اعلان‌ها",
+                        onClick = { navController.navigate(Routes.NOTIFICATIONS) },
+                        badge = true
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    GhostIconButton(
+                        icon = Icons.Filled.Refresh,
+                        contentDescription = "تازه‌سازی",
+                        onClick = viewModel::refresh,
+                        tint = GoldDim
                     )
                 }
-                NotificationIconButton { navController.navigate(Routes.NOTIFICATIONS) }
-                IconButton(onClick = viewModel::refresh) {
-                    Icon(Icons.Filled.Refresh, contentDescription = "تازه‌سازی")
-                }
-            }
-
-            // --- جستجو ---
-            OutlinedTextField(
-                value = state.query,
-                onValueChange = viewModel::updateQuery,
-                placeholder = { Text("جستجوی کسب‌وکار، خدمت یا شهر…") },
-                leadingIcon = {
-                    Icon(Icons.Filled.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                },
-                trailingIcon = {
-                    if (state.query.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.updateQuery("") }) {
-                            Icon(Icons.Filled.Close, contentDescription = "پاک کردن")
-                        }
-                    }
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(22.dp),
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
-                // فقط پارامترهایی که در همه‌ی نسخه‌های M3 1.x وجود دارند (سازگار با 1.2.1)
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = if (dark) Color.White.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.7f),
-                    unfocusedContainerColor = if (dark) Color.White.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.7f),
-                    cursorColor = MaterialTheme.colorScheme.primary,
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = if (dark) Color.White.copy(alpha = 0.15f) else Color.Transparent,
-                    focusedLabelColor = MaterialTheme.colorScheme.primary
-                )
             )
 
-            // --- فیلترها ---
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                item {
-                    GlassChip(
-                        selected = state.selectedCategory.isNotBlank(),
-                        onClick = { categoryMenu = true }
-                    ) {
-                        Icon(
-                            Icons.Filled.Category,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                            tint = if (state.selectedCategory.isNotBlank()) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            if (state.selectedCategory.isBlank()) "دسته‌بندی" else state.selectedCategory,
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = if (state.selectedCategory.isNotBlank()) FontWeight.Bold else FontWeight.Medium,
-                            color = if (state.selectedCategory.isNotBlank()) Color.White else MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-                item {
-                    GlassChip(
-                        selected = state.selectedProvince.isNotBlank(),
-                        onClick = { provinceMenu = true }
-                    ) {
-                        Icon(
-                            Icons.Filled.Place,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                            tint = if (state.selectedProvince.isNotBlank()) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            if (state.selectedProvince.isBlank()) "استان" else state.selectedProvince,
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = if (state.selectedProvince.isNotBlank()) FontWeight.Bold else FontWeight.Medium,
-                            color = if (state.selectedProvince.isNotBlank()) Color.White else MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-                if (state.selectedCategory.isNotBlank() || state.selectedProvince.isNotBlank()) {
-                    item {
-                        TextButton(onClick = viewModel::clearFilters) {
-                            Text("حذف فیلترها", color = MaterialTheme.colorScheme.error)
-                        }
-                    }
+            Spacer(Modifier.height(6.dp))
+
+            // ── سرچ‌بار ──
+            LuxSearchBar(
+                value = state.query,
+                onValueChange = viewModel::updateQuery,
+                modifier = Modifier.padding(horizontal = 22.dp)
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            // ── دکمه‌های فیلتر: راست = استان، چپ = دسته‌بندی ──
+            FilterRow(
+                province = state.selectedProvince,
+                category = state.selectedCategory,
+                onProvince = { provinceMenu = true },
+                onCategory = { categoryMenu = true },
+                modifier = Modifier.padding(horizontal = 22.dp)
+            )
+
+            if (state.selectedCategory.isNotBlank() || state.selectedProvince.isNotBlank()) {
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 22.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Text(
+                        "حذف فیلترها",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = GoldLight,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .clickable(onClick = viewModel::clearFilters)
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
                 }
             }
-            Spacer(Modifier.height(4.dp))
 
-            // --- نتایج ---
+            Spacer(Modifier.height(16.dp))
+
+            Box(Modifier.padding(horizontal = 22.dp)) {
+                SectionTitle(
+                    text = "کسب‌وکارهای منتخب",
+                    trailing = {
+                        val count = (state.results as? UiState.Success)?.data?.size
+                        if (count != null) {
+                            Text(
+                                "${Jalali.persianDigits(count)} مورد",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TextMuted
+                            )
+                        }
+                    }
+                )
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            // ── نتایج ──
             when (val r = state.results) {
                 is UiState.Loading -> Box(
                     Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 60.dp),
+                        .heightIn(min = 220.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    CircularProgressIndicator(color = Gold, strokeWidth = 2.5.dp)
                 }
                 is UiState.Error -> ErrorState(r.message, r.kind, onRetry = viewModel::refresh)
                 UiState.Empty -> EmptyState(
@@ -313,13 +309,21 @@ fun HomeScreen(graph: AppGraph, navController: NavHostController) {
                 )
                 is UiState.Success -> LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    contentPadding = PaddingValues(horizontal = 22.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     items(r.data, key = { it.id }) { b ->
-                        BusinessCard(b) { navController.navigate(Routes.business(b.id)) }
+                        VipBusinessCard(
+                            title = b.name,
+                            location = listOfNotNull(b.city, b.province).joinToString("، ")
+                                .ifBlank { b.address.orEmpty() },
+                            services = b.services.take(3).joinToString("، "),
+                            icon = businessTypeIcon(b.businessType),
+                            badge = if (b.services.size >= 3) "VIP" else null,
+                            onClick = { navController.navigate(Routes.business(b.id)) }
+                        )
                     }
-                    item { Spacer(Modifier.height(8.dp)) }
+                    item { BottomBarSpacer() }
                 }
             }
         }
@@ -343,6 +347,7 @@ fun HomeScreen(graph: AppGraph, navController: NavHostController) {
     }
 }
 
+/** دیالوگ انتخاب لوکس (استان / دسته‌بندی) */
 @Composable
 private fun SelectionDialog(
     title: String,
@@ -350,103 +355,57 @@ private fun SelectionDialog(
     onDismiss: () -> Unit,
     onSelect: (String) -> Unit
 ) {
-    val dark = isSystemInDarkTheme()
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = if (dark) Color(0xFF1E2521) else Color(0xFFFBFDFC)
+            shape = LuxCardShape,
+            color = Color.Transparent
         ) {
-            LazyColumn(
+            Column(
                 Modifier
-                    .heightIn(max = 420.dp)
+                    .clip(LuxCardShape)
+                    .background(Brush.verticalGradient(listOf(MidnightSoft, NavyCardDeep)))
                     .fillMaxWidth()
             ) {
-                item {
-                    Text(
-                        title,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                items(options) { (label, count) ->
-                    Row(
-                        Modifier
-                            .clickable { onSelect(label) }
-                            .padding(horizontal = 20.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                        Text(
-                            "${Jalali.persianDigits(count)} کسب‌وکار",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                item { Spacer(Modifier.height(8.dp)) }
-            }
-        }
-    }
-}
-
-@Composable
-private fun BusinessCard(b: BusinessSummary, onClick: () -> Unit) {
-    GlassCard(onClick = onClick) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconTile(icon = businessTypeIcon(b.businessType), tileSize = 52.dp, contentDescription = null)
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
                 Text(
-                    b.name,
+                    title,
+                    modifier = Modifier.padding(horizontal = 22.dp, vertical = 16.dp),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    color = GoldLight
                 )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    listOfNotNull(b.city, b.province).joinToString("، "),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                GoldDivider()
+                LazyColumn(Modifier.heightIn(max = 420.dp)) {
+                    items(options) { (label, count) ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { onSelect(label) }
+                                .padding(horizontal = 22.dp, vertical = 13.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                Modifier
+                                    .size(6.dp)
+                                    .clip(RoundedCornerShape(50))
+                                    .background(Gold.copy(alpha = 0.7f))
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                label,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Cream,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text(
+                                "${Jalali.persianDigits(count)} کسب‌وکار",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = PureWhite.copy(alpha = 0.5f)
+                            )
+                        }
+                    }
+                    item { Spacer(Modifier.height(10.dp)) }
+                }
             }
-        }
-        if (b.services.isNotEmpty()) {
-            Spacer(Modifier.height(8.dp))
-            Text(
-                b.services.take(4).joinToString(" · "),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        if (!b.address.isNullOrBlank()) {
-            Spacer(Modifier.height(4.dp))
-            Text(
-                b.address,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        Spacer(Modifier.height(10.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                "مشاهده و رزرو",
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.weight(1f)
-            )
-            Icon(
-                Icons.Filled.ChevronLeft,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp)
-            )
         }
     }
 }

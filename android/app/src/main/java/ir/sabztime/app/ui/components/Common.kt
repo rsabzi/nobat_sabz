@@ -1,6 +1,7 @@
 package ir.sabztime.app.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -58,12 +59,16 @@ fun LoadingState(modifier: Modifier = Modifier, label: String = "در حال ب�
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-            Spacer(Modifier.height(12.dp))
+            CircularProgressIndicator(
+                color = ir.sabztime.app.ui.theme.Gold,
+                strokeWidth = 2.5.dp,
+                modifier = Modifier.size(30.dp)
+            )
+            Spacer(Modifier.height(14.dp))
             Text(
                 label,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = MaterialTheme.typography.bodySmall,
+                color = ir.sabztime.app.ui.theme.TextMuted
             )
         }
     }
@@ -131,17 +136,29 @@ fun EmptyState(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(
                 Modifier
-                    .size(88.dp)
+                    .size(92.dp)
                     .clip(RoundedCornerShape(30.dp))
                     .background(
-                        if (dark) Color.White.copy(alpha = 0.06f) else Color.White.copy(alpha = 0.75f)
+                        androidx.compose.ui.graphics.Brush.verticalGradient(
+                            listOf(Color(0x33182343), Color(0x0DFFFFFF))
+                        )
+                    )
+                    .border(
+                        ir.sabztime.app.ui.theme.goldBorder(0.22f),
+                        RoundedCornerShape(30.dp)
                     ),
                 contentAlignment = Alignment.Center
             ) {
                 Text(icon, style = MaterialTheme.typography.displayMedium)
             }
             Spacer(Modifier.height(14.dp))
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+            Text(
+                title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                color = ir.sabztime.app.ui.theme.Cream
+            )
             if (subtitle != null) {
                 Spacer(Modifier.height(8.dp))
                 Text(
@@ -226,7 +243,7 @@ fun StatItem(label: String, value: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun ListDivider() = HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+fun ListDivider() = GoldDivider()
 
 @Composable
 fun SpacerH(height: Int) = Spacer(Modifier.height(height.dp))

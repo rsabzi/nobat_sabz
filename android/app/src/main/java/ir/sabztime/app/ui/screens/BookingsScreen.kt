@@ -178,7 +178,7 @@ fun BookingsScreen(
                         items(ui.data, key = { it.id }) { b ->
                             BookingCard(b, onClick = { navController.navigate(Routes.booking(b.id)) })
                         }
-                        item { Spacer(Modifier.height(8.dp)) }
+                        item { ir.sabztime.app.ui.components.BottomBarSpacer() }
                     }
                 }
             }
@@ -188,16 +188,22 @@ fun BookingsScreen(
 
 @Composable
 fun BookingCard(b: BookingSummary, onClick: () -> Unit, badge: (@Composable () -> Unit)? = null) {
-    val dark = isSystemInDarkTheme()
     val parts = Jalali.parts(b.bookingDate)
-    GlassCard(onClick = onClick, shape = RoundedCornerShape(24.dp)) {
+    GlassCard(onClick = onClick, shape = RoundedCornerShape(25.dp), pattern = true) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             // بلوک تاریخ
             Box(
                 Modifier
                     .size(64.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(MaterialTheme.colorScheme.primaryContainer),
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(
+                        androidx.compose.ui.graphics.Brush.verticalGradient(
+                            listOf(
+                                ir.sabztime.app.ui.theme.GoldLight,
+                                ir.sabztime.app.ui.theme.GoldDim
+                            )
+                        )
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -205,12 +211,12 @@ fun BookingCard(b: BookingSummary, onClick: () -> Unit, badge: (@Composable () -
                         parts?.let { Jalali.persianDigits(it.third) } ?: "—",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = ir.sabztime.app.ui.theme.MidnightDeep
                     )
                     Text(
                         parts?.let { Jalali.monthName(it.second) } ?: "",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = ir.sabztime.app.ui.theme.MidnightDeep
                     )
                 }
             }
@@ -263,14 +269,14 @@ fun statusText(status: String): String = when (status) {
 
 @Composable
 fun statusColor(status: String): Color = when (status) {
-    "cancelled" -> MaterialTheme.colorScheme.error
-    "completed" -> Color(0xFF3949AB)
-    else -> MaterialTheme.colorScheme.primary
+    "cancelled" -> ir.sabztime.app.ui.theme.DangerRose
+    "completed" -> ir.sabztime.app.ui.theme.SuccessEmerald
+    else -> ir.sabztime.app.ui.theme.GoldLight
 }
 
 @Composable
 fun statusContainer(status: String): Color = when (status) {
-    "cancelled" -> MaterialTheme.colorScheme.errorContainer
-    "completed" -> Color(0xFFE8EAF6)
-    else -> MaterialTheme.colorScheme.primaryContainer
+    "cancelled" -> ir.sabztime.app.ui.theme.DangerRoseDeep.copy(alpha = 0.35f)
+    "completed" -> ir.sabztime.app.ui.theme.SuccessEmeraldDeep.copy(alpha = 0.30f)
+    else -> ir.sabztime.app.ui.theme.GoldDeep.copy(alpha = 0.28f)
 }

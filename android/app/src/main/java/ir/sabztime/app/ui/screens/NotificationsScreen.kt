@@ -94,12 +94,18 @@ private fun notificationIcon(type: String): ImageVector = when (type) {
 
 private fun notificationPalette(type: String): TilePalette = when (type) {
     "booking_cancelled" -> TilePalette.ERROR
-    "credit_change" -> TilePalette.AMBER
-    else -> TilePalette.GREEN
+    "credit_change" -> TilePalette.GOLD
+    "booking_completed" -> TilePalette.EMERALD
+    else -> TilePalette.SAPPHIRE
 }
 
 @Composable
-fun NotificationsScreen(graph: AppGraph, navController: NavHostController) {
+fun NotificationsScreen(
+    graph: AppGraph,
+    navController: NavHostController,
+    /** وقتی به‌عنوان تب داخل صفحه‌ی اصلی نمایش داده می‌شود (بدون دکمه‌ی بازگشت) */
+    embedded: Boolean = false
+) {
     val viewModel: NotificationsViewModel = viewModel { NotificationsViewModel(graph) }
     val state by viewModel.state.collectAsState()
 
@@ -108,8 +114,8 @@ fun NotificationsScreen(graph: AppGraph, navController: NavHostController) {
             containerColor = Color.Transparent,
             topBar = {
                 GlassTopBar(
-                    title = "اعلان‌ها",
-                    onBack = { navController.popBackStack() },
+                    title = "پیام‌ها و اعلان‌ها",
+                    onBack = if (embedded) null else ({ navController.popBackStack() }),
                     actions = {
                         IconButton(onClick = viewModel::load) {
                             Icon(Icons.Filled.Refresh, contentDescription = "تازه‌سازی")
@@ -137,7 +143,7 @@ fun NotificationsScreen(graph: AppGraph, navController: NavHostController) {
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     items(s.data, key = { "${it.type}-${it.refId}-${it.createdAt}" }) { n ->
-                        GlassCard(shape = RoundedCornerShape(24.dp)) {
+                        GlassCard(shape = RoundedCornerShape(25.dp)) {
                             Row(
                                 Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically
@@ -172,7 +178,7 @@ fun NotificationsScreen(graph: AppGraph, navController: NavHostController) {
                             }
                         }
                     }
-                    item { Spacer(Modifier.height(8.dp)) }
+                    item { ir.sabztime.app.ui.components.BottomBarSpacer() }
                 }
             }
         }

@@ -1,96 +1,69 @@
 package ir.sabztime.app.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
-private val LightColors = lightColorScheme(
-    primary = LightPrimary,
-    onPrimary = LightOnPrimary,
-    primaryContainer = LightPrimaryContainer,
-    onPrimaryContainer = LightOnPrimaryContainer,
-    inversePrimary = LightInversePrimary,
-    secondary = LightSecondary,
-    onSecondary = LightOnSecondary,
-    secondaryContainer = LightSecondaryContainer,
-    onSecondaryContainer = LightOnSecondaryContainer,
-    tertiary = LightTertiary,
-    onTertiary = LightOnTertiary,
-    tertiaryContainer = LightTertiaryContainer,
-    onTertiaryContainer = LightOnTertiaryContainer,
-    background = LightBackground,
-    onBackground = LightOnBackground,
-    surface = LightSurface,
-    onSurface = LightOnSurface,
-    surfaceVariant = LightSurfaceVariant,
-    onSurfaceVariant = LightOnSurfaceVariant,
-    surfaceTint = LightPrimary,
-    error = LightError,
-    onError = LightOnError,
-    errorContainer = LightErrorContainer,
-    onErrorContainer = LightOnErrorContainer,
-    outline = LightOutline,
-    outlineVariant = LightOutlineVariant,
-    scrim = LightScrim,
-    inverseSurface = LightInverseSurface,
-    inverseOnSurface = LightInverseOnSurface,
-    surfaceContainerLowest = LightSurfaceContainerLowest,
-    surfaceContainerLow = LightSurfaceContainerLow,
-    surfaceContainer = LightSurfaceContainer,
-    surfaceContainerHigh = LightSurfaceContainerHigh,
-    surfaceContainerHighest = LightSurfaceContainerHighest
-)
+/**
+ * طرح رنگ «لوکس» — هویت بصری واحد و تک‌حالته (Dark Premium).
+ * تمام صفحه‌ها از همین طرح تغذیه می‌شوند تا حس یکدست و گران‌قیمت حفظ شود.
+ */
+private val LuxColors = darkColorScheme(
+    primary = Gold,
+    onPrimary = MidnightDeep,
+    primaryContainer = GoldDeep,
+    onPrimaryContainer = GoldLight,
+    inversePrimary = GoldBright,
 
-private val DarkColors = darkColorScheme(
-    primary = DarkPrimary,
-    onPrimary = DarkOnPrimary,
-    primaryContainer = DarkPrimaryContainer,
-    onPrimaryContainer = DarkOnPrimaryContainer,
-    inversePrimary = DarkInversePrimary,
-    secondary = DarkSecondary,
-    onSecondary = DarkOnSecondary,
-    secondaryContainer = DarkSecondaryContainer,
-    onSecondaryContainer = DarkOnSecondaryContainer,
-    tertiary = DarkTertiary,
-    onTertiary = DarkOnTertiary,
-    tertiaryContainer = DarkTertiaryContainer,
-    onTertiaryContainer = DarkOnTertiaryContainer,
-    background = DarkBackground,
-    onBackground = DarkOnBackground,
-    surface = DarkSurface,
-    onSurface = DarkOnSurface,
-    surfaceVariant = DarkSurfaceVariant,
-    onSurfaceVariant = DarkOnSurfaceVariant,
-    surfaceTint = DarkPrimary,
-    error = DarkError,
-    onError = DarkOnError,
-    errorContainer = DarkErrorContainer,
-    onErrorContainer = DarkOnErrorContainer,
-    outline = DarkOutline,
-    outlineVariant = DarkOutlineVariant,
-    scrim = DarkScrim,
-    inverseSurface = DarkInverseSurface,
-    inverseOnSurface = DarkInverseOnSurface,
-    surfaceContainerLowest = DarkSurfaceContainerLowest,
-    surfaceContainerLow = DarkSurfaceContainerLow,
-    surfaceContainer = DarkSurfaceContainer,
-    surfaceContainerHigh = DarkSurfaceContainerHigh,
-    surfaceContainerHighest = DarkSurfaceContainerHighest
+    secondary = Burgundy,
+    onSecondary = Cream,
+    secondaryContainer = BurgundyDeep,
+    onSecondaryContainer = Cream,
+
+    tertiary = GoldBright,
+    onTertiary = MidnightDeep,
+    tertiaryContainer = GoldContainer,
+    onTertiaryContainer = GoldLight,
+
+    background = Midnight,
+    onBackground = Cream,
+
+    surface = NavyCard,
+    onSurface = Cream,
+    surfaceVariant = NavyCardDeep,
+    onSurfaceVariant = TextMuted,
+    surfaceTint = Gold,
+
+    error = DangerRose,
+    onError = PureWhite,
+    errorContainer = DangerRoseDeep,
+    onErrorContainer = RoseContainerText,
+
+    outline = GoldDim,
+    outlineVariant = OutlineFaint,
+    scrim = ScrimDeep,
+
+    inverseSurface = Cream,
+    inverseOnSurface = MidnightDeep,
+
+    surfaceContainerLowest = CharcoalDeep,
+    surfaceContainerLow = Midnight,
+    surfaceContainer = NavyCardDeep,
+    surfaceContainerHigh = NavyCard,
+    surfaceContainerHighest = MidnightSoft
 )
 
 /**
- * تم نوبت‌سبز — طراحی شیشه‌ای مدرن با تم روشن و تاریک.
- * مقدار darkTheme از انتخاب کاربر (ThemeManager) یا سیستم خوانده می‌شود.
+ * تم نوبت‌سبز — «پرایم». پارامتر darkTheme برای سازگاری با کدهای موجود
+ * حفظ شده اما هویت بصری همیشه تیره‌ی لوکس است (طراحی تک‌حالته).
  */
 @Composable
 fun SabzTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = true,
     content: @Composable () -> Unit
 ) {
     MaterialTheme(
-        colorScheme = if (darkTheme) DarkColors else LightColors,
+        colorScheme = LuxColors,
         typography = SabzTypography,
         shapes = SabzShapes,
         content = content
