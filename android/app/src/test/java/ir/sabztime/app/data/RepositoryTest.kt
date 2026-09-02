@@ -119,6 +119,77 @@ class RepositoryTest {
     }
 
     @Test
+    fun `profile decodes when PDO returns numbers as strings`() = runTest {
+        // PDO با emulated prepares همه ستون‌های عددی را به‌صورت رشته می‌فرستد؛
+        // این حالت قبلاً باعث شکست دیکد صفحه پروفایل (و پیام گمراه‌کننده «اینترنت») می‌شد.
+        server.enqueue(
+            MockResponse().setBody(
+                """
+                {"status":"success",
+                 "user": {"app_user_id": "1", "name": "علی", "phone": "09123456789", "telegram_id": "-9000000000000000001"},
+                 "credit": {"current_credit": "10", "total_earned": "10", "total_deducted": "0",
+                            "last_updated": "2026-09-01 12:00:00"},
+                 "businesses": [{"id": "1", "name": "آرایشگاه", "is_active": "1", "services_count": "2", "bookings_count": "5"}],
+                 "marketer": null,
+                 "booking_stats": {"total": "3", "upcoming": "2", "cancelled": "1", "completed": "0"}}
+                """.trimIndent()
+            )
+        )
+        val p = repo.me()
+        assertEquals("علی", p.user.name)
+        assertEquals(-9000000000000000001L, p.user.telegramId)
+        assertEquals(10, p.credit?.currentCredit)
+        assertEquals(10, p.credit?.totalEarned)
+        assertEquals(0, p.credit?.totalDeducted)
+        assertEquals(5, p.businesses[0].bookingsCount)
+        assertEquals(3, p.bookingStats.total)
+    }
+
+    @Test
+    fun `bookings decode when ids are strings from PDO`() = runTest {
+        server.enqueue(
+            MockResponse().setBody(
+                """
+                {"status":"success","message":"ok",
+                 "bookings":[
+                   {"id": "7", "business_id": "2", "confirmation_code": "ABC123",
+                    "booking_date": "2026-09-10", "start_time": "10:00", "end_time": "10:30",
+                    "customer_name": "علی", "customer_phone": "09123456789", "status": "confirmed",
+                    "business_name": "آرایشگاه", "can_cancel": true, "time_until_booking": "4.5"}
+                 ],"total_count":"1"}
+                """.trimIndent()
+            )
+        )
+        val list = repo.myBookings()
+        assertEquals(1, list.size)
+        assertEquals(7, list[0].id)
+        assertEquals(2, list[0].businessId)
+        assertEquals(4.5, list[0].timeUntilBooking, 0.001)
+    }
+
+    @Test
+    fun `decimal price string parses to long`() = runTest {
+        server.enqueue(
+            MockResponse().setBody(
+                """
+                {"success": true, "business": {
+                  "id": 2, "name": "آرایشگاه", "slot_duration_minutes": "30", "is_active": "1",
+                  "services": [
+                    {"id": "3", "name": "کوتاهی", "price": "250000.00", "duration_minutes": "30", "is_active": "1"},
+                    {"id": "4", "name": "رنگ مو", "price": "1200000.50", "duration_minutes": "120", "is_active": "1"}
+                  ]
+                }}
+                """.trimIndent()
+            )
+        )
+        val b = repo.businessDetails(2)
+        assertNotNull(b)
+        assertEquals(30, b!!.slotDurationMinutes)
+        assertEquals(250_000L, b.services[0].priceValue)
+        assertEquals(1_200_000L, b.services[1].priceValue)
+    }
+
+    @Test
     fun `create booking posts proper payload`() = runTest {
         server.enqueue(
             MockResponse().setBody("""{"status":"success","message":"ok","booking_id":9,"confirmation_code":"XYZ99"}""")

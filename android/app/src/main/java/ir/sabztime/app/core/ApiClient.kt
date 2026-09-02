@@ -48,6 +48,7 @@ class ApiClient(
         .connectTimeout(20, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
+        .retryOnConnectionFailure(true)
         .build()
 
     private val mediaType = "application/json; charset=utf-8".toMediaType()
@@ -79,15 +80,29 @@ class ApiClient(
         val response = try {
             client.newCall(builder.build()).execute()
         } catch (e: IOException) {
-            throw SabzException.Network(e)
+            throw SabzException.Network(networkMessage(e), cause = e)
         }
 
         response.use { resp ->
             val text = resp.body?.string() ?: ""
             val root = try {
+                if (text.isBlank()) {
+                    throw SabzException.Server(
+                        SabzException.MSG_BAD_RESPONSE + " (HTTP ${resp.code}).",
+                        "EMPTY_RESPONSE",
+                        resp.code
+                    )
+                }
                 json.parseToJsonElement(text).jsonObject
+            } catch (e: SabzException) {
+                throw e
             } catch (e: Exception) {
-                throw SabzException.Server("پاسخ نامعتبر از سرور دریافت شد (HTTP ${resp.code}).", "BAD_RESPONSE", resp.code)
+                // پاسخ غیر-JSON (مثلاً صفحه خطای 404 سرور یا پروکسی) → خطای سرور، نه «اینترنت»
+                throw SabzException.Server(
+                    SabzException.MSG_BAD_RESPONSE + " (HTTP ${resp.code}).",
+                    "BAD_RESPONSE",
+                    resp.code
+                )
             }
 
             if (!resp.isSuccessful) {
@@ -112,14 +127,13 @@ class ApiClient(
         throw error
     }
 
-    private fun buildHttpError(message: String, code: String?, httpCode: Int): SabzException =
-        when {
-            // نشست منقضی: کد AUTH_REQUIRED یا اشاره به «نشست» در پیام همراه با کد خطا
-            code == "AUTH_REQUIRED" || (message.contains("نشست") && code != null) ->
-                SabzException.SessionExpired()
-            httpCode == 401 -> SabzException.Auth(message, code)
-            else -> SabzException.Server(message, code, httpCode)
-        }
+    private fun buildHttpError(message: String, code: String?, httpCode: Int): SabzException = when {
+        // نشست منقضی: کد AUTH_REQUIRED یا اشاره به «نشست» در پیام همراه با کد خطا
+        code == "AUTH_REQUIRED" || (message.contains("نشست") && code != null) ->
+            SabzException.SessionExpired()
+        httpCode == 401 -> SabzException.Auth(message, code)
+        else -> SabzException.Server(message, code, httpCode)
+    }
 
     private fun String.toHttpUrlBuilder(params: Map<String, String>): okhttp3.HttpUrl.Builder {
         val base = this.toHttpUrlOrNull()

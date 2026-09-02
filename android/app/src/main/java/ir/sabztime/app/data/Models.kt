@@ -1,7 +1,10 @@
 package ir.sabztime.app.data
 
-import kotlinx.serialization.SerialName
+import ir.sabztime.app.core.LenientDouble
+import ir.sabztime.app.core.LenientInt
+import ir.sabztime.app.core.LenientLong
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
 
 // ---------------------------------------------------------------------------
 // جستجو (search_api.php)
@@ -18,17 +21,17 @@ data class SearchResponse(
 
 @Serializable
 data class Pagination(
-    @SerialName("current_page") val currentPage: Int = 1,
-    @SerialName("per_page") val perPage: Int = 20,
-    val total: Int = 0,
-    @SerialName("total_pages") val totalPages: Int = 0,
+    @SerialName("current_page") @Serializable(with = LenientInt::class) val currentPage: Int = 1,
+    @SerialName("per_page") @Serializable(with = LenientInt::class) val perPage: Int = 20,
+    @Serializable(with = LenientInt::class) val total: Int = 0,
+    @SerialName("total_pages") @Serializable(with = LenientInt::class) val totalPages: Int = 0,
     @SerialName("has_next") val hasNext: Boolean = false,
     @SerialName("has_prev") val hasPrev: Boolean = false
 )
 
 @Serializable
 data class BusinessSummary(
-    val id: Int,
+    @Serializable(with = LenientInt::class) val id: Int,
     val name: String = "",
     val description: String? = null,
     @SerialName("business_type") val businessType: String? = null,
@@ -37,7 +40,7 @@ data class BusinessSummary(
     val address: String? = null,
     val phone: String? = null,
     @SerialName("owner_name") val ownerName: String? = null,
-    @SerialName("services_count") val servicesCount: Int = 0,
+    @SerialName("services_count") @Serializable(with = LenientInt::class) val servicesCount: Int = 0,
     val services: List<String> = emptyList(),
     @SerialName("created_at") val createdAt: String? = null
 )
@@ -49,10 +52,16 @@ data class FiltersData(
 )
 
 @Serializable
-data class ProvinceCount(val province: String = "", val count: Int = 0)
+data class ProvinceCount(
+    val province: String = "",
+    @Serializable(with = LenientInt::class) val count: Int = 0
+)
 
 @Serializable
-data class CategoryCount(@SerialName("business_type") val businessType: String = "", val count: Int = 0)
+data class CategoryCount(
+    @SerialName("business_type") val businessType: String = "",
+    @Serializable(with = LenientInt::class) val count: Int = 0
+)
 
 @Serializable
 data class CitiesResponse(val success: Boolean = true, val cities: List<String> = emptyList(), val error: String? = null)
@@ -63,7 +72,7 @@ data class CitiesResponse(val success: Boolean = true, val cities: List<String> 
 
 @Serializable
 data class BusinessDetails(
-    val id: Int,
+    @Serializable(with = LenientInt::class) val id: Int,
     val name: String = "",
     val description: String? = null,
     val province: String? = null,
@@ -73,10 +82,10 @@ data class BusinessDetails(
     val email: String? = null,
     val website: String? = null,
     @SerialName("business_type") val businessType: String? = null,
-    @SerialName("slot_duration_minutes") val slotDurationMinutes: Int? = null,
-    @SerialName("advance_booking_days") val advanceBookingDays: Int? = null,
+    @SerialName("slot_duration_minutes") @Serializable(with = LenientInt::class) val slotDurationMinutes: Int? = null,
+    @SerialName("advance_booking_days") @Serializable(with = LenientInt::class) val advanceBookingDays: Int? = null,
     @SerialName("link_alias") val linkAlias: String? = null,
-    @SerialName("is_active") val isActive: Int = 1,
+    @SerialName("is_active") @Serializable(with = LenientInt::class) val isActive: Int = 1,
     @SerialName("owner_name") val ownerName: String? = null,
     val services: List<Service> = emptyList()
 )
@@ -90,14 +99,16 @@ data class BusinessDetailsResponse(
 
 @Serializable
 data class Service(
-    val id: Int,
+    @Serializable(with = LenientInt::class) val id: Int,
     val name: String = "",
     val description: String? = null,
+    // قیمت از دیتابیس به‌صورت رشته اعشاری (مثلاً "250000.00") می‌رسد
     val price: String? = null,
-    @SerialName("duration_minutes") val durationMinutes: Int? = null,
-    @SerialName("is_active") val isActive: Int = 1
+    @SerialName("duration_minutes") @Serializable(with = LenientInt::class) val durationMinutes: Int? = null,
+    @SerialName("is_active") @Serializable(with = LenientInt::class) val isActive: Int = 1
 ) {
-    val priceValue: Long? get() = price?.toLongOrNull()
+    /** قیمت به تومان (با پشتیبانی از اعداد اعشاری مثل "250000.00") */
+    val priceValue: Long? get() = parsePrice(price)
 }
 
 @Serializable
@@ -105,7 +116,7 @@ data class DateSlot(
     val date: String,
     @SerialName("jalali_date") val jalaliDate: String? = null,
     @SerialName("day_name") val dayName: String? = null,
-    @SerialName("slot_count") val slotCount: Int? = null
+    @SerialName("slot_count") @Serializable(with = LenientInt::class) val slotCount: Int? = null
 )
 
 @Serializable
@@ -120,14 +131,20 @@ data class TimeSlot(
 @Serializable
 data class SlotsResponse(val status: String = "", val data: List<TimeSlot> = emptyList())
 
+/** تبدیل رشته قیمت (از دیتابیس) به عدد؛ "250000.00" / "250000" / "250,000" همگی معتبرند */
+fun parsePrice(raw: String?): Long? {
+    val s = raw?.replace(",", "").trim() ?: return null
+    return s.toDoubleOrNull()?.toLong()
+}
+
 // ---------------------------------------------------------------------------
 // رزرو
 // ---------------------------------------------------------------------------
 
 @Serializable
 data class BookingSummary(
-    val id: Int,
-    @SerialName("business_id") val businessId: Int = 0,
+    @Serializable(with = LenientInt::class) val id: Int,
+    @SerialName("business_id") @Serializable(with = LenientInt::class) val businessId: Int = 0,
     @SerialName("confirmation_code") val confirmationCode: String = "",
     @SerialName("booking_date") val bookingDate: String = "",
     @SerialName("start_time") val startTime: String = "",
@@ -143,7 +160,7 @@ data class BookingSummary(
     @SerialName("jalali_date") val jalaliDate: String? = null,
     @SerialName("day_name") val dayName: String? = null,
     @SerialName("can_cancel") val canCancel: Boolean = false,
-    @SerialName("time_until_booking") val timeUntilBooking: Double = 0.0
+    @SerialName("time_until_booking") @Serializable(with = LenientDouble::class) val timeUntilBooking: Double = 0.0
 )
 
 @Serializable
@@ -151,14 +168,14 @@ data class BookingsResponse(
     val status: String = "",
     val message: String? = null,
     val bookings: List<BookingSummary> = emptyList(),
-    @SerialName("total_count") val totalCount: Int = 0
+    @SerialName("total_count") @Serializable(with = LenientInt::class) val totalCount: Int = 0
 )
 
 @Serializable
 data class BookingCreatedResponse(
     val status: String = "",
     val message: String? = null,
-    @SerialName("booking_id") val bookingId: Int? = null,
+    @SerialName("booking_id") @Serializable(with = LenientInt::class) val bookingId: Int? = null,
     @SerialName("confirmation_code") val confirmationCode: String? = null,
     @SerialName("success") val success: Boolean? = null
 )
@@ -167,7 +184,7 @@ data class BookingCreatedResponse(
 data class CancelResponse(
     val status: String = "",
     val message: String? = null,
-    @SerialName("booking_id") val bookingId: Int? = null,
+    @SerialName("booking_id") @Serializable(with = LenientInt::class) val bookingId: Int? = null,
     @SerialName("confirmation_code") val confirmationCode: String? = null,
     @SerialName("freed_time") val freedTime: String? = null
 )
@@ -178,7 +195,7 @@ data class CancelResponse(
 
 @Serializable
 data class QueueItem(
-    val id: Int,
+    @Serializable(with = LenientInt::class) val id: Int,
     @SerialName("customer_name") val customerName: String = "",
     @SerialName("customer_phone") val customerPhone: String? = null,
     @SerialName("booking_date") val bookingDate: String = "",
@@ -186,36 +203,36 @@ data class QueueItem(
     @SerialName("end_time") val endTime: String = "",
     val status: String = "",
     @SerialName("queue_status") val queueStatus: String = "waiting",
-    @SerialName("user_id") val userId: Int? = null,
-    @SerialName("user_telegram_id") val userTelegramId: Long? = null,
-    val position: Int = 0,
-    @SerialName("eta_minutes") val etaMinutes: Int = 0
+    @SerialName("user_id") @Serializable(with = LenientInt::class) val userId: Int? = null,
+    @SerialName("user_telegram_id") @Serializable(with = LenientLong::class) val userTelegramId: Long? = null,
+    @Serializable(with = LenientInt::class) val position: Int = 0,
+    @SerialName("eta_minutes") @Serializable(with = LenientInt::class) val etaMinutes: Int = 0
 )
 
 @Serializable
 data class QueueResponse(
     val status: String = "",
     val queue: List<QueueItem> = emptyList(),
-    @SerialName("avg_duration_minutes") val avgDurationMinutes: Double = 0.0
+    @SerialName("avg_duration_minutes") @Serializable(with = LenientDouble::class) val avgDurationMinutes: Double = 0.0
 )
 
 @Serializable
 data class CustomerQueueInfoResponse(
     val status: String = "",
-    val position: Int? = null,
-    @SerialName("eta_minutes") val etaMinutes: Int? = null,
-    @SerialName("booking_id") val bookingId: Int? = null,
-    @SerialName("avg_duration_minutes") val avgDurationMinutes: Double = 0.0,
-    @SerialName("total_active") val totalActive: Int = 0
+    @Serializable(with = LenientInt::class) val position: Int? = null,
+    @SerialName("eta_minutes") @Serializable(with = LenientInt::class) val etaMinutes: Int? = null,
+    @SerialName("booking_id") @Serializable(with = LenientInt::class) val bookingId: Int? = null,
+    @SerialName("avg_duration_minutes") @Serializable(with = LenientDouble::class) val avgDurationMinutes: Double = 0.0,
+    @SerialName("total_active") @Serializable(with = LenientInt::class) val totalActive: Int = 0
 )
 
 @Serializable
 data class QueueActionResponse(
     val status: String = "",
     val message: String? = null,
-    @SerialName("completed_booking_id") val completedBookingId: Int? = null,
-    @SerialName("next_booking_id") val nextBookingId: Int? = null,
-    @SerialName("booking_id") val bookingId: Int? = null
+    @SerialName("completed_booking_id") @Serializable(with = LenientInt::class) val completedBookingId: Int? = null,
+    @SerialName("next_booking_id") @Serializable(with = LenientInt::class) val nextBookingId: Int? = null,
+    @SerialName("booking_id") @Serializable(with = LenientInt::class) val bookingId: Int? = null
 )
 
 // ---------------------------------------------------------------------------
@@ -225,7 +242,7 @@ data class QueueActionResponse(
 @Serializable
 data class SubscriptionStatusResponse(
     val status: String = "",
-    @SerialName("free_tokens_remaining") val freeTokensRemaining: Int = 0,
+    @SerialName("free_tokens_remaining") @Serializable(with = LenientInt::class) val freeTokensRemaining: Int = 0,
     @SerialName("subscription_plan") val subscriptionPlan: String? = null,
     @SerialName("expiry_date") val expiryDate: String? = null,
     @SerialName("referral_code") val referralCode: String? = null
@@ -233,33 +250,35 @@ data class SubscriptionStatusResponse(
 
 @Serializable
 data class Plan(
-    val id: Int,
+    @Serializable(with = LenientInt::class) val id: Int,
     val name: String,
     val price: String? = null,
-    @SerialName("reservation_limit") val reservationLimit: Int = 0,
-    @SerialName("duration_days") val durationDays: Int = 30
-)
+    @SerialName("reservation_limit") @Serializable(with = LenientInt::class) val reservationLimit: Int = 0,
+    @SerialName("duration_days") @Serializable(with = LenientInt::class) val durationDays: Int = 30
+) {
+    val priceValue: Long? get() = parsePrice(price)
+}
 
 @Serializable
 data class PlansResponse(val status: String = "", val plans: List<Plan> = emptyList())
 
 @Serializable
 data class MyBusinessItem(
-    val id: Int,
+    @Serializable(with = LenientInt::class) val id: Int,
     val name: String = "",
     @SerialName("business_type") val businessType: String? = null,
     val province: String? = null,
     val city: String? = null,
     val address: String? = null,
     val phone: String? = null,
-    @SerialName("is_active") val isActive: Int = 1,
-    @SerialName("slot_duration_minutes") val slotDurationMinutes: Int? = null,
+    @SerialName("is_active") @Serializable(with = LenientInt::class) val isActive: Int = 1,
+    @SerialName("slot_duration_minutes") @Serializable(with = LenientInt::class) val slotDurationMinutes: Int? = null,
     @SerialName("link_alias") val linkAlias: String? = null,
-    @SerialName("subscription_plan_id") val subscriptionPlanId: Int? = null,
+    @SerialName("subscription_plan_id") @Serializable(with = LenientInt::class) val subscriptionPlanId: Int? = null,
     @SerialName("subscription_expiry_date") val subscriptionExpiryDate: String? = null,
-    @SerialName("free_reservation_tokens") val freeReservationTokens: Int? = null,
-    @SerialName("services_count") val servicesCount: Int = 0,
-    @SerialName("bookings_count") val bookingsCount: Int = 0,
+    @SerialName("free_reservation_tokens") @Serializable(with = LenientInt::class) val freeReservationTokens: Int? = null,
+    @SerialName("services_count") @Serializable(with = LenientInt::class) val servicesCount: Int = 0,
+    @SerialName("bookings_count") @Serializable(with = LenientInt::class) val bookingsCount: Int = 0,
     @SerialName("subscription_plan_name") val subscriptionPlanName: String? = null
 )
 
@@ -267,7 +286,7 @@ data class MyBusinessItem(
 data class MyBusinessesResponse(
     val status: String = "",
     val businesses: List<MyBusinessItem> = emptyList(),
-    @SerialName("total_count") val totalCount: Int = 0
+    @SerialName("total_count") @Serializable(with = LenientInt::class) val totalCount: Int = 0
 )
 
 // ---------------------------------------------------------------------------
@@ -276,36 +295,36 @@ data class MyBusinessesResponse(
 
 @Serializable
 data class UserInfo(
-    @SerialName("app_user_id") val appUserId: Long = 0,
+    @SerialName("app_user_id") @Serializable(with = LenientLong::class) val appUserId: Long = 0,
     val name: String = "",
     val phone: String = "",
-    @SerialName("telegram_id") val telegramId: Long = 0
+    @SerialName("telegram_id") @Serializable(with = LenientLong::class) val telegramId: Long = 0
 )
 
 @Serializable
 data class CreditInfo(
-    @SerialName("current_credit") val currentCredit: Int = 0,
-    @SerialName("total_earned") val totalEarned: Int = 0,
-    @SerialName("total_deducted") val totalDeducted: Int = 0,
+    @SerialName("current_credit") @Serializable(with = LenientInt::class) val currentCredit: Int = 0,
+    @SerialName("total_earned") @Serializable(with = LenientInt::class) val totalEarned: Int = 0,
+    @SerialName("total_deducted") @Serializable(with = LenientInt::class) val totalDeducted: Int = 0,
     @SerialName("last_updated") val lastUpdated: String? = null
 )
 
 @Serializable
 data class MarketerInfo(
-    val id: Int = 0,
+    @Serializable(with = LenientInt::class) val id: Int = 0,
     @SerialName("marketer_code") val marketerCode: String = "",
-    @SerialName("total_businesses") val totalBusinesses: Int = 0,
-    @SerialName("total_bookings") val totalBookings: Int = 0,
-    @SerialName("commission_rate") val commissionRate: Int = 0,
-    @SerialName("total_commission") val totalCommission: Int = 0
+    @SerialName("total_businesses") @Serializable(with = LenientInt::class) val totalBusinesses: Int = 0,
+    @SerialName("total_bookings") @Serializable(with = LenientInt::class) val totalBookings: Int = 0,
+    @SerialName("commission_rate") @Serializable(with = LenientInt::class) val commissionRate: Int = 0,
+    @SerialName("total_commission") @Serializable(with = LenientInt::class) val totalCommission: Int = 0
 )
 
 @Serializable
 data class BookingStats(
-    val total: Int = 0,
-    val upcoming: Int = 0,
-    val cancelled: Int = 0,
-    val completed: Int = 0
+    @Serializable(with = LenientInt::class) val total: Int = 0,
+    @Serializable(with = LenientInt::class) val upcoming: Int = 0,
+    @Serializable(with = LenientInt::class) val cancelled: Int = 0,
+    @Serializable(with = LenientInt::class) val completed: Int = 0
 )
 
 @Serializable
@@ -321,7 +340,7 @@ data class ProfileData(
 data class ProfileResponse(
     val status: String = "",
     val message: String? = null,
-    @SerialName("app_user_id") val appUserId: Long? = null,
+    @SerialName("app_user_id") @Serializable(with = LenientLong::class) val appUserId: Long? = null,
     val user: UserInfo? = null,
     val credit: CreditInfo? = null,
     val businesses: List<MyBusinessItem>? = null,
@@ -347,7 +366,7 @@ data class NotificationItem(
     val icon: String = "🔔",
     val title: String = "",
     val body: String = "",
-    @SerialName("ref_id") val refId: Int? = null,
+    @SerialName("ref_id") @Serializable(with = LenientInt::class) val refId: Int? = null,
     @SerialName("created_at") val createdAt: String? = null
 )
 
@@ -363,28 +382,28 @@ data class NotificationsResponse(
 
 @Serializable
 data class MarketerBusiness(
-    val id: Int = 0,
+    @Serializable(with = LenientInt::class) val id: Int = 0,
     val name: String = "",
     @SerialName("business_type") val businessType: String? = null,
     val city: String? = null,
     val province: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
-    @SerialName("total_bookings") val totalBookings: Int = 0,
-    @SerialName("commission_earned") val commissionEarned: Int = 0,
-    @SerialName("free_reservation_tokens") val freeReservationTokens: Int? = null,
-    @SerialName("is_active") val isActive: Int = 1
+    @SerialName("total_bookings") @Serializable(with = LenientInt::class) val totalBookings: Int = 0,
+    @SerialName("commission_earned") @Serializable(with = LenientInt::class) val commissionEarned: Int = 0,
+    @SerialName("free_reservation_tokens") @Serializable(with = LenientInt::class) val freeReservationTokens: Int? = null,
+    @SerialName("is_active") @Serializable(with = LenientInt::class) val isActive: Int = 1
 )
 
 @Serializable
 data class MarketerDashboardResponse(
     val status: String = "",
-    @SerialName("total_businesses") val totalBusinesses: Int = 0,
-    @SerialName("total_bookings") val totalBookings: Int = 0,
-    @SerialName("total_commission") val totalCommission: Int = 0,
-    @SerialName("commission_rate") val commissionRate: Int = 0,
-    @SerialName("monthly_businesses") val monthlyBusinesses: Int = 0,
-    @SerialName("monthly_bookings") val monthlyBookings: Int = 0,
-    @SerialName("monthly_commission") val monthlyCommission: Int = 0,
+    @SerialName("total_businesses") @Serializable(with = LenientInt::class) val totalBusinesses: Int = 0,
+    @SerialName("total_bookings") @Serializable(with = LenientInt::class) val totalBookings: Int = 0,
+    @SerialName("total_commission") @Serializable(with = LenientInt::class) val totalCommission: Int = 0,
+    @SerialName("commission_rate") @Serializable(with = LenientInt::class) val commissionRate: Int = 0,
+    @SerialName("monthly_businesses") @Serializable(with = LenientInt::class) val monthlyBusinesses: Int = 0,
+    @SerialName("monthly_bookings") @Serializable(with = LenientInt::class) val monthlyBookings: Int = 0,
+    @SerialName("monthly_commission") @Serializable(with = LenientInt::class) val monthlyCommission: Int = 0,
     @SerialName("monthly_revenue") val monthlyRevenue: List<Double> = emptyList(),
     @SerialName("business_types") val businessTypes: Map<String, Int> = emptyMap(),
     val businesses: List<MarketerBusiness> = emptyList()

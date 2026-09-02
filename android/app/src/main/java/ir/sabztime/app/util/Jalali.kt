@@ -66,6 +66,22 @@ object Jalali {
         return "${persianDigits(jd)} ${jMonths[jm - 1]} ${persianDigits(jy)}"
     }
 
+    /** "2025-02-10" → Triple(1403, 11, 22) یا null در صورت ورودی نامعتبر */
+    fun parts(isoDate: String?): Triple<Int, Int, Int>? {
+        if (isoDate.isNullOrBlank()) return null
+        val p = isoDate.trim().split("-").mapNotNull { it.take(4).toIntOrNull() }
+        if (p.size < 3) return null
+        return try {
+            toJalali(p[0], p[1], p[2])
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /** نام ماه جلالی (شماره‌ی ۱ تا ۱۲) */
+    fun monthName(monthIndex: Int): String =
+        jMonths.getOrElse(monthIndex - 1) { "—" }
+
     fun weekdayName(isoDate: String?): String {
         if (isoDate.isNullOrBlank()) return ""
         return try {

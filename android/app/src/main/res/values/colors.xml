@@ -4,4 +4,5 @@
     <color name="brand_green_dark">#0E5A33</color>
     <color name="brand_green_light">#E6F4EC</color>
     <color name="ic_launcher_background">#1B7F4D</color>
+    <color name="dark_background">#0C1310</color>
 </resources>
