@@ -146,6 +146,52 @@ class RepositoryTest {
     }
 
     @Test
+    fun `profile tolerates unexpected production shapes`() = runTest {
+        // اگر پاسخ واقعی سرور با مدل اندروید تفاوت ساختاری داشته باشد (مثلاً credit عدد باشد،
+        // businesses آبجکت به‌جای آرای، marketer رشته)، دیکدِ کل‌جا قبلاً صفحه پروفایل را با
+        // «ساختار پاسخ سرور قابل خواندن نبود» کرش می‌داد. حالا هر بخش جداگانه و امن دیکد می‌شود.
+        server.enqueue(
+            MockResponse().setBody(
+                """
+                {"status":"success",
+                 "user": {"app_user_id": 5, "name": "سارا", "phone": "09120000000"},
+                 "credit": 10,
+                 "businesses": {"0": {"id": "1", "name": "آرایشگاه"}},
+                 "marketer": "inactive",
+                 "booking_stats": {"total": "3"}}
+                """
+            )
+        )
+        val p = repo.me()
+        assertEquals("سارا", p.user.name)
+        org.junit.Assert.assertNull(p.credit)
+        assertEquals(0, p.businesses.size)
+        org.junit.Assert.assertNull(p.marketer)
+        assertEquals(3, p.bookingStats.total)
+        assertEquals(0, p.bookingStats.completed)
+    }
+
+    @Test
+    fun `profile tolerates data-wrapped response`() = runTest {
+        // بعضی نسخه‌های API داده‌ها را زیر کلید «data» می‌فرستند؛ پروفایل باید از هر دو شکل بخواند.
+        server.enqueue(
+            MockResponse().setBody(
+                """
+                {"status":"success","data":
+                 {"user":{"app_user_id":7,"name":"مهدی","phone":"09121111111"},
+                  "credit":{"current_credit":"20"},
+                  "businesses":[],
+                  "booking_stats":{"total":"1","upcoming":"1","cancelled":"0","completed":"0"}}}
+                """
+            )
+        )
+        val p = repo.me()
+        assertEquals("مهدی", p.user.name)
+        assertEquals(20, p.credit?.currentCredit)
+        assertEquals(1, p.bookingStats.total)
+    }
+
+    @Test
     fun `bookings decode when ids are strings from PDO`() = runTest {
         server.enqueue(
             MockResponse().setBody(
