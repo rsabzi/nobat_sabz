@@ -518,16 +518,12 @@ fun ProfileHeroCard(
         contentPadding = 18.dp
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconTile(
-                icon = Icons.Filled.Star,
-                tileSize = 44.dp,
-                palette = TilePalette.GOLD,
-                contentDescription = null
-            )
+            // در RTL: تصویر پروفایل سمت راست، ستاره‌ی طلایی سمت چپ
+            GoldAvatar(name = name, size = 58.dp)
             Spacer(Modifier.width(14.dp))
             Column(
                 Modifier.weight(1f),
-                horizontalAlignment = Alignment.End
+                horizontalAlignment = Alignment.Start
             ) {
                 Text(
                     name,
@@ -552,7 +548,12 @@ fun ProfileHeroCard(
                 }
             }
             Spacer(Modifier.width(14.dp))
-            GoldAvatar(name = name, size = 58.dp)
+            IconTile(
+                icon = Icons.Filled.Star,
+                tileSize = 44.dp,
+                palette = TilePalette.GOLD,
+                contentDescription = null
+            )
         }
         Spacer(Modifier.height(14.dp))
         GoldDivider()
