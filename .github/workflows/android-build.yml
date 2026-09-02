@@ -47,7 +47,8 @@ jobs:
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: sabztime-release-apk
+          # نام نسخه‌دار، تا artifact اجرای قدیمی با APK منتشرشده اشتباه نشود.
+          name: sabztime-v1.1.0-release-apk
           path: android/app/build/outputs/apk/release/app-release.apk
 
   emulator-smoke:

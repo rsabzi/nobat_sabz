@@ -48,6 +48,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import ir.sabztime.app.BuildConfig
 import ir.sabztime.app.core.AppGraph
 import ir.sabztime.app.core.SabzException
 import ir.sabztime.app.core.UiState
@@ -200,7 +201,7 @@ fun ProfileScreen(graph: AppGraph, navController: NavHostController) {
                     }
 
                     Text(
-                        "نسخه ۱٫۰٫۰ — نوبت‌سبز",
+                        "نسخه ${Jalali.persianDigits(BuildConfig.VERSION_NAME)} — نوبت‌سبز",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.align(Alignment.CenterHorizontally)
