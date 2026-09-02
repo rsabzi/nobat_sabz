@@ -1570,7 +1570,7 @@ function handle_post_request($pdo, $internal_user_id) {
     
     // برای add_business نیازی به business_id نیست، چون کسب‌وکار جدید ایجاد می‌شود
     // get_bot_info، get_subscription_plans، get_marketer_dashboard و get_user_bookings نیازی به business_id ندارند
-    $exempt_actions = ['add_business', 'get_bot_info', 'get_subscription_plans', 'get_marketer_dashboard', 'get_user_bookings'];
+    $exempt_actions = ['add_business', 'register_marketer', 'get_bot_info', 'get_subscription_plans', 'get_marketer_dashboard', 'get_user_bookings'];
     error_log("📝 اکشن‌های معاف از business_id: " . json_encode($exempt_actions, JSON_UNESCAPED_UNICODE));
     error_log("✅ آیا action معاف است؟ " . (in_array($action, $exempt_actions) ? 'بله' : 'خیر'));
     
@@ -1593,7 +1593,7 @@ function handle_post_request($pdo, $internal_user_id) {
         }
     } else {
         // برای add_business، create_booking، cancel_booking، get_bot_info، get_subscription_status، get_subscription_plans، get_marketer_dashboard و get_user_bookings نیازی به بررسی مالکیت نیست
-        if ($action !== 'add_business' && $action !== 'create_booking' && $action !== 'cancel_booking' && $action !== 'get_bot_info' && $action !== 'get_subscription_status' && $action !== 'get_subscription_plans' && $action !== 'get_marketer_dashboard' && $action !== 'get_user_bookings') {
+        if ($action !== 'add_business' && $action !== 'register_marketer' && $action !== 'create_booking' && $action !== 'cancel_booking' && $action !== 'get_bot_info' && $action !== 'get_subscription_status' && $action !== 'get_subscription_plans' && $action !== 'get_marketer_dashboard' && $action !== 'get_user_bookings') {
             try {
                 error_log("🔍 بررسی مالکیت کسب‌وکار...");
                 $checkStmt = $pdo->prepare("SELECT id FROM businesses WHERE id = ? AND owner_id = ?");
@@ -1618,7 +1618,45 @@ function handle_post_request($pdo, $internal_user_id) {
     }
 
     // *** استفاده از ساختار if/elseif برای جداسازی کامل منطق ***
-    if ($action === 'add_business') {
+    if ($action === 'register_marketer') {
+        // معادل مسیر «بازاریاب هستم» در ربات: فعال‌سازی امن و idempotent برای کاربر اپ.
+        if (!$pdo || empty($internal_user_id)) {
+            send_json_response('error', 'احراز هویت برای فعال‌سازی بازاریابی الزامی است.', ['code' => 'AUTH_REQUIRED'], 401);
+        }
+        try {
+            $pdo->exec("CREATE TABLE IF NOT EXISTS marketers (
+                id INT(11) PRIMARY KEY AUTO_INCREMENT,
+                user_id INT(11) NOT NULL,
+                marketer_code VARCHAR(50) UNIQUE,
+                total_businesses INT(11) DEFAULT 0,
+                total_bookings INT(11) DEFAULT 0,
+                commission_rate DECIMAL(10,2) DEFAULT 10.00,
+                total_commission DECIMAL(12,2) DEFAULT 0,
+                is_active TINYINT(1) DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uk_marketer_user (user_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            $stmt = $pdo->prepare('SELECT id, marketer_code, total_businesses, total_bookings, commission_rate, total_commission, is_active FROM marketers WHERE user_id = ? LIMIT 1');
+            $stmt->execute([$internal_user_id]);
+            $marketer = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$marketer) {
+                $code = 'MKT' . str_pad((string)$internal_user_id, 6, '0', STR_PAD_LEFT) . random_int(100, 999);
+                $insert = $pdo->prepare('INSERT INTO marketers (user_id, marketer_code, total_businesses, total_bookings, commission_rate, total_commission, is_active, created_at, updated_at) VALUES (?, ?, 0, 0, 10.00, 0, 1, NOW(), NOW())');
+                $insert->execute([$internal_user_id, $code]);
+                $stmt->execute([$internal_user_id]);
+                $marketer = $stmt->fetch(PDO::FETCH_ASSOC);
+            } elseif ((int)$marketer['is_active'] !== 1) {
+                $pdo->prepare('UPDATE marketers SET is_active = 1, updated_at = NOW() WHERE id = ?')->execute([$marketer['id']]);
+                $marketer['is_active'] = 1;
+            }
+            send_json_response('success', 'حساب بازاریابی شما فعال شد.', ['marketer' => $marketer]);
+        } catch (Exception $e) {
+            error_log('register_marketer failed: ' . $e->getMessage());
+            send_json_response('error', 'فعال‌سازی حساب بازاریابی انجام نشد.', [], 500);
+        }
+    }
+    elseif ($action === 'add_business') {
         // منطق ایجاد کسب‌وکار جدید
         if (!$pdo) {
             error_log("❌ اتصال دیتابیس موجود نیست برای add_business");
@@ -3722,8 +3760,9 @@ function handle_post_request($pdo, $internal_user_id) {
              }
              
              // آماده‌سازی پاسخ
-             $dashboardData = [
-                 'total_businesses' => $totalBusinesses,
+            $dashboardData = [
+                'marketer_code' => $marketer['marketer_code'],
+                'total_businesses' => $totalBusinesses,
                  'total_bookings' => $totalBookings,
                  'total_commission' => $totalCommission,
                  'commission_rate' => (float)$marketer['commission_rate'],

@@ -1,13 +1,16 @@
 package ir.sabztime.app.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -18,7 +21,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -33,8 +42,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -45,6 +52,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.ViewModel
@@ -152,46 +160,79 @@ fun HomeScreen(graph: AppGraph, navController: NavHostController) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("نوبت‌سبز", fontWeight = FontWeight.Bold)
-                        Text(
-                            "جستجوی کسب‌وکار و رزرو نوبت",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+            Surface(
+                color = MaterialTheme.colorScheme.background,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(start = 20.dp, end = 16.dp, top = 14.dp, bottom = 12.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                "نوبت‌سبز",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                "رزرو نوبت، ساده و مطمئن",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        IconButton(
+                            onClick = { navController.navigate(Routes.NOTIFICATIONS) },
+                            colors = IconButtonDefaults.iconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                contentColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            Icon(Icons.Filled.Notifications, contentDescription = "اعلان‌ها")
+                        }
                     }
-                },
-                actions = {
-                    NotificationBadgeButton { navController.navigate(Routes.NOTIFICATIONS) }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
-            )
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        "نوبت بعدی‌تان را پیدا کنید",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = state.query,
+                        onValueChange = viewModel::updateQuery,
+                        placeholder = { Text("نام کسب‌وکار، خدمت یا شهر") },
+                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                        trailingIcon = {
+                            if (state.query.isNotEmpty()) {
+                                IconButton(onClick = { viewModel.updateQuery("") }) {
+                                    Icon(Icons.Filled.Close, contentDescription = "پاک کردن")
+                                }
+                            }
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(18.dp),
+                        colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
         }
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            OutlinedTextField(
-                value = state.query,
-                onValueChange = viewModel::updateQuery,
-                placeholder = { Text("نام کسب‌وکار، خدمت یا شهر…") },
-                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                trailingIcon = {
-                    if (state.query.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.updateQuery("") }) {
-                            Icon(Icons.Filled.Close, contentDescription = "پاک کردن")
-                        }
-                    }
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+            Text(
+                "فیلترهای سریع",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = 20.dp, top = 4.dp, bottom = 8.dp)
             )
-
             LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
+                contentPadding = PaddingValues(horizontal = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 item {
@@ -200,7 +241,10 @@ fun HomeScreen(graph: AppGraph, navController: NavHostController) {
                         label = {
                             Text(if (state.selectedCategory.isBlank()) "دسته‌بندی" else state.selectedCategory)
                         },
-                        leadingIcon = { Text(if (state.selectedCategory.isBlank()) "▾" else "✓") }
+                        leadingIcon = { Icon(Icons.Filled.Tune, contentDescription = null, modifier = Modifier.height(18.dp)) },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = if (state.selectedCategory.isBlank()) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.primaryContainer
+                        )
                     )
                 }
                 item {
@@ -209,7 +253,10 @@ fun HomeScreen(graph: AppGraph, navController: NavHostController) {
                         label = {
                             Text(if (state.selectedProvince.isBlank()) "استان" else state.selectedProvince)
                         },
-                        leadingIcon = { Text(if (state.selectedProvince.isBlank()) "▾" else "✓") }
+                        leadingIcon = { Icon(Icons.Filled.LocationOn, contentDescription = null, modifier = Modifier.height(18.dp)) },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = if (state.selectedProvince.isBlank()) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.primaryContainer
+                        )
                     )
                 }
                 if (state.selectedCategory.isNotBlank() || state.selectedProvince.isNotBlank()) {
@@ -232,7 +279,7 @@ fun HomeScreen(graph: AppGraph, navController: NavHostController) {
                     action = { Button(onClick = viewModel::retry) { Text("جستجوی دوباره") } }
                 )
                 is UiState.Success -> LazyColumn(
-                    contentPadding = PaddingValues(16.dp),
+                    contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(r.data, key = { it.id }) { b ->
@@ -288,11 +335,26 @@ private fun SelectionDialog(
 private fun BusinessCard(b: BusinessSummary, onClick: () -> Unit) {
     Card(
         onClick = onClick,
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column(Modifier.padding(16.dp)) {
+        Column(Modifier.padding(18.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(MaterialTheme.colorScheme.primaryContainer)
+                        .padding(10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Filled.CalendarMonth,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Spacer(Modifier.width(10.dp))
                 Text(
                     b.name,
                     style = MaterialTheme.typography.titleMedium,
@@ -331,8 +393,9 @@ private fun BusinessCard(b: BusinessSummary, onClick: () -> Unit) {
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                "مشاهده و رزرو ←",
-                style = MaterialTheme.typography.labelMedium,
+                "مشاهده و رزرو",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.align(Alignment.End)
             )

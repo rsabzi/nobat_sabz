@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -55,6 +56,19 @@ class MarketerViewModel(private val graph: AppGraph) : ViewModel() {
     val state: StateFlow<UiState<MarketerDashboardResponse>> = _state.asStateFlow()
 
     init { load() }
+
+    fun activate() {
+        _state.value = UiState.Loading
+        viewModelScope.launch {
+            try {
+                graph.repository.registerMarketer()
+                load()
+            } catch (e: Exception) {
+                val sabz = e as? SabzException ?: SabzException.Network(e)
+                _state.value = UiState.Error(sabz.toFriendlyMessage(), sabz.kind)
+            }
+        }
+    }
 
     fun load() {
         _state.value = UiState.Loading
@@ -98,12 +112,13 @@ fun MarketerScreen(graph: AppGraph, navController: NavHostController) {
             ) {
                 CircularProgressIndicator()
             }
-            is UiState.Error -> ErrorState(s.message, s.kind, onRetry = viewModel::load)
+            is UiState.Error -> ErrorState(s.message, s.kind, onRetry = viewModel::activate)
             UiState.Empty -> EmptyState(
                 icon = "📣",
                 title = "داده‌ای برای نمایش وجود ندارد",
-                subtitle = "از ربات نوبت‌سبز (منوی بازاریابی) لینک اختصاصی خود را دریافت کنید.",
-                modifier = Modifier.padding(padding)
+                subtitle = "می‌توانید همین‌جا حساب بازاریابی خود را فعال کنید.",
+                modifier = Modifier.padding(padding),
+                action = { Button(onClick = viewModel::activate) { Text("فعال‌سازی بازاریابی") } }
             )
             is UiState.Success -> {
                 val d = s.data
@@ -112,27 +127,26 @@ fun MarketerScreen(graph: AppGraph, navController: NavHostController) {
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    if (d.totalBusinesses == 0 && d.totalBookings == 0) {
-                        item {
-                            EmptyState(
-                                icon = "📣",
-                                title = "هنوز بازاریاب نیستید",
-                                subtitle = "برای فعال‌شدن به‌عنوان بازاریاب، از ربات نوبت‌سبز (منوی بازاریابی) اقدام کنید.",
-                                modifier = Modifier.fillMaxWidth()
-                            )
+                    item {
+                        SectionCard {
+                            Text("پنل بازاریابی شما", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(4.dp))
+                            InfoRow("کد بازاریابی", d.marketerCode)
+                            InfoRow("لینک معرفی", "t.me/…?start=marketer_${d.marketerCode}")
+                            Text("این لینک را برای صاحبان کسب‌وکار بفرستید تا معرفی‌ها با کد شما ثبت شوند.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                    } else {
-                        item {
-                            SectionCard {
-                                Text("آمار کلی", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                                Spacer(Modifier.height(4.dp))
-                                InfoRow("کسب‌وکارهای معرفی‌شده", Jalali.persianDigits(d.totalBusinesses))
-                                InfoRow("کل رزروها", Jalali.persianDigits(d.totalBookings))
-                                InfoRow("کمیسیون دریافتی", "${Jalali.formatPrice(d.totalCommission.toLong())}")
-                                InfoRow("نرخ کمیسیون", "${Jalali.persianDigits(d.commissionRate)}٪")
-                            }
+                    }
+                    item {
+                        SectionCard {
+                            Text("آمار کلی", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(4.dp))
+                            InfoRow("کسب‌وکارهای معرفی‌شده", Jalali.persianDigits(d.totalBusinesses))
+                            InfoRow("کل رزروها", Jalali.persianDigits(d.totalBookings))
+                            InfoRow("کمیسیون دریافتی", "${Jalali.formatPrice(d.totalCommission.toLong())}")
+                            InfoRow("نرخ کمیسیون", "${Jalali.persianDigits(d.commissionRate)}٪")
                         }
-                        item {
+                    }
+                    item {
                             SectionCard {
                                 Text("این ماه", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                 Spacer(Modifier.height(4.dp))
@@ -161,7 +175,6 @@ fun MarketerScreen(graph: AppGraph, navController: NavHostController) {
                                 }
                             }
                         }
-                    }
                 }
             }
         }
