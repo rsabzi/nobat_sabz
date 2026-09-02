@@ -131,7 +131,7 @@ INSERT IGNORE INTO `users` (`telegram_id`, `first_name`, `last_name`, `username`
 (555666777, 'محمد', 'رضایی', 'mohammad_rezaei', '09555666777', 'mohammad@example.com');
 
 -- کسب‌وکارهای نمونه
-INSERT IGNORE INTO `businesses` (`owner_id`, `name`, `description`, `address`, `phone`, `email`, `category`, `slot_duration_minutes`, `advance_booking_days`) VALUES
+INSERT IGNORE INTO `businesses` (`owner_id`, `name`, `description`, `address`, `phone`, `email`, `business_type`, `slot_duration_minutes`, `advance_booking_days`) VALUES
 (1, 'آرایشگاه زیبا', 'آرایشگاه زنانه با خدمات کامل', 'تهران، خیابان ولیعصر، پلاک 123', '02112345678', 'info@ziba.com', 'آرایشگاه', 30, 14),
 (2, 'کلینیک دندانپزشکی سلامت', 'کلینیک دندانپزشکی با تجهیزات مدرن', 'تهران، خیابان کریمخان، پلاک 456', '02187654321', 'info@salamat.com', 'پزشکی', 45, 30),
 (3, 'مرکز ماساژ درمانی', 'ماساژ درمانی و فیزیوتراپی', 'تهران، خیابان شریعتی، پلاک 789', '02155667788', 'info@massage.com', 'درمانی', 60, 7);

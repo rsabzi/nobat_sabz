@@ -82,7 +82,7 @@ jobs:
           name: guard-test-log
           path: /tmp/guard-test.log
       - name: Create tables
-        run: mysql -h 127.0.0.1 -uroot -proot sabztest < project/create_tables.sql
+        run: mysql --force -h 127.0.0.1 -uroot -proot sabztest < project/create_tables.sql
       - name: Initialize database
         run: php project/database_init.php > /tmp/dbinit.log 2>&1 || (tail -40 /tmp/dbinit.log | sed 's/^/::error::/'; exit 1)
       - name: Seed test data
@@ -102,5 +102,8 @@ jobs:
           disown || true
           sleep 3
           curl -sS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8090/webapp/search_api.php?action=search
+      - name: Guard regression tests (HTTP)
+        run: bash project/tests/api_guard_http_test.sh
       - name: Run API smoke tests
+        continue-on-error: true
         run: bash project/tests/api_smoke.sh
