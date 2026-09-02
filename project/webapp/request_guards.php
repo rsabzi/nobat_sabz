@@ -50,13 +50,17 @@ function action_requires_business_id($action) {
  * فقط وقتی اجباری است که اکشن واقعاً به آن نیاز داشته باشد.
  * خروجی: شناسه‌ی عددی معتبر یا null (برای اکشن‌های بدون کسب‌وکار).
  */
+function is_valid_business_id($business_id) {
+    return $business_id !== null
+        && $business_id !== ''
+        && preg_match('/^[1-9][0-9]*$/', (string)$business_id) === 1;
+}
+
 function require_business_id_if_needed($action, $business_id) {
     if (!action_requires_business_id($action)) {
-        return ($business_id !== null && $business_id !== '' && ctype_digit((string)$business_id))
-            ? (int)$business_id
-            : null;
+        return is_valid_business_id($business_id) ? (int)$business_id : null;
     }
-    if ($business_id === null || $business_id === '' || !ctype_digit((string)$business_id)) {
+    if (!is_valid_business_id($business_id)) {
         error_log("❌ Business ID لازم است ولی معتبر نیست برای action: " . $action);
         send_json_response('error', 'Business ID is required.', [], 400);
     }
