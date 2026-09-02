@@ -266,6 +266,21 @@ class RepositoryTest {
     }
 
     @Test
+    fun `marketer registration activates code and referral link`() = runTest {
+        server.enqueue(
+            MockResponse().setBody(
+                """{"status":"success",
+                    "marketer":{"id":2,"marketer_code":"MKT000042123","total_businesses":0,"total_bookings":0,"commission_rate":10,"total_commission":0},
+                    "referral_link":"https://t.me/sabztime_bot?start=marketer_MKT000042123"}"""
+            )
+        )
+        val result = repo.registerMarketer()
+        assertEquals("MKT000042123", result.marketer?.marketerCode)
+        org.junit.Assert.assertTrue(result.referralLink!!.contains("marketer_MKT000042123"))
+        assertTrue(server.takeRequest().body.readUtf8().contains("\"action\":\"register_marketer\""))
+    }
+
+    @Test
     fun `create booking posts proper payload`() = runTest {
         server.enqueue(
             MockResponse().setBody("""{"status":"success","message":"ok","booking_id":9,"confirmation_code":"XYZ99"}""")

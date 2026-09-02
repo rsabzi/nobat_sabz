@@ -98,6 +98,40 @@ if (!function_exists('mobile_normalize_phone')) {
     }
 }
 
+if (!function_exists('mobile_auth_find_user_by_phone')) {
+    /**
+     * یافتن حساب واقعی (ربات) با این شماره تلفن.
+     * کاربرانِ مصنوعی اپ (telegram_id حدود -۹۰۰۰۰۰۰۰۰۰۰۰۰) برنمی‌گردند.
+     */
+    function mobile_auth_find_user_by_phone($pdo, $phone) {
+        $norm = function_exists('mobile_normalize_phone') ? mobile_normalize_phone($phone) : trim((string)$phone);
+        if (!$norm) return null;
+        // شماره ممکن است در جدول users با فرمت‌های مختلف ذخیره شده باشد؛
+        // همه شکل‌های احتمالی را جستجو می‌کنیم.
+        $core = substr($norm, 1);                 // 9xxxxxxxxx (۱۰ رقم)
+        $candidates = array_values(array_unique([
+            $norm,             // 09xxxxxxxxx
+            $core,             // 9xxxxxxxxx
+            '98' . $core,      // 989xxxxxxxxx
+            '+98' . $core,     // +989xxxxxxxxx
+        ]));
+        $placeholders = implode(',', array_fill(0, count($candidates), '?'));
+        try {
+            $stmt = $pdo->prepare(
+                "SELECT id, telegram_id FROM users
+                 WHERE phone IN ($placeholders) AND telegram_id > -9000000000000000000
+                 ORDER BY (telegram_id > 0) DESC, id DESC
+                 LIMIT 1"
+            );
+            $stmt->execute($candidates);
+            $row = $stmt->fetch();
+            return $row ?: null;
+        } catch (Exception $e) {
+            return null;
+        }
+    }
+}
+
 if (!function_exists('mobile_auth_build_token')) {
     function mobile_auth_build_token() {
         return bin2hex(random_bytes(32));
@@ -166,6 +200,24 @@ if (!function_exists('mobile_auth_from_request')) {
             if (!$row) return null;
             if ($row['linked_user_id'] === null || $row['telegram_id'] === null) return null;
 
+            // کاربران قدیمی اپ که با حساب مصنوعی ثبت شده‌اند: اگر حساب واقعی ربات
+            // با همین شماره تلفن پیدا شود، اتصال را اصلاح می‌کنیم تا کسب‌وکارها و
+            // داشبورد بازاریابِ ربات در اپ دیده شود (هم‌هویت با ربات).
+            if (is_numeric($row['telegram_id']) && $row['telegram_id'] < -9000000000000000000) {
+                try {
+                    $realUser = mobile_auth_find_user_by_phone($pdo, $row['phone'] ?? '');
+                    if ($realUser && (int)$realUser['id'] !== (int)$row['linked_user_id']) {
+                        $upd = $pdo->prepare("UPDATE app_users SET linked_user_id = ?, telegram_id = ? WHERE id = ?");
+                        $upd->execute([(int)$realUser['id'], (int)$realUser['telegram_id'], (int)$row['app_user_id']]);
+                        $row['linked_user_id'] = (int)$realUser['id'];
+                        $row['telegram_id']   = (int)$realUser['telegram_id'];
+                        error_log('mobile_auth: relinked app user ' . $row['app_user_id'] . ' to real user ' . $realUser['id']);
+                    }
+                } catch (Exception $e) {
+                    error_log('mobile_auth: relink failed: ' . $e->getMessage());
+                }
+            }
+
             // تمدید خودکار نشست (sliding) و آخرین بازدید
             $stmt2 = $pdo->prepare(
                 "UPDATE app_sessions
@@ -219,6 +271,21 @@ if (!function_exists('mobile_auth_register_user')) {
         $pdo->beginTransaction();
         try {
             $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+
+            // اگر همین شماره تلفن حساب واقعی (ربات) دارد، کاربر اپ به همان
+            // حساب وصل می‌شود تا کسب‌وکارها/بازاریابی ربات در اپ دیده شود.
+            $existing = mobile_auth_find_user_by_phone($pdo, $phone);
+            if ($existing) {
+                $linkedUserId = (int)$existing['id'];
+                $telegramId = (int)$existing['telegram_id'];
+                $insertApp = $pdo->prepare(
+                    "INSERT INTO app_users (phone, password_hash, full_name, linked_user_id, telegram_id) VALUES (?, ?, ?, ?, ?)"
+                );
+                $insertApp->execute([$phone, $passwordHash, $name, $linkedUserId, $telegramId]);
+                $appUserId = (int)$pdo->lastInsertId();
+                $pdo->commit();
+                return ['app_user_id' => $appUserId, 'linked_user_id' => $linkedUserId, 'telegram_id' => $telegramId];
+            }
 
             $syntheticBase = -9000000000000000000; // بزرگ‌تر از هر شناسه تلگرام واقعی
             $insertUser = $pdo->prepare(

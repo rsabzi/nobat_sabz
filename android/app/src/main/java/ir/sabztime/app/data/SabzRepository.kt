@@ -271,6 +271,20 @@ class SabzRepository(private val api: ApiClient) {
         return decode(MarketerDashboardResponse.serializer(), json, MarketerDashboardResponse())
     }
 
+    /**
+     * فعال‌سازی حساب بازاریابی — هم‌منطق ربات (user_type_marketer):
+     * اگر کاربر بازاریاب نباشد، رکورد جدید با کد یکتا ساخته می‌شود.
+     */
+    suspend fun registerMarketer(): MarketerRegistrationResponse {
+        val json = api.post("api.php", body = jsonBody { put("action", "register_marketer") })
+        return try {
+            api.serializer.decodeFromJsonElement(MarketerRegistrationResponse.serializer(), json)
+        } catch (e: Exception) {
+            Log.w(TAG, "registerMarketer decode failed: ${e.message}")
+            throw classify(e)
+        }
+    }
+
     // --- احراز هویت و پروفایل (mobile_auth.php) ---
     suspend fun register(phone: String, password: String, name: String, device: String): AuthResponse {
         val json = api.post("mobile_auth.php", body = jsonBody {

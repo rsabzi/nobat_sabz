@@ -327,12 +327,20 @@ data class CreditInfo(
 )
 
 @Serializable
+data class MarketerRegistrationResponse(
+    val status: String = "",
+    val message: String? = null,
+    val marketer: MarketerInfo? = null,
+    @SerialName("referral_link") val referralLink: String? = null
+)
+
+@Serializable
 data class MarketerInfo(
     @Serializable(with = LenientInt::class) val id: Int = 0,
     @SerialName("marketer_code") val marketerCode: String = "",
     @SerialName("total_businesses") @Serializable(with = LenientInt::class) val totalBusinesses: Int = 0,
     @SerialName("total_bookings") @Serializable(with = LenientInt::class) val totalBookings: Int = 0,
-    @SerialName("commission_rate") @Serializable(with = LenientInt::class) val commissionRate: Int = 0,
+    @SerialName("commission_rate") @Serializable(with = LenientDouble::class) val commissionRate: Double = 0.0,
     @SerialName("total_commission") @Serializable(with = LenientInt::class) val totalCommission: Int = 0
 )
 
@@ -417,7 +425,7 @@ data class MarketerDashboardResponse(
     @SerialName("total_businesses") @Serializable(with = LenientInt::class) val totalBusinesses: Int = 0,
     @SerialName("total_bookings") @Serializable(with = LenientInt::class) val totalBookings: Int = 0,
     @SerialName("total_commission") @Serializable(with = LenientInt::class) val totalCommission: Int = 0,
-    @SerialName("commission_rate") @Serializable(with = LenientInt::class) val commissionRate: Int = 0,
+    @SerialName("commission_rate") @Serializable(with = LenientDouble::class) val commissionRate: Double = 0.0,
     @SerialName("monthly_businesses") @Serializable(with = LenientInt::class) val monthlyBusinesses: Int = 0,
     @SerialName("monthly_bookings") @Serializable(with = LenientInt::class) val monthlyBookings: Int = 0,
     @SerialName("monthly_commission") @Serializable(with = LenientInt::class) val monthlyCommission: Int = 0,

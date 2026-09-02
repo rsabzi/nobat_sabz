@@ -3581,8 +3581,50 @@ function handle_post_request($pdo, $internal_user_id) {
              send_json_response('error', 'خطا در دریافت لیست رزروها.', [], 500);
          }
      }
-     elseif ($action === 'get_marketer_dashboard') {
-         // دریافت اطلاعات داشبورد بازاریاب
+    elseif ($action === 'register_marketer') {
+        // فعال‌سازی حساب بازاریابی برای کاربر احراز‌هویتی شده (هم‌منطق ربات: user_type_marketer)
+        if (!$pdo) {
+            send_json_response('error', 'Database connection required.', [], 500);
+        }
+        if (empty($internal_user_id)) {
+            send_json_response('error', 'احراز هویت الزامی است.', [], 401);
+        }
+        try {
+            $stmt = $pdo->prepare("SELECT * FROM marketers WHERE user_id = ?");
+            $stmt->execute([$internal_user_id]);
+            $marketer = $stmt->fetch();
+
+            if (!$marketer) {
+                // ایجاد بازاریاب جدید با کد یکتا (الگوی ربات)
+                $marketer_code = 'MKT' . str_pad((string)$internal_user_id, 6, '0', STR_PAD_LEFT) . rand(100, 999);
+                $insertStmt = $pdo->prepare(
+                    "INSERT INTO marketers (user_id, marketer_code, total_businesses, total_bookings, commission_rate, total_commission, is_active, created_at, updated_at)
+                     VALUES (?, ?, 0, 0, 10.00, 0.00, 1, NOW(), NOW())"
+                );
+                $insertStmt->execute([$internal_user_id, $marketer_code]);
+                $stmt->execute([$internal_user_id]);
+                $marketer = $stmt->fetch();
+            }
+
+            $botName = defined('BOT_USERNAME') ? BOT_USERNAME : 'sabztime_bot';
+            send_json_response('success', 'کد بازاریابی شما فعال شد.', [
+                'marketer' => [
+                    'id' => (int)$marketer['id'],
+                    'marketer_code' => $marketer['marketer_code'],
+                    'total_businesses' => (int)$marketer['total_businesses'],
+                    'total_bookings' => (int)$marketer['total_bookings'],
+                    'commission_rate' => (float)$marketer['commission_rate'],
+                    'total_commission' => (int)$marketer['total_commission']
+                ],
+                'referral_link' => 'https://t.me/' . $botName . '?start=marketer_' . $marketer['marketer_code']
+            ]);
+        } catch (PDOException $e) {
+            error_log('Error in register_marketer: ' . $e->getMessage());
+            send_json_response('error', 'خطا در ایجاد حساب بازاریابی.', [], 500);
+        }
+    }
+    elseif ($action === 'get_marketer_dashboard') {
+        // دریافت اطلاعات داشبورد بازاریاب
          debug_log("🏢 شروع دریافت اطلاعات داشبورد بازاریاب", 'INFO');
          debug_log("🔍 internal_user_id: " . ($internal_user_id ?? 'NULL'), 'INFO');
          

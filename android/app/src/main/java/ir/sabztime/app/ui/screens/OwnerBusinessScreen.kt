@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Queue
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
@@ -85,6 +86,9 @@ class OwnerBusinessViewModel(private val graph: AppGraph, private val businessId
     private val _state = MutableStateFlow(OwnerState())
     val state: StateFlow<OwnerState> = _state.asStateFlow()
 
+    private val _services = MutableStateFlow<List<Service>>(emptyList())
+    val services: StateFlow<List<Service>> = _services.asStateFlow()
+
     init {
         refreshAll()
     }
@@ -92,6 +96,17 @@ class OwnerBusinessViewModel(private val graph: AppGraph, private val businessId
     fun refreshAll() {
         refreshQueue()
         refreshSubscription()
+        refreshServices()
+    }
+
+    fun refreshServices() {
+        viewModelScope.launch {
+            try {
+                _services.value = graph.repository.businessDetails(businessId)?.services.orEmpty()
+            } catch (e: Exception) {
+                // اختیاری
+            }
+        }
     }
 
     /** افزودن خدمت جدید به فهرست خدمات کسب‌وکار (از طریق اندپوینت update_services). */
@@ -105,7 +120,27 @@ class OwnerBusinessViewModel(private val graph: AppGraph, private val businessId
                     existing + Service(id = 0, name = name, price = price.toString(), durationMinutes = durationMinutes)
                 )
                 _state.value = _state.value.copy(actionBusy = false, actionMessage = "خدمت جدید ذخیره شد. ✅", actionError = false)
+                refreshServices()
                 onDone()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val s = classify(e)
+                _state.value = _state.value.copy(actionBusy = false, actionMessage = s.message, actionError = true)
+            }
+        }
+    }
+
+    /** حذف یک خدمت از فهرست خدمات (ارسال فهرست بدون خدمتِ حذف‌شده). */
+    fun deleteService(service: Service) {
+        _state.value = _state.value.copy(actionBusy = true, actionMessage = null, actionError = false)
+        viewModelScope.launch {
+            try {
+                val remaining = graph.repository.businessDetails(businessId)?.services.orEmpty()
+                    .filter { it.id != service.id }
+                graph.repository.updateServices(businessId, remaining)
+                _state.value = _state.value.copy(actionBusy = false, actionMessage = "خدمت حذف شد. ✅", actionError = false)
+                refreshServices()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -182,6 +217,7 @@ fun OwnerBusinessScreen(graph: AppGraph, businessId: Int, navController: NavHost
         OwnerBusinessViewModel(graph, businessId)
     }
     val state by viewModel.state.collectAsState()
+    val services by viewModel.services.collectAsState()
     var showServiceDialog by remember { mutableStateOf(false) }
 
     GlassBackground {
@@ -250,10 +286,42 @@ fun OwnerBusinessScreen(graph: AppGraph, businessId: Int, navController: NavHost
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            "خدمت و مدت زمان قابل رزرو را مستقیماً از اپ اضافه کنید.",
+                            "خدمت و مدت زمان قابل رزرو را مستقیماً از اپ اضافه یا حذف کنید.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        if (services.isNotEmpty()) {
+                            Spacer(Modifier.height(10.dp))
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                services.forEach { svc ->
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Column(Modifier.weight(1f)) {
+                                            Text(
+                                                svc.name,
+                                                style = MaterialTheme.typography.bodyLarge,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                            Text(
+                                                "${Jalali.persianDigits(svc.durationMinutes ?: 30)} دقیقه" +
+                                                    (svc.priceValue?.let { " • ${Jalali.formatPrice(it)}" } ?: ""),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        IconButton(
+                                            onClick = { viewModel.deleteService(svc) },
+                                            enabled = !state.actionBusy
+                                        ) {
+                                            Icon(
+                                                Icons.Filled.Delete,
+                                                contentDescription = "حذف خدمت",
+                                                tint = MaterialTheme.colorScheme.error
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         Spacer(Modifier.height(10.dp))
                         GradientButton(
                             onClick = { showServiceDialog = true },
