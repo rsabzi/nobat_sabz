@@ -17,8 +17,10 @@ android {
         applicationId = "ir.sabztime.app"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        // هر انتشار باید versionCode جدید داشته باشد؛ در غیر این صورت اندروید ممکن است
+        // APK تازه را به‌عنوان نسخه قدیمی تشخیص دهد یا کاربر artifact قبلی را نصب کند.
+        versionCode = 2
+        versionName = "1.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl/\"")
     }
