@@ -306,7 +306,7 @@ fun ProfileScreen(graph: AppGraph, navController: NavHostController) {
 
                             Box(
                                 modifier = Modifier.fillMaxWidth(),
-                                contentAlignment = Alignment.CenterHorizontally
+                                contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     "نوبت‌سبز — نسخه ۱٫۰٫۰",
