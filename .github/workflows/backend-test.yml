@@ -81,10 +81,12 @@ jobs:
         with:
           name: guard-test-log
           path: /tmp/guard-test.log
-      - name: Seed database and smoke test
+      - name: Create tables
+        run: mysql -h 127.0.0.1 -uroot -proot sabztest < project/create_tables.sql
+      - name: Initialize database
+        run: php project/database_init.php > /tmp/dbinit.log 2>&1 || (tail -40 /tmp/dbinit.log | sed 's/^/::error::/'; exit 1)
+      - name: Seed test data
         run: |
-          mysql -h 127.0.0.1 -uroot -proot sabztest < project/create_tables.sql
-          php project/database_init.php > /dev/null
           mysql -h 127.0.0.1 -uroot -proot sabztest <<'SQL'
           INSERT INTO businesses (owner_id, name, business_type, province, city, address, phone, slot_duration_minutes, is_active)
           VALUES (1, 'آرایشگاه تست', 'آرایشی و زیبایی', 'تهران', 'تهران', 'خیابان تست', '09120000000', 30, 1);
@@ -94,6 +96,11 @@ jobs:
           VALUES (1, 6, '09:00', '17:00', 1), (1, 0, '09:00', '17:00', 1), (1, 1, '09:00', '17:00', 1), (1, 2, '09:00', '17:00', 1),
                  (1, 3, '09:00', '17:00', 1), (1, 4, '09:00', '17:00', 1), (1, 5, '09:00', '17:00', 1);
           SQL
-          cd project && php -S 127.0.0.1:8090 > /tmp/phpserver.log 2>&1 &
+      - name: Start PHP server
+        run: |
+          cd project && nohup php -S 127.0.0.1:8090 > /tmp/phpserver.log 2>&1 &
+          disown || true
           sleep 3
-          bash tests/api_smoke.sh
+          curl -sS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8090/webapp/search_api.php?action=search
+      - name: Run API smoke tests
+        run: bash project/tests/api_smoke.sh

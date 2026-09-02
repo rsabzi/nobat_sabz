@@ -8,7 +8,13 @@ PASS=0; FAIL=0
 
 check() {
   local name="$1" cond="$2"
-  if eval "$cond"; then PASS=$((PASS+1)); echo "✅ $name"; else FAIL=$((FAIL+1)); echo "❌ $name"; fi
+  if eval "$cond"; then
+    PASS=$((PASS+1)); echo "✅ $name"
+  else
+    FAIL=$((FAIL+1)); echo "❌ $name"
+    # در CI به‌صورت annotation نمایش داده می‌شود تا بدون دانلود لاگ هم دیده شود
+    [ -n "${GITHUB_ACTIONS:-}" ] && echo "::error::❌ $name"
+  fi
 }
 
 json() { python3 -c "import json,sys; d=json.load(sys.stdin); print(eval(sys.argv[1]))" "$1"; }
@@ -99,4 +105,5 @@ check "اعلان‌ها" "echo '$NOTIF' | grep -q '\"status\":\"success\"'"
 
 echo "----------------------------------------"
 echo "PASS=$PASS FAIL=$FAIL"
+[ -n "${GITHUB_ACTIONS:-}" ] && echo "::notice::نتیجه تست‌های دود API → PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ]
