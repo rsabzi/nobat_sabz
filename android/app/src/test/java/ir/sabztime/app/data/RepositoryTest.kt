@@ -119,6 +119,24 @@ class RepositoryTest {
     }
 
     @Test
+    fun `add business posts owner setup fields and returns generated id`() = runTest {
+        server.enqueue(MockResponse().setBody("""{"status":"success","business_id":42}"""))
+        val result = repo.addBusiness("آرایشگاه نمونه", "آرایشی", "09123456789", "تهران", "تهران", "خیابان نمونه")
+        assertEquals(42, result.businessId)
+        val body = server.takeRequest().body.readUtf8()
+        assertTrue(body.contains("\"action\":\"add_business\""))
+        assertTrue(body.contains("\"name\":\"آرایشگاه نمونه\""))
+    }
+
+    @Test
+    fun `marketer registration decodes code for in app dashboard`() = runTest {
+        server.enqueue(MockResponse().setBody("""{"status":"success","marketer":{"id":2,"marketer_code":"MKT000002123"}}"""))
+        val result = repo.registerMarketer()
+        assertEquals("MKT000002123", result.marketer?.marketerCode)
+        assertTrue(server.takeRequest().body.readUtf8().contains("\"action\":\"register_marketer\""))
+    }
+
+    @Test
     fun `create booking posts proper payload`() = runTest {
         server.enqueue(
             MockResponse().setBody("""{"status":"success","message":"ok","booking_id":9,"confirmation_code":"XYZ99"}""")

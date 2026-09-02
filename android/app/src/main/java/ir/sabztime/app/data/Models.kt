@@ -270,6 +270,23 @@ data class MyBusinessesResponse(
     @SerialName("total_count") val totalCount: Int = 0
 )
 
+@Serializable
+data class BusinessCreatedResponse(
+    val status: String = "",
+    val message: String? = null,
+    @SerialName("business_id") val businessId: Int? = null
+)
+
+@Serializable
+data class ManagedServicesResponse(
+    val status: String = "",
+    val message: String? = null,
+    val data: ManagedServicesData? = null
+)
+
+@Serializable
+data class ManagedServicesData(val services: List<Service> = emptyList())
+
 // ---------------------------------------------------------------------------
 // پروفایل و احراز هویت (mobile_auth.php)
 // ---------------------------------------------------------------------------
@@ -298,6 +315,13 @@ data class MarketerInfo(
     @SerialName("total_bookings") val totalBookings: Int = 0,
     @SerialName("commission_rate") val commissionRate: Int = 0,
     @SerialName("total_commission") val totalCommission: Int = 0
+)
+
+@Serializable
+data class MarketerRegistrationResponse(
+    val status: String = "",
+    val message: String? = null,
+    val marketer: MarketerInfo? = null
 )
 
 @Serializable
@@ -378,6 +402,7 @@ data class MarketerBusiness(
 @Serializable
 data class MarketerDashboardResponse(
     val status: String = "",
+    @SerialName("marketer_code") val marketerCode: String = "",
     @SerialName("total_businesses") val totalBusinesses: Int = 0,
     @SerialName("total_bookings") val totalBookings: Int = 0,
     @SerialName("total_commission") val totalCommission: Int = 0,

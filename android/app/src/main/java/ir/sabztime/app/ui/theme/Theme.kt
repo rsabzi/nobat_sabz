@@ -7,47 +7,65 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-val BrandGreen = Color(0xFF1B7F4D)
-val BrandGreenDark = Color(0xFF0E5A33)
-val BrandGreenLight = Color(0xFFE6F4EC)
-val BrandGreenContainer = Color(0xFFCDEBD9)
-val Accent = Color(0xFFF59E0B)
-val ErrorRed = Color(0xFFB3261E)
+/** رنگ‌های هویت بصری نوبت‌سبز؛ سبز عمیق برای اعتماد و کهربایی برای تأکیدهای کوتاه. */
+val BrandGreen = Color(0xFF087B5B)
+val BrandGreenDark = Color(0xFF00513B)
+val BrandGreenLight = Color(0xFFE4F5EF)
+val BrandGreenContainer = Color(0xFFC4EBDD)
+val Accent = Color(0xFFFFB547)
+val ErrorRed = Color(0xFFBA1A1A)
+val Ink = Color(0xFF17211D)
+val MutedInk = Color(0xFF53625B)
+val Canvas = Color(0xFFF7FAF8)
 
 private val LightColors = lightColorScheme(
     primary = BrandGreen,
     onPrimary = Color.White,
     primaryContainer = BrandGreenContainer,
-    onPrimaryContainer = Color(0xFF06331C),
-    secondary = Color(0xFF4A6656),
+    onPrimaryContainer = Color(0xFF002116),
+    secondary = Color(0xFF4B6358),
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFCDEBD9),
-    onSecondaryContainer = Color(0xFF072115),
-    tertiary = Accent,
-    background = Color(0xFFF7FAF8),
-    onBackground = Color(0xFF161D18),
-    surface = Color.White,
-    onSurface = Color(0xFF161D18),
-    surfaceVariant = Color(0xFFDEE5DE),
-    onSurfaceVariant = Color(0xFF424940),
-    outline = Color(0xFF727970),
-    error = ErrorRed
+    secondaryContainer = Color(0xFFD0E8D9),
+    onSecondaryContainer = Color(0xFF082016),
+    tertiary = Color(0xFF775A00),
+    onTertiary = Color.White,
+    tertiaryContainer = Color(0xFFFFE08D),
+    onTertiaryContainer = Color(0xFF251A00),
+    background = Canvas,
+    onBackground = Ink,
+    surface = Color(0xFFFFFFFF),
+    onSurface = Ink,
+    surfaceVariant = Color(0xFFDEE8E1),
+    onSurfaceVariant = MutedInk,
+    surfaceContainerHighest = Color(0xFFEAF1EC),
+    outline = Color(0xFF74827B),
+    outlineVariant = Color(0xFFC4CEC7),
+    error = ErrorRed,
+    onError = Color.White
 )
 
 private val DarkColors = darkColorScheme(
-    primary = Color(0xFF98D5B1),
-    onPrimary = Color(0xFF00391F),
-    primaryContainer = Color(0xFF0F5233),
-    onPrimaryContainer = Color(0xFFB7F2CE),
-    secondary = Color(0xFFB2CCB9),
-    onSecondary = Color(0xFF1E3526),
-    background = Color(0xFF101411),
-    onBackground = Color(0xFFE1E3DE),
-    surface = Color(0xFF161D18),
-    onSurface = Color(0xFFE1E3DE),
-    surfaceVariant = Color(0xFF424940),
-    onSurfaceVariant = Color(0xFFC2C9C1),
-    error = Color(0xFFF2B8B5)
+    primary = Color(0xFF8BDABD),
+    onPrimary = Color(0xFF003828),
+    primaryContainer = Color(0xFF00513B),
+    onPrimaryContainer = Color(0xFFA7F7D7),
+    secondary = Color(0xFFB2CCBE),
+    onSecondary = Color(0xFF1E352B),
+    secondaryContainer = Color(0xFF344B40),
+    onSecondaryContainer = Color(0xFFCEE9D9),
+    tertiary = Color(0xFFFFDB7E),
+    onTertiary = Color(0xFF3E2E00),
+    tertiaryContainer = Color(0xFF5A4300),
+    onTertiaryContainer = Color(0xFFFFE08D),
+    background = Color(0xFF101512),
+    onBackground = Color(0xFFE0E5E0),
+    surface = Color(0xFF161D19),
+    onSurface = Color(0xFFE0E5E0),
+    surfaceVariant = Color(0xFF3E4A43),
+    onSurfaceVariant = Color(0xFFBECAC2),
+    outline = Color(0xFF89968E),
+    error = Color(0xFFFFB4AB),
+    onError = Color(0xFF690005)
 )
 
 @Composable

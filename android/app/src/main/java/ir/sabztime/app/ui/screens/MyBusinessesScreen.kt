@@ -18,6 +18,10 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -27,6 +31,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -58,6 +63,18 @@ class MyBusinessesViewModel(private val graph: AppGraph) : ViewModel() {
 
     init { load() }
 
+    fun addBusiness(name: String, type: String, phone: String, province: String, city: String, address: String, onCreated: (Int) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val result = graph.repository.addBusiness(name, type, phone, province, city, address)
+                result.businessId?.let(onCreated) ?: load()
+            } catch (e: Exception) {
+                val sabz = e as? SabzException ?: SabzException.Network(e)
+                _state.value = UiState.Error(sabz.toFriendlyMessage(), sabz.kind)
+            }
+        }
+    }
+
     fun load() {
         _state.value = UiState.Loading
         viewModelScope.launch {
@@ -77,8 +94,16 @@ class MyBusinessesViewModel(private val graph: AppGraph) : ViewModel() {
 fun MyBusinessesScreen(graph: AppGraph, navController: NavHostController) {
     val viewModel: MyBusinessesViewModel = viewModel { MyBusinessesViewModel(graph) }
     val state by viewModel.state.collectAsState()
+    var showAddDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
 
     Scaffold(
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = { showAddDialog = true },
+                icon = { Text("+") },
+                text = { Text("افزودن کسب‌وکار") }
+            )
+        },
         topBar = {
             TopAppBar(
                 title = { Text("کسب‌وکارهای من", fontWeight = FontWeight.Bold) },
@@ -101,8 +126,8 @@ fun MyBusinessesScreen(graph: AppGraph, navController: NavHostController) {
             UiState.Empty -> EmptyState(
                 icon = "🏪",
                 title = "هنوز کسب‌وکاری ثبت نکرده‌اید",
-                subtitle = "از ربات تلگرام نوبت‌سبز (/start) می‌توانید کسب‌وکار خود را ثبت کنید.",
-                action = { Button(onClick = { navController.popBackStack() }) { Text("بازگشت") } }
+                subtitle = "برای شروع، اطلاعات کسب‌وکار خود را وارد کنید.",
+                action = { Button(onClick = { showAddDialog = true }) { Text("ثبت کسب‌وکار") } }
             )
             is UiState.Success -> LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(padding),
@@ -139,6 +164,46 @@ fun MyBusinessesScreen(graph: AppGraph, navController: NavHostController) {
             }
         }
     }
+
+    if (showAddDialog) {
+        AddBusinessDialog(
+            onDismiss = { showAddDialog = false },
+            onSubmit = { name, type, phone, province, city, address ->
+                viewModel.addBusiness(name, type, phone, province, city, address) { id ->
+                    showAddDialog = false
+                    navController.navigate(Routes.owner(id))
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun AddBusinessDialog(onDismiss: () -> Unit, onSubmit: (String, String, String, String, String, String) -> Unit) {
+    var name by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+    var type by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+    var phone by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+    var province by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+    var city by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+    var address by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("ثبت کسب‌وکار جدید") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(name, { name = it }, label = { Text("نام کسب‌وکار") }, singleLine = true)
+                OutlinedTextField(type, { type = it }, label = { Text("نوع کسب‌وکار") }, singleLine = true)
+                OutlinedTextField(phone, { phone = it }, label = { Text("شماره تماس (۰۹…) ") }, singleLine = true)
+                OutlinedTextField(province, { province = it }, label = { Text("استان") }, singleLine = true)
+                OutlinedTextField(city, { city = it }, label = { Text("شهر") }, singleLine = true)
+                OutlinedTextField(address, { address = it }, label = { Text("نشانی (اختیاری)") }, singleLine = true)
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onSubmit(name, type, phone, province, city, address) }, enabled = listOf(name, type, phone, province, city).all { it.isNotBlank() }) { Text("ثبت و مدیریت خدمات") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }
+    )
 }
 
 @Composable
