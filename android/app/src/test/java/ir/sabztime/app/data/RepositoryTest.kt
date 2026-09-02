@@ -236,6 +236,36 @@ class RepositoryTest {
     }
 
     @Test
+    fun `add business posts owner setup fields and returns generated id`() = runTest {
+        server.enqueue(MockResponse().setBody("""{"status":"success","business_id":42}"""))
+        val result = repo.addBusiness("آرایشگاه نمونه", "آرایشی", "09123456789", "تهران", "تهران", "خیابان نمونه")
+        assertEquals(42, result.businessId)
+        val body = server.takeRequest().body.readUtf8()
+        assertTrue(body.contains("\"action\":\"add_business\""))
+        assertTrue(body.contains("\"name\":\"آرایشگاه نمونه\""))
+        assertTrue(body.contains("\"phone\":\"09123456789\""))
+    }
+
+    @Test
+    fun `update services posts full services array and decodes result`() = runTest {
+        server.enqueue(
+            MockResponse().setBody(
+                """{"status":"success","data":{"services":[{"id":1,"name":"برش","price":"250000.00","duration_minutes":30,"is_active":1}]}}"""
+            )
+        )
+        val list = repo.updateServices(
+            7,
+            listOf(Service(id = 0, name = "برش", price = "250000", durationMinutes = 30))
+        )
+        assertEquals(1, list.size)
+        assertEquals("برش", list[0].name)
+        val body = server.takeRequest().body.readUtf8()
+        assertTrue(body.contains("\"action\":\"update_services\""))
+        assertTrue(body.contains("\"business_id\":7"))
+        assertTrue(body.contains("\"name\":\"برش\""))
+    }
+
+    @Test
     fun `create booking posts proper payload`() = runTest {
         server.enqueue(
             MockResponse().setBody("""{"status":"success","message":"ok","booking_id":9,"confirmation_code":"XYZ99"}""")

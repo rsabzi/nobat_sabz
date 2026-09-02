@@ -172,6 +172,7 @@ class JsonObjectBuilder {
     fun put(key: String, value: String?) { m[key] = JsonPrimitive(value ?: "") }
     fun put(key: String, value: Number?) { m[key] = JsonPrimitive(value ?: 0) }
     fun put(key: String, value: Boolean) { m[key] = JsonPrimitive(value) }
+    fun putArray(key: String, value: JsonArray) { m[key] = value }
     fun putObj(key: String, value: JsonObject) { m[key] = value }
     fun build(): JsonObject = JsonObject(m)
 }

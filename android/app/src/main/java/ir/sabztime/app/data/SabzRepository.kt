@@ -7,7 +7,10 @@ import ir.sabztime.app.core.classify
 import ir.sabztime.app.core.jsonBody
 import ir.sabztime.app.core.obj
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 /**
  * لایه داده: همه تماس‌ها به API موجود سرور (بدون تغییر منطق سمت سرور).
@@ -192,6 +195,61 @@ class SabzRepository(private val api: ApiClient) {
     suspend fun myBusinesses(): List<MyBusinessItem> {
         val json = api.get("api.php", mapOf("action" to "get_my_businesses"))
         return decode(MyBusinessesResponse.serializer(), json, MyBusinessesResponse()).businesses
+    }
+
+    /** ثبت کسب‌وکار جدید توسط مالک (اندپوینت add_business بک‌اند). */
+    suspend fun addBusiness(
+        name: String,
+        type: String,
+        phone: String,
+        province: String,
+        city: String,
+        address: String,
+        marketerCode: String = ""
+    ): BusinessCreatedResponse {
+        val json = api.post("api.php", body = jsonBody {
+            put("action", "add_business")
+            put("name", name)
+            put("type", type)
+            put("phone", phone)
+            put("province", province)
+            put("city", city)
+            put("address", address)
+            put("marketer_code", marketerCode)
+        })
+        return try {
+            api.serializer.decodeFromJsonElement(BusinessCreatedResponse.serializer(), json)
+        } catch (e: Exception) {
+            Log.w(TAG, "addBusiness decode failed: ${e.message}")
+            throw classify(e)
+        }
+    }
+
+    /** جایگزینی کامل فهرست خدمات یک کسب‌وکار (اندپوینت update_services بک‌اند). */
+    suspend fun updateServices(businessId: Int, services: List<Service>): List<Service> {
+        val json = api.post("api.php", body = jsonBody {
+            put("action", "update_services")
+            put("business_id", businessId)
+            putArray(
+                "services",
+                JsonArray(services.map { s ->
+                    buildJsonObject {
+                        put("id", s.id)
+                        put("name", s.name)
+                        put("description", s.description ?: "")
+                        put("price", s.priceValue ?: 0)
+                        put("duration_minutes", s.durationMinutes ?: 30)
+                        put("is_active", s.isActive)
+                    }
+                })
+            )
+        })
+        return try {
+            api.serializer.decodeFromJsonElement(ManagedServicesResponse.serializer(), json).data?.services.orEmpty()
+        } catch (e: Exception) {
+            Log.w(TAG, "updateServices decode failed: ${e.message}")
+            throw classify(e)
+        }
     }
 
     suspend fun subscriptionStatus(businessId: Int): SubscriptionStatusResponse {

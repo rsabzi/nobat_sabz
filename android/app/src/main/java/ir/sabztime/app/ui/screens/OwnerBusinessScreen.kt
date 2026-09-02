@@ -15,20 +15,29 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Queue
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Work
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -44,6 +53,7 @@ import ir.sabztime.app.core.UiState
 import ir.sabztime.app.core.classify
 import ir.sabztime.app.data.QueueItem
 import ir.sabztime.app.data.QueueResponse
+import ir.sabztime.app.data.Service
 import ir.sabztime.app.data.SubscriptionStatusResponse
 import ir.sabztime.app.ui.Routes
 import ir.sabztime.app.ui.components.EmptyState
@@ -82,6 +92,27 @@ class OwnerBusinessViewModel(private val graph: AppGraph, private val businessId
     fun refreshAll() {
         refreshQueue()
         refreshSubscription()
+    }
+
+    /** افزودن خدمت جدید به فهرست خدمات کسب‌وکار (از طریق اندپوینت update_services). */
+    fun addService(name: String, price: Long, durationMinutes: Int, onDone: () -> Unit) {
+        _state.value = _state.value.copy(actionBusy = true, actionMessage = null, actionError = false)
+        viewModelScope.launch {
+            try {
+                val existing = graph.repository.businessDetails(businessId)?.services.orEmpty()
+                graph.repository.updateServices(
+                    businessId,
+                    existing + Service(id = 0, name = name, price = price.toString(), durationMinutes = durationMinutes)
+                )
+                _state.value = _state.value.copy(actionBusy = false, actionMessage = "خدمت جدید ذخیره شد. ✅", actionError = false)
+                onDone()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val s = classify(e)
+                _state.value = _state.value.copy(actionBusy = false, actionMessage = s.message, actionError = true)
+            }
+        }
     }
 
     fun refreshQueue() {
@@ -151,6 +182,7 @@ fun OwnerBusinessScreen(graph: AppGraph, businessId: Int, navController: NavHost
         OwnerBusinessViewModel(graph, businessId)
     }
     val state by viewModel.state.collectAsState()
+    var showServiceDialog by remember { mutableStateOf(false) }
 
     GlassBackground {
         Scaffold(
@@ -210,6 +242,30 @@ fun OwnerBusinessScreen(graph: AppGraph, businessId: Int, navController: NavHost
                 }
 
                 item {
+                    GlassCard {
+                        Text(
+                            "خدمات کسب‌وکار",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "خدمت و مدت زمان قابل رزرو را مستقیماً از اپ اضافه کنید.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        GradientButton(
+                            onClick = { showServiceDialog = true },
+                            enabled = !state.actionBusy,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("افزودن خدمت", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                item {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             "صف امروز",
@@ -264,7 +320,66 @@ fun OwnerBusinessScreen(graph: AppGraph, businessId: Int, navController: NavHost
                 }
             }
         }
+        if (showServiceDialog) {
+            AddServiceDialog(
+                onDismiss = { showServiceDialog = false },
+                onSubmit = { name, price, duration ->
+                    viewModel.addService(name, price, duration) { showServiceDialog = false }
+                }
+            )
+        }
     }
+}
+
+@Composable
+private fun AddServiceDialog(
+    onDismiss: () -> Unit,
+    onSubmit: (String, Long, Int) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var price by remember { mutableStateOf("") }
+    var duration by remember { mutableStateOf("30") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("افزودن خدمت", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("نام خدمت") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = price,
+                    onValueChange = { price = it },
+                    label = { Text("قیمت (تومان)") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = duration,
+                    onValueChange = { duration = it },
+                    label = { Text("مدت (دقیقه)") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onSubmit(name, price.toLongOrNull() ?: 0, duration.toIntOrNull() ?: 30) },
+                enabled = name.isNotBlank() && (duration.toIntOrNull() ?: 0) > 0
+            ) { Text("ذخیره خدمت") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }
+    )
 }
 
 @Composable

@@ -14,16 +14,26 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -45,6 +55,7 @@ import ir.sabztime.app.ui.components.ErrorState
 import ir.sabztime.app.ui.theme.GlassBackground
 import ir.sabztime.app.ui.components.GlassCard
 import ir.sabztime.app.ui.components.GlassTopBar
+import ir.sabztime.app.ui.components.GradientButton
 import ir.sabztime.app.ui.components.IconTile
 import ir.sabztime.app.ui.components.InfoRow
 import ir.sabztime.app.ui.components.StatusChip
@@ -62,6 +73,29 @@ class MyBusinessesViewModel(private val graph: AppGraph) : ViewModel() {
 
     init {
         load()
+    }
+
+    /** ثبت کسب‌وکار جدید؛ در موفقیت به صفحه مدیریت همان کسب‌وکار می‌رود. */
+    fun addBusiness(
+        name: String,
+        type: String,
+        phone: String,
+        province: String,
+        city: String,
+        address: String,
+        onCreated: (Int) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val result = graph.repository.addBusiness(name, type, phone, province, city, address)
+                result.businessId?.let(onCreated) ?: load()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val s = classify(e)
+                _state.value = UiState.Error(s.message, s.kind)
+            }
+        }
     }
 
     fun load() {
@@ -84,6 +118,7 @@ class MyBusinessesViewModel(private val graph: AppGraph) : ViewModel() {
 fun MyBusinessesScreen(graph: AppGraph, navController: NavHostController) {
     val viewModel: MyBusinessesViewModel = viewModel { MyBusinessesViewModel(graph) }
     val state by viewModel.state.collectAsState()
+    var showAddDialog by remember { mutableStateOf(false) }
 
     GlassBackground {
         Scaffold(
@@ -102,16 +137,28 @@ fun MyBusinessesScreen(graph: AppGraph, navController: NavHostController) {
                     }
                 }
                 is UiState.Error -> ErrorState(s.message, s.kind, onRetry = viewModel::load)
-                UiState.Empty -> EmptyState(
-                    icon = "🏪",
-                    title = "هنوز کسب‌وکاری ثبت نکرده‌اید",
-                    subtitle = "از ربات تلگرام نوبت‌سبز (دستور /start) می‌توانید کسب‌وکار خود را ثبت کنید."
-                )
-                is UiState.Success -> LazyColumn(
-                    modifier = Modifier.fillMaxSize().padding(padding),
-                    contentPadding = PaddingValues(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
+                else -> Column(Modifier.fillMaxSize().padding(padding)) {
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp)) {
+                        GradientButton(
+                            onClick = { showAddDialog = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Filled.Add, contentDescription = null, tint = Color.White)
+                            Spacer(Modifier.width(8.dp))
+                            Text("افزودن کسب‌وکار", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    when (s) {
+                        UiState.Empty -> EmptyState(
+                            icon = "🏪",
+                            title = "هنوز کسب‌وکاری ثبت نکرده‌اید",
+                            subtitle = "برای شروع، اطلاعات کسب‌وکار خود را در بالا وارد کنید."
+                        )
+                        is UiState.Success -> LazyColumn(
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(20.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
                     items(s.data, key = { it.id }) { b ->
                         GlassCard(onClick = { navController.navigate(Routes.owner(b.id)) }) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -162,8 +209,98 @@ fun MyBusinessesScreen(graph: AppGraph, navController: NavHostController) {
                         }
                     }
                     item { Spacer(Modifier.height(8.dp)) }
+                    }
+                }
                 }
             }
         }
+        if (showAddDialog) {
+            AddBusinessDialog(
+                onDismiss = { showAddDialog = false },
+                onSubmit = { name, type, phone, province, city, address ->
+                    viewModel.addBusiness(name, type, phone, province, city, address) { id ->
+                        navController.navigate(Routes.owner(id))
+                    }
+                    showAddDialog = false
+                }
+            )
+        }
     }
+}
+
+@Composable
+private fun AddBusinessDialog(
+    onDismiss: () -> Unit,
+    onSubmit: (String, String, String, String, String, String) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var type by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var province by remember { mutableStateOf("") }
+    var city by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("ثبت کسب‌وکار جدید", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("نام کسب‌وکار") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = type,
+                    onValueChange = { type = it },
+                    label = { Text("نوع کسب‌وکار") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = phone,
+                    onValueChange = { phone = it },
+                    label = { Text("شماره تماس (۰۹…)") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone),
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = province,
+                    onValueChange = { province = it },
+                    label = { Text("استان") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = city,
+                    onValueChange = { city = it },
+                    label = { Text("شهر") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = address,
+                    onValueChange = { address = it },
+                    label = { Text("نشانی (اختیاری)") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onSubmit(name, type, phone, province, city, address) },
+                enabled = listOf(name, type, phone, province, city).all { it.isNotBlank() }
+            ) { Text("ثبت و مدیریت خدمات") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }
+    )
 }

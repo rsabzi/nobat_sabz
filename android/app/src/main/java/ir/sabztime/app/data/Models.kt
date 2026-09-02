@@ -289,6 +289,23 @@ data class MyBusinessesResponse(
     @SerialName("total_count") @Serializable(with = LenientInt::class) val totalCount: Int = 0
 )
 
+@Serializable
+data class BusinessCreatedResponse(
+    val status: String = "",
+    val message: String? = null,
+    @SerialName("business_id") @Serializable(with = LenientInt::class) val businessId: Int? = null
+)
+
+@Serializable
+data class ManagedServicesResponse(
+    val status: String = "",
+    val message: String? = null,
+    val data: ManagedServicesData? = null
+)
+
+@Serializable
+data class ManagedServicesData(val services: List<Service> = emptyList())
+
 // ---------------------------------------------------------------------------
 // پروفایل و احراز هویت (mobile_auth.php)
 // ---------------------------------------------------------------------------
