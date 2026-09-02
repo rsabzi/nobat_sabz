@@ -352,6 +352,9 @@ function validateTelegramData($initData) {
     return false;
 }
 
+// گاردهای مشترک درخواست (اعتبارسنجی شناسه‌ی کسب‌وکار) — قابل تست مستقل
+require_once __DIR__ . '/request_guards.php';
+
 function authenticate_user() {
     error_log("🔐 === شروع احراز هویت کاربر ===");
     
@@ -568,11 +571,9 @@ function handle_get_request($pdo, $internal_user_id) {
     error_log("🎯 Action: " . ($action ?: 'خالی'));
     error_log("🏢 Business ID: " . ($business_id ?: 'خالی'));
     
-    // برای action های خاص که نیاز به business_id ندارند، این بررسی را رد می‌کنیم
-    if (!$business_id && !in_array($action, ['health_check', 'test', 'get_bot_info', 'get_business'])) {
-        error_log("❌ Business ID موجود نیست");
-        send_json_response('error', 'Business ID is required.', [], 400);
-    }
+    // فقط اکشن‌هایی که واقعاً به کسب‌وکار وابسته‌اند، شناسه لازم دارند
+    // (مثلاً get_my_businesses فهرست کسب‌وکارهای خودِ کاربر است و شناسه نمی‌خواهد)
+    $business_id = require_business_id_if_needed($action, $business_id);
 
     if ($action === 'get_business_for_edit') {
         // بررسی وجود اتصال دیتابیس
@@ -1636,16 +1637,10 @@ function handle_post_request($pdo, $internal_user_id) {
     error_log("🌐 _GET['business_id']: " . ($_GET['business_id'] ?? 'NULL'));
     error_log("🌐 _GET['id']: " . ($_GET['id'] ?? 'NULL'));
     
-    // برای add_business نیازی به business_id نیست، چون کسب‌وکار جدید ایجاد می‌شود
-    // get_bot_info، get_subscription_plans، get_marketer_dashboard و get_user_bookings نیازی به business_id ندارند
-    $exempt_actions = ['add_business', 'get_bot_info', 'get_subscription_plans', 'get_marketer_dashboard', 'get_user_bookings'];
-    error_log("📝 اکشن‌های معاف از business_id: " . json_encode($exempt_actions, JSON_UNESCAPED_UNICODE));
-    error_log("✅ آیا action معاف است؟ " . (in_array($action, $exempt_actions) ? 'بله' : 'خیر'));
-    
-    if (!in_array($action, $exempt_actions) && !$business_id) {
-        error_log("❌ Business ID موجود نیست برای action: " . $action);
-        send_json_response('error', 'Business ID is required.', [], 400);
-    }
+    // فهرست «مثبت»: فقط اکشن‌های وابسته به کسب‌وکار شناسه لازم دارند.
+    // (add_business, cancel_booking, register_marketer, get_user_bookings, … بدون شناسه کار می‌کنند)
+    error_log("📝 آیا این action به business_id نیاز دارد؟ " . (action_requires_business_id($action) ? 'بله' : 'خیر'));
+    $business_id = require_business_id_if_needed($action, $business_id);
     
     // بررسی وجود اتصال دیتابیس
     if (!$pdo) {
@@ -1660,8 +1655,16 @@ function handle_post_request($pdo, $internal_user_id) {
             }
         }
     } else {
-        // برای add_business، create_booking، cancel_booking، get_bot_info، get_subscription_status، get_subscription_plans، get_marketer_dashboard و get_user_bookings نیازی به بررسی مالکیت نیست
-        if ($action !== 'add_business' && $action !== 'create_booking' && $action !== 'cancel_booking' && $action !== 'get_bot_info' && $action !== 'get_subscription_status' && $action !== 'get_subscription_plans' && $action !== 'get_marketer_dashboard' && $action !== 'get_user_bookings') {
+        // بررسی مالکیت فقط برای اکشن‌هایی که روی یک کسب‌وکار مشخص عمل می‌کنند.
+        // اکشن‌های بدون شناسه (ثبت‌نام بازاریاب، لغو رزرو، فهرست رزروها و …)
+        // نباید وارد این بررسی شوند؛ در غیر این صورت با شناسه‌ی خالی «Access Denied» می‌گرفتند.
+        $ownership_exempt = [
+            'add_business', 'create_booking', 'cancel_booking', 'get_bot_info',
+            'get_subscription_status', 'get_subscription_plans',
+            'get_marketer_dashboard', 'get_user_bookings',
+            'register_marketer', 'get_my_businesses'
+        ];
+        if ($business_id && !in_array($action, $ownership_exempt, true)) {
             try {
                 error_log("🔍 بررسی مالکیت کسب‌وکار...");
                 $checkStmt = $pdo->prepare("SELECT id FROM businesses WHERE id = ? AND owner_id = ?");

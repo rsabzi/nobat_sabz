@@ -5,6 +5,7 @@ import ir.sabztime.app.core.ApiClient
 import ir.sabztime.app.core.arr
 import ir.sabztime.app.core.classify
 import ir.sabztime.app.core.jsonBody
+import ir.sabztime.app.core.SabzException
 import ir.sabztime.app.core.obj
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.JsonArray
@@ -192,9 +193,30 @@ class SabzRepository(private val api: ApiClient) {
     }
 
     // --- مالک ---
+    /**
+     * فهرست کسب‌وکارهای مالک.
+     *
+     * مسیر اصلی: `api.php?action=get_my_businesses`.
+     * اگر سرور نسخه‌ی قدیمی باشد و این اکشن را رد کند (مثلاً خطای
+     * «Business ID is required.» در نسخه‌های پیش از اصلاح گارد درخواست)،
+     * به‌جای نمایش خطا، همان فهرست از اندپوینت پروفایل (`mobile_auth.php?action=me`)
+     * که کسب‌وکارهای کاربر را هم برمی‌گرداند خوانده می‌شود.
+     */
     suspend fun myBusinesses(): List<MyBusinessItem> {
-        val json = api.get("api.php", mapOf("action" to "get_my_businesses"))
-        return decode(MyBusinessesResponse.serializer(), json, MyBusinessesResponse()).businesses
+        return try {
+            val json = api.get("api.php", mapOf("action" to "get_my_businesses"))
+            decode(MyBusinessesResponse.serializer(), json, MyBusinessesResponse()).businesses
+        } catch (e: SabzException) {
+            // انقضای نشست باید به لایه بالا برسد تا کاربر به صفحه ورود برگردد
+            if (e.kind == SabzException.Kind.SESSION || e.kind == SabzException.Kind.AUTH) throw e
+            Log.w(TAG, "get_my_businesses failed (${e.message}); falling back to profile endpoint")
+            try {
+                me().businesses
+            } catch (fallbackError: Exception) {
+                Log.w(TAG, "profile fallback failed: ${fallbackError.message}")
+                throw e
+            }
+        }
     }
 
     /** ثبت کسب‌وکار جدید توسط مالک (اندپوینت add_business بک‌اند). */
