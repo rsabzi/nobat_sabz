@@ -441,15 +441,19 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
 
                         item { Spacer(Modifier.height(4.dp)) }
                         item {
+                            // این مقادیر باید به متغیرهای پایدار محلی کپی شوند تا هوشمندکست
+                            // (smart cast) بعد از بررسی null کار کند.
+                            val selectedDate = state.selectedDate
+                            val selectedSlot = state.selectedSlot
                             GradientButton(
-                                enabled = state.selectedDate != null && state.selectedSlot != null,
+                                enabled = selectedDate != null && selectedSlot != null,
                                 onClick = viewModel::openForm,
                                 modifier = Modifier.fillMaxWidth().height(54.dp)
                             ) {
                                 Text(
                                     when {
-                                        state.selectedSlot == null -> "زمان را انتخاب کنید"
-                                        else -> "ادامه رزرو — ساعت ${Jalali.persianDigits(state.selectedSlot.startTime)}"
+                                        selectedSlot == null -> "زمان را انتخاب کنید"
+                                        else -> "ادامه رزرو — ساعت ${Jalali.persianDigits(selectedSlot.startTime)}"
                                     },
                                     fontWeight = FontWeight.Bold
                                 )
