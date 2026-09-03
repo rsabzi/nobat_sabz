@@ -557,7 +557,7 @@ fun OwnerBusinessScreen(graph: AppGraph, businessId: Int, navController: NavHost
                             subtitle = "رزروهای امروز اینجا نمایش داده می‌شوند."
                         )
                     }
-                    is UiState.Success -> items(q.data.queue, key = { it.id }) { item ->
+                    is UiState.Success -> items(q.data.queue) { item ->
                         QueueRow(item, busy = state.actionBusy, onComplete = { viewModel.complete(item.id) })
                     }
                 }
@@ -602,7 +602,7 @@ fun OwnerBusinessScreen(graph: AppGraph, businessId: Int, navController: NavHost
                             subtitle = "به‌محض اینکه مشتری‌ها نوبت بگیرند، اینجا نمایش داده می‌شوند."
                         )
                     }
-                    is UiState.Success -> items(b.data.bookings, key = { it.id }) { booking ->
+                    is UiState.Success -> items(b.data.bookings) { booking ->
                         BookingRow(
                             booking = booking,
                             busy = state.actionBusy,

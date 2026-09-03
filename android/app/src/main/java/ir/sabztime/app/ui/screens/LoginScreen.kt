@@ -23,8 +23,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.ContentCut
-import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.CircularProgressIndicator
@@ -69,6 +67,7 @@ import ir.sabztime.app.ui.theme.GlassBackground
 import ir.sabztime.app.ui.components.GlassCard
 import ir.sabztime.app.ui.components.GradientButton
 import ir.sabztime.app.ui.components.IconTile
+import ir.sabztime.app.ui.components.SabzLeafIcon
 import ir.sabztime.app.ui.components.SegmentedControl
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -184,7 +183,7 @@ fun LoginScreen(graph: AppGraph, navController: NavHostController) {
         ) {
             // نشان طلایی برند
             IconTile(
-                icon = Icons.Filled.ContentCut,
+                icon = SabzLeafIcon,
                 tileSize = 84.dp,
                 contentDescription = null
             )

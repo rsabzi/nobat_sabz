@@ -6,8 +6,11 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.core.view.WindowCompat
 import ir.sabztime.app.ui.AppNav
 import ir.sabztime.app.ui.theme.SabzTheme
@@ -19,19 +22,21 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         val graph = (application as SabzApp).graph
         setContent {
-            // هویت بصری همیشه «طلایی لوکس»ِ روشن است
-            SabzTheme {
-                LaunchedEffect(Unit) {
-                    // آیکون‌های نوار وضعیت تیره روی زمینه‌ی طلایی روشن
-                    val controller = WindowCompat.getInsetsController(window, window.decorView)
-                    controller.isAppearanceLightStatusBars = true
-                    controller.isAppearanceLightNavigationBars = true
-                }
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = GoldBgTop
-                ) {
-                    AppNav(graph)
+            // هویت بصری همیشه «طلایی لوکس»ِ روشن است؛ جهت صفحه را صریحاً راست‌به‌چپ (RTL) می‌کنیم
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                SabzTheme {
+                    LaunchedEffect(Unit) {
+                        // آیکون‌های نوار وضعیت تیره روی زمینه‌ی طلایی روشن
+                        val controller = WindowCompat.getInsetsController(window, window.decorView)
+                        controller.isAppearanceLightStatusBars = true
+                        controller.isAppearanceLightNavigationBars = true
+                    }
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = GoldBgTop
+                    ) {
+                        AppNav(graph)
+                    }
                 }
             }
         }

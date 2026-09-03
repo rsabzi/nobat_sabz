@@ -175,7 +175,7 @@ fun BookingsScreen(
                         contentPadding = PaddingValues(20.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(ui.data, key = { it.id }) { b ->
+                        items(ui.data) { b ->
                             BookingCard(b, onClick = { navController.navigate(Routes.booking(b.id)) })
                         }
                         item { ir.sabztime.app.ui.components.BottomBarSpacer() }

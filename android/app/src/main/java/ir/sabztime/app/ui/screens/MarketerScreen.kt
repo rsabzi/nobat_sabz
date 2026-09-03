@@ -236,7 +236,7 @@ fun MarketerScreen(graph: AppGraph, navController: NavHostController) {
                                         )
                                     }
                                 }
-                                items(d.businesses, key = { it.id }) { b ->
+                                items(d.businesses) { b ->
                                     GlassCard(shape = RoundedCornerShape(24.dp)) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             IconTile(

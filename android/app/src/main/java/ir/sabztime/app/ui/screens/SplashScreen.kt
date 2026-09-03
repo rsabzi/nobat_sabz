@@ -16,8 +16,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +36,7 @@ import androidx.navigation.NavHostController
 import ir.sabztime.app.core.AppGraph
 import ir.sabztime.app.ui.Routes
 import ir.sabztime.app.ui.components.GoldText
+import ir.sabztime.app.ui.components.SabzLeafIcon
 import ir.sabztime.app.ui.theme.Cocoa
 import ir.sabztime.app.ui.theme.CocoaSoft
 import ir.sabztime.app.ui.theme.GoldBgEdge
@@ -96,9 +95,9 @@ fun SplashScreen(graph: AppGraph, navController: NavHostController) {
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        Icons.Filled.ContentCut,
+                        SabzLeafIcon,
                         contentDescription = null,
-                        modifier = Modifier.size(54.dp),
+                        modifier = Modifier.size(60.dp),
                         tint = Cocoa
                     )
                 }

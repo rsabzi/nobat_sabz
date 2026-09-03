@@ -205,7 +205,7 @@ fun MyBusinessesScreen(graph: AppGraph, navController: NavHostController) {
                         contentPadding = PaddingValues(20.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                    items(s.data, key = { it.id }) { b ->
+                    items(s.data) { b ->
                         GlassCard(onClick = { navController.navigate(Routes.owner(b.id)) }) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 IconTile(

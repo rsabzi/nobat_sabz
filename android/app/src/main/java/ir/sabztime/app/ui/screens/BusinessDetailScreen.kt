@@ -351,7 +351,7 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
                         // --- خدمات ---
                         if (b.services.isNotEmpty()) {
                             item { SectionHeader(Icons.Filled.Work, "خدمات") }
-                            items(b.services, key = { "s${it.id}" }) { service ->
+                            items(b.services) { service ->
                                 ServiceRow(
                                     service,
                                     selected = state.selectedServiceId == service.id,
@@ -383,7 +383,7 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 else -> LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    items(state.dates, key = { it.date }) { d ->
+                                    items(state.dates) { d ->
                                         val sel = state.selectedDate?.date == d.date
                                         GlassChip(
                                             selected = sel,

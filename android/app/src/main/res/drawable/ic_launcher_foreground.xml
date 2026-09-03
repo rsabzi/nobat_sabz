@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- آیکون سه‌بعدی: برگ سفید با گرادیان و سایه (روی گرادیان آبی برند) -->
+<!-- آیکون لانچر — برگ نوبت‌سبز روی گرادیان آبی برند (viewport 108 با safe-zone وسط) -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
@@ -7,22 +7,23 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- سایه‌ی محو زیر برگ (عمق سه‌بعدی) -->
+    <!-- سایه‌ی محو زیر برگ (عمق) -->
     <path
-        android:fillColor="#33000000"
-        android:pathData="M54 32 C 36 44, 32 66, 54 84 C 76 66, 72 44, 54 32 Z" />
+        android:fillColor="#40000000"
+        android:pathData="M54 30 C 36 42, 30 62, 54 86 C 78 62, 72 42, 54 30 Z" />
 
-    <!-- برگ اصلی با گرادیان عمودی -->
-    <path android:pathData="M54 28 C 36 40, 32 62, 54 80 C 76 62, 72 40, 54 28 Z">
+    <!-- برگ اصلی با گرادیان عمودی (سفید درخشان → آبی روشن) -->
+    <path
+        android:pathData="M54 26 C 36 38, 30 60, 54 84 C 78 60, 72 38, 54 26 Z">
         <aapt:attr name="android:fillColor">
             <gradient
                 android:type="linear"
                 android:startX="54"
-                android:startY="28"
+                android:startY="26"
                 android:endX="54"
-                android:endY="80"
+                android:endY="84"
                 android:startColor="#FFFFFF"
-                android:endColor="#CFE2F7" />
+                android:endColor="#DCEAFB" />
         </aapt:attr>
     </path>
 
@@ -32,13 +33,13 @@
         android:strokeColor="#B30B4F9E"
         android:strokeWidth="2.4"
         android:strokeLineCap="round"
-        android:pathData="M54 34 L54 74" />
+        android:pathData="M54 32 L54 80" />
 
     <!-- رگبرگ‌های جانبی -->
     <path
         android:fillColor="#00000000"
-        android:strokeColor="#800B4F9E"
+        android:strokeColor="#990B4F9E"
         android:strokeWidth="2"
         android:strokeLineCap="round"
-        android:pathData="M54 48 L45 41 M54 48 L63 41 M54 60 L46 52 M54 60 L62 52" />
+        android:pathData="M54 50 L45 42 M54 50 L63 42 M54 62 L44 54 M54 62 L64 54 M54 72 L46 65 M54 72 L62 65" />
 </vector>

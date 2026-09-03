@@ -312,7 +312,7 @@ fun HomeScreen(graph: AppGraph, navController: NavHostController) {
                     contentPadding = PaddingValues(horizontal = 22.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    items(r.data, key = { it.id }) { b ->
+                    items(r.data) { b ->
                         VipBusinessCard(
                             title = b.name,
                             location = listOfNotNull(b.city, b.province).joinToString("، ")

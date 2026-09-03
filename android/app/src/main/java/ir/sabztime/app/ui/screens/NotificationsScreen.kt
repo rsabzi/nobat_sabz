@@ -142,7 +142,7 @@ fun NotificationsScreen(
                     contentPadding = PaddingValues(20.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(s.data, key = { "${it.type}-${it.refId}-${it.createdAt}" }) { n ->
+                    items(s.data) { n ->
                         GlassCard(shape = RoundedCornerShape(25.dp)) {
                             Row(
                                 Modifier.fillMaxWidth(),
