@@ -414,7 +414,7 @@ fun OwnerBusinessScreen(graph: AppGraph, businessId: Int, navController: NavHost
                             IconTile(
                                 icon = businessTypeIcon(business?.businessType),
                                 tileSize = 44.dp,
-                                palette = TilePalette.GREEN,
+                                palette = TilePalette.BLUE,
                                 contentDescription = null
                             )
                             Spacer(Modifier.width(12.dp))

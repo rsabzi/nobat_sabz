@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -27,9 +25,10 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import ir.sabztime.app.core.AppGraph
 import ir.sabztime.app.ui.Routes
+import ir.sabztime.app.ui.components.SabzLeafIcon
 
 /**
- * صفحه‌ی خوش‌آمد — گرادیان برند + لوگوی سه‌بعدی شیشه‌ای.
+ * صفحه‌ی خوش‌آمد — گرادیان برند آبی + لوگوی برگ نوبت‌سبز.
  */
 @Composable
 fun SplashScreen(graph: AppGraph, navController: NavHostController) {
@@ -45,7 +44,7 @@ fun SplashScreen(graph: AppGraph, navController: NavHostController) {
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(Color(0xFF17B871), Color(0xFF0B7A45), Color(0xFF075C36))
+                    colors = listOf(Color(0xFF1E6FE0), Color(0xFF0B4F9E), Color(0xFF083A76))
                 )
             )
     ) {
@@ -54,21 +53,21 @@ fun SplashScreen(graph: AppGraph, navController: NavHostController) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // لوگوی سه‌بعدی شیشه‌ای
+            // لوگوی برگ نوبت‌سبز روی کاشی شیشه‌ای
             Box(Modifier.size(100.dp), contentAlignment = Alignment.Center) {
                 Box(
                     Modifier
                         .fillMaxSize()
                         .background(
                             Brush.verticalGradient(
-                                colors = listOf(Color.White.copy(alpha = 0.38f), Color.White.copy(alpha = 0.10f))
+                                colors = listOf(Color.White.copy(alpha = 0.30f), Color.White.copy(alpha = 0.08f))
                             ),
                             shape = RoundedCornerShape(34.dp)
                         )
                         .shadow(14.dp, RoundedCornerShape(34.dp))
                 )
                 Icon(
-                    Icons.Filled.Spa,
+                    SabzLeafIcon,
                     contentDescription = null,
                     modifier = Modifier.size(54.dp),
                     tint = Color.White
@@ -85,7 +84,7 @@ fun SplashScreen(graph: AppGraph, navController: NavHostController) {
             Text(
                 "رزرو نوبت، ساده و حرفه‌ای",
                 style = MaterialTheme.typography.bodyLarge,
-                color = Color.White.copy(alpha = 0.9f)
+                color = Color.White.copy(alpha = 0.92f)
             )
             Spacer(Modifier.height(44.dp))
             CircularProgressIndicator(

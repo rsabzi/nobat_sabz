@@ -1,7 +1,7 @@
 package ir.sabztime.app.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
+import ir.sabztime.app.ui.theme.LocalSabzDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,7 +23,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Spa
+import ir.sabztime.app.ui.components.SabzLeafIcon
+import ir.sabztime.app.ui.components.IconTile
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.CircularProgressIndicator
@@ -67,7 +68,6 @@ import ir.sabztime.app.ui.Routes
 import ir.sabztime.app.ui.theme.GlassBackground
 import ir.sabztime.app.ui.components.GlassCard
 import ir.sabztime.app.ui.components.GradientButton
-import ir.sabztime.app.ui.components.IconTile
 import ir.sabztime.app.ui.components.SegmentedControl
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -183,7 +183,7 @@ fun LoginScreen(graph: AppGraph, navController: NavHostController) {
         ) {
             // لوگوی سه‌بعدی
             IconTile(
-                icon = Icons.Filled.Spa,
+                icon = SabzLeafIcon,
                 tileSize = 72.dp,
                 contentDescription = null,
                 modifier = Modifier.shadow(6.dp, RoundedCornerShape(22.dp))
@@ -311,7 +311,7 @@ fun LoginScreen(graph: AppGraph, navController: NavHostController) {
 /** نشان‌خطای درون فرم */
 @Composable
 private fun ErrorBanner(message: String) {
-    val dark = isSystemInDarkTheme()
+    val dark = LocalSabzDarkTheme.current
     Box(
         Modifier
             .fillMaxWidth()
@@ -346,7 +346,7 @@ private fun GlassTextField(
     isError: Boolean = false,
     errorText: String? = null
 ) {
-    val dark = isSystemInDarkTheme()
+    val dark = LocalSabzDarkTheme.current
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,

@@ -1,7 +1,9 @@
 package ir.sabztime.app.ui.screens
+import ir.sabztime.app.ui.theme.SignalGreen
+import ir.sabztime.app.ui.theme.SignalGreenContainer
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
+import ir.sabztime.app.ui.theme.LocalSabzDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -188,7 +190,7 @@ fun BookingsScreen(
 
 @Composable
 fun BookingCard(b: BookingSummary, onClick: () -> Unit, badge: (@Composable () -> Unit)? = null) {
-    val dark = isSystemInDarkTheme()
+    val dark = LocalSabzDarkTheme.current
     val parts = Jalali.parts(b.bookingDate)
     GlassCard(onClick = onClick, shape = RoundedCornerShape(24.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -264,13 +266,15 @@ fun statusText(status: String): String = when (status) {
 @Composable
 fun statusColor(status: String): Color = when (status) {
     "cancelled" -> MaterialTheme.colorScheme.error
-    "completed" -> Color(0xFF3949AB)
-    else -> MaterialTheme.colorScheme.primary
+    "pending" -> MaterialTheme.colorScheme.tertiary
+    "completed" -> MaterialTheme.colorScheme.primary
+    else -> SignalGreen // confirmed → سبزِ سیگنال
 }
 
 @Composable
 fun statusContainer(status: String): Color = when (status) {
     "cancelled" -> MaterialTheme.colorScheme.errorContainer
-    "completed" -> Color(0xFFE8EAF6)
-    else -> MaterialTheme.colorScheme.primaryContainer
+    "pending" -> MaterialTheme.colorScheme.tertiaryContainer
+    "completed" -> MaterialTheme.colorScheme.primaryContainer
+    else -> SignalGreenContainer // confirmed
 }

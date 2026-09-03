@@ -1,7 +1,7 @@
 package ir.sabztime.app.ui.screens
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
+import ir.sabztime.app.ui.theme.LocalSabzDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -49,7 +49,7 @@ fun MainScreen(graph: AppGraph, navController: NavHostController) {
         TabItem("نوبت‌ها", Icons.Filled.CalendarMonth),
         TabItem("پروفایل", Icons.Filled.AccountCircle)
     )
-    val dark = isSystemInDarkTheme()
+    val dark = LocalSabzDarkTheme.current
     val barShape = RoundedCornerShape(26.dp)
 
     GlassBackground {

@@ -1,6 +1,6 @@
 package ir.sabztime.app.ui.screens
 
-import androidx.compose.foundation.isSystemInDarkTheme
+import ir.sabztime.app.ui.theme.LocalSabzDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -522,11 +522,11 @@ private fun BookingDialog(
     onDismiss: () -> Unit,
     onViewBookings: () -> Unit
 ) {
-    val dark = isSystemInDarkTheme()
+    val dark = LocalSabzDarkTheme.current
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(28.dp),
-            color = if (dark) Color(0xFF1E2521) else Color(0xFFFBFDFC)
+            color = MaterialTheme.colorScheme.surfaceContainerHigh
         ) {
             Column(
                 Modifier

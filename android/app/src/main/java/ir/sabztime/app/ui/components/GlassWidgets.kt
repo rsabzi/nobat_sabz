@@ -4,7 +4,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -34,23 +32,36 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import ir.sabztime.app.ui.theme.GlassGradientAmberDark
+import ir.sabztime.app.ui.theme.GlassGradientAmberLight
+import ir.sabztime.app.ui.theme.GlassGradientDark
+import ir.sabztime.app.ui.theme.GlassGradientErrorDark
+import ir.sabztime.app.ui.theme.GlassGradientErrorLight
+import ir.sabztime.app.ui.theme.GlassGradientGreenDark
+import ir.sabztime.app.ui.theme.GlassGradientGreenLight
+import ir.sabztime.app.ui.theme.GlassGradientLight
+import ir.sabztime.app.ui.theme.GlassGradientMutedDark
+import ir.sabztime.app.ui.theme.GlassGradientMutedLight
+import ir.sabztime.app.ui.theme.LocalSabzDarkTheme
 
 // ---------------------------------------------------------------------------
 // پالت‌های آیکون سه‌بعدی
+//   BLUE  = برند/ناوبری/CTA   GREEN = سیگنال (نوبت آزاد، موفقیت، تأیید)
 // ---------------------------------------------------------------------------
 
-enum class TilePalette { GREEN, MUTED, ERROR, AMBER }
+enum class TilePalette { BLUE, GREEN, MUTED, ERROR, AMBER }
 
-private fun tileColors(palette: TilePalette, selected: Boolean, dark: Boolean): Pair<Color, Color> = when {
-    !selected -> if (dark) Color(0xFF5A675E) to Color(0xFF434E46) else Color(0xFFA9BFAD) to Color(0xFF86A08E)
-    palette == TilePalette.ERROR -> if (dark) Color(0xFFEF9A93) to Color(0xFFB3362B) else Color(0xFFF28B82) to Color(0xFFC62828)
-    palette == TilePalette.AMBER -> if (dark) Color(0xFFFFC766) to Color(0xFFB26A00) else Color(0xFFFFB74D) to Color(0xFFEF8C00)
-    else -> if (dark) Color(0xFF43D694) to Color(0xFF159159) else Color(0xFF35C985) to Color(0xFF0C7C47)
+private fun tileColors(palette: TilePalette, selected: Boolean, dark: Boolean): List<Color> = when {
+    !selected -> if (dark) GlassGradientMutedDark else GlassGradientMutedLight
+    palette == TilePalette.ERROR -> if (dark) GlassGradientErrorDark else GlassGradientErrorLight
+    palette == TilePalette.AMBER -> if (dark) GlassGradientAmberDark else GlassGradientAmberLight
+    palette == TilePalette.GREEN -> if (dark) GlassGradientGreenDark else GlassGradientGreenLight
+    else -> if (dark) GlassGradientDark else GlassGradientLight
 }
 
 /**
- * آیکون «سه‌بعدی» — کاشی گرادیانی با جیغ (gloss) بالا و سایه،
- * که به رابط بصری اپ حس عمق و مدرن می‌دهد.
+ * آیکون «سه‌بعدی» — کاشی گرادیانی با جیغ (gloss) بالا و سایه.
+ * پیش‌فرض: آبی برند؛ برای «نوبت آزاد/موفقیت» از [TilePalette.GREEN] استفاده کنید.
  */
 @Composable
 fun IconTile(
@@ -58,18 +69,18 @@ fun IconTile(
     modifier: Modifier = Modifier,
     tileSize: Dp = 44.dp,
     selected: Boolean = true,
-    palette: TilePalette = TilePalette.GREEN,
+    palette: TilePalette = TilePalette.BLUE,
     contentDescription: String? = null
 ) {
-    val dark = isSystemInDarkTheme()
-    val (top, bottom) = tileColors(palette, selected, dark)
+    val dark = LocalSabzDarkTheme.current
+    val colors = tileColors(palette, selected, dark)
     val shape = RoundedCornerShape(tileSize * 0.30f)
     Box(modifier = modifier.size(tileSize), contentAlignment = Alignment.Center) {
         Box(
             Modifier
                 .fillMaxSize()
                 .shadow(3.dp, shape)
-                .background(Brush.verticalGradient(listOf(top, bottom)), shape)
+                .background(Brush.verticalGradient(colors), shape)
         )
         // لایه‌ی gloss (نور از بالا)
         Box(
@@ -95,7 +106,7 @@ fun IconTile(
 }
 
 // ---------------------------------------------------------------------------
-// دکمه گرادیانی (CTA اصلی)
+// دکمه گرادیانی (CTA اصلی) — رنگ پیش‌فرض: آبی برند
 // ---------------------------------------------------------------------------
 
 @Composable
@@ -103,17 +114,17 @@ fun GradientButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    palette: TilePalette = TilePalette.GREEN,
+    palette: TilePalette = TilePalette.BLUE,
     shape: Shape = MaterialTheme.shapes.medium,
     content: @Composable RowScope.() -> Unit
 ) {
-    val dark = isSystemInDarkTheme()
-    val (top, bottom) = tileColors(palette, enabled, dark)
-    val textColor = if (enabled) Color.White else if (dark) Color(0xFF8B948C) else Color(0xFF5C6B62)
+    val dark = LocalSabzDarkTheme.current
+    val colors = tileColors(palette, enabled, dark)
+    val textColor = if (enabled) Color.White else if (dark) Color(0xFF8B96A5) else Color(0xFF6B7686)
     Box(
         modifier = modifier
             .shadow(if (enabled) 5.dp else 0.dp, shape)
-            .background(Brush.verticalGradient(listOf(top, bottom)), shape)
+            .background(Brush.verticalGradient(colors), shape)
             .clip(shape)
             .clickable(onClick = onClick, enabled = enabled),
         contentAlignment = Alignment.Center
@@ -150,7 +161,7 @@ fun GlassCard(
 
 /**
  * «کنترل قطعه‌ای» (Segmented control) برای انتخاب‌های دو/چندتایی
- * مثل ورود/ثبت‌نام یا حالت پوسته.
+ * مثل ورود/ثبت‌نام یا حالت پوسته — انتخاب‌شده با آبی برند.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -161,12 +172,12 @@ fun SegmentedControl(
     modifier: Modifier = Modifier,
     icons: List<ImageVector?> = emptyList()
 ) {
-    val dark = isSystemInDarkTheme()
+    val dark = LocalSabzDarkTheme.current
     val shape = RoundedCornerShape(14.dp)
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         options.forEachIndexed { i, label ->
             val sel = i == selected
-            val gradient = Brush.verticalGradient(listOf(Color(0xFF35C985), Color(0xFF0C7C47)))
+            val gradient = Brush.verticalGradient(if (dark) GlassGradientDark else GlassGradientLight)
             Surface(
                 onClick = { onSelect(i) },
                 modifier = Modifier.weight(1f),
@@ -177,7 +188,7 @@ fun SegmentedControl(
                     else -> Color.White.copy(alpha = 0.55f)
                 },
                 border = if (sel) BorderStroke(1.dp, Color.Transparent)
-                else BorderStroke(1.dp, if (dark) Color.White.copy(alpha = 0.16f) else Color(0xFFC1C9C1)),
+                else BorderStroke(1.dp, if (dark) Color.White.copy(alpha = 0.16f) else Color(0xFFD3DAE3)),
                 tonalElevation = 0.dp,
                 contentColor = if (sel) Color.White else MaterialTheme.colorScheme.onSurface
             ) {
@@ -210,7 +221,7 @@ fun SegmentedControl(
 // ---------------------------------------------------------------------------
 
 /**
- * چیپ انتخابی شیشه‌ای — حالت انتخاب‌شده با گرادیان سبز، غیرانتخاب‌شده شفاف.
+ * چیپ انتخابی شیشه‌ای — حالت انتخاب‌شده با گرادیان آبی برند، غیرانتخاب‌شده شفاف.
  */
 @Composable
 fun GlassChip(
@@ -219,7 +230,7 @@ fun GlassChip(
     modifier: Modifier = Modifier,
     content: @Composable RowScope.() -> Unit
 ) {
-    val dark = isSystemInDarkTheme()
+    val dark = LocalSabzDarkTheme.current
     val shape = RoundedCornerShape(50)
     Box(
         modifier = modifier
@@ -229,13 +240,13 @@ fun GlassChip(
                 color = when {
                     selected -> Color.Transparent
                     dark -> Color.White.copy(alpha = 0.18f)
-                    else -> Color(0xFFC9D4CC)
+                    else -> Color(0xFFD3DAE3)
                 },
                 shape = shape
             )
             .background(
                 if (selected) {
-                    Brush.verticalGradient(listOf(Color(0xFF35C985), Color(0xFF0C7C47)))
+                    Brush.verticalGradient(if (dark) GlassGradientDark else GlassGradientLight)
                 } else {
                     Brush.verticalGradient(
                         listOf(
@@ -257,3 +268,5 @@ fun GlassChip(
         }
     }
 }
+
+/** فاصله‌ی افقی کوچک — از Common.kt (SpacerW(Int)) استفاده می‌شود */
