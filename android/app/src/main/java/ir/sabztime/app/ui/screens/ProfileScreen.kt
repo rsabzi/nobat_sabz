@@ -66,6 +66,7 @@ import ir.sabztime.app.ui.components.ProfileHeroCard
 import ir.sabztime.app.ui.components.SectionTitle
 import ir.sabztime.app.ui.components.SoftBanner
 import ir.sabztime.app.ui.components.TilePalette
+import ir.sabztime.app.ui.theme.CocoaSoft
 import ir.sabztime.app.ui.theme.Cream
 import ir.sabztime.app.ui.theme.CreamDim
 import ir.sabztime.app.ui.theme.Gold
