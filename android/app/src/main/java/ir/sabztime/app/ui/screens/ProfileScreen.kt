@@ -2,7 +2,7 @@ package ir.sabztime.app.ui.screens
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
+import ir.sabztime.app.ui.theme.LocalSabzDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -356,10 +356,10 @@ private fun Avatar(name: String) {
             .clip(CircleShape)
             .background(
                 Brush.verticalGradient(
-                    colors = if (isSystemInDarkTheme()) {
-                        listOf(Color(0xFF43D694), Color(0xFF159159))
+                    colors = if (LocalSabzDarkTheme.current) {
+                        listOf(Color(0xFF5C9BFF), Color(0xFF1D53A8))
                     } else {
-                        listOf(Color(0xFF35C985), Color(0xFF0C7C47))
+                        listOf(Color(0xFF1E6FE0), Color(0xFF0B4F9E))
                     }
                 )
             ),
@@ -392,7 +392,7 @@ private fun OfflineBanner() {
 private fun RowDivider() {
     Spacer(Modifier.height(2.dp))
     androidx.compose.material3.HorizontalDivider(
-        color = if (isSystemInDarkTheme()) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.05f)
+        color = if (LocalSabzDarkTheme.current) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.05f)
     )
     Spacer(Modifier.height(2.dp))
 }

@@ -2,7 +2,6 @@ package ir.sabztime.app.ui.theme
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,13 +25,13 @@ import androidx.compose.ui.unit.dp
  */
 @Composable
 fun glassCardColor(alpha: Float): Color {
-    val dark = isSystemInDarkTheme()
+    val dark = LocalSabzDarkTheme.current
     return if (dark) Color.White.copy(alpha = alpha * 0.07f) else Color.White.copy(alpha = alpha)
 }
 
 /** خط دور کارت شیشه‌ای — نازک و محو */
 @Composable
-fun glassBorder(dark: Boolean = isSystemInDarkTheme()): BorderStroke = BorderStroke(
+fun glassBorder(dark: Boolean = LocalSabzDarkTheme.current): BorderStroke = BorderStroke(
     width = 1.dp,
     color = if (dark) Color.White.copy(alpha = 0.14f) else Color.White.copy(alpha = 0.8f)
 )
@@ -40,17 +39,18 @@ fun glassBorder(dark: Boolean = isSystemInDarkTheme()): BorderStroke = BorderStr
 /**
  * پس‌زمینه‌ی شیشه‌ای کل صفحه:
  * رنگ پایه + چند «لکه» گرادیانی محو که باعث می‌شوند کارت‌های شفاف واقعاً شیشه‌ای به نظر برسند.
+ * لکه‌ها بر پایه‌ی آبی برند (و یک لمس خیلی کمِ سبز سیگنال) هستند.
  */
 @Composable
 fun GlassBackground(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
-    val dark = isSystemInDarkTheme()
-    val base = if (dark) Color(0xFF0C1310) else Color(0xFFF2F8F4)
-    val blob1 = if (dark) Color(0xFF1FAF6C).copy(alpha = 0.16f) else Color(0xFF35C985).copy(alpha = 0.20f)
-    val blob2 = if (dark) Color(0xFF0A5135).copy(alpha = 0.30f) else Color(0xFF0B7A45).copy(alpha = 0.08f)
-    val blob3 = if (dark) Color(0xFFB26A00).copy(alpha = 0.08f) else Color(0xFFF2B74D).copy(alpha = 0.12f)
+    val dark = LocalSabzDarkTheme.current
+    val base = if (dark) Color(0xFF0B1220) else Color(0xFFF3F6FB)
+    val blob1 = if (dark) Color(0xFF1E6FE0).copy(alpha = 0.16f) else Color(0xFF1E6FE0).copy(alpha = 0.14f)
+    val blob2 = if (dark) Color(0xFF0A3D77).copy(alpha = 0.30f) else Color(0xFF0B4F9E).copy(alpha = 0.07f)
+    val blob3 = if (dark) Color(0xFF2E7D5B).copy(alpha = 0.07f) else Color(0xFF43C37E).copy(alpha = 0.06f)
 
     Box(
         modifier = modifier
@@ -90,7 +90,7 @@ fun GlassSurface(
     tonalElevation: Dp = 2.dp,
     content: @Composable BoxScope.() -> Unit
 ) {
-    val dark = isSystemInDarkTheme()
+    val dark = LocalSabzDarkTheme.current
     Surface(
         modifier = modifier,
         shape = shape,

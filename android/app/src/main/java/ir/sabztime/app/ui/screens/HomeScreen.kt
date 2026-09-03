@@ -1,7 +1,7 @@
 package ir.sabztime.app.ui.screens
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
+import ir.sabztime.app.ui.theme.LocalSabzDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -175,7 +175,7 @@ class HomeViewModel(private val graph: AppGraph) : ViewModel() {
 fun HomeScreen(graph: AppGraph, navController: NavHostController) {
     val viewModel: HomeViewModel = viewModel { HomeViewModel(graph) }
     val state by viewModel.state.collectAsState()
-    val dark = isSystemInDarkTheme()
+    val dark = LocalSabzDarkTheme.current
 
     var categoryMenu by remember { mutableStateOf(false) }
     var provinceMenu by remember { mutableStateOf(false) }
@@ -350,11 +350,11 @@ private fun SelectionDialog(
     onDismiss: () -> Unit,
     onSelect: (String) -> Unit
 ) {
-    val dark = isSystemInDarkTheme()
+    val dark = LocalSabzDarkTheme.current
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(24.dp),
-            color = if (dark) Color(0xFF1E2521) else Color(0xFFFBFDFC)
+            color = MaterialTheme.colorScheme.surfaceContainerHigh
         ) {
             LazyColumn(
                 Modifier

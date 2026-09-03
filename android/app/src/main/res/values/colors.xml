@@ -1,8 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="brand_green">#1B7F4D</color>
-    <color name="brand_green_dark">#0E5A33</color>
-    <color name="brand_green_light">#E6F4EC</color>
-    <color name="ic_launcher_background">#1B7F4D</color>
-    <color name="dark_background">#0C1310</color>
+    <!-- آبی برند (هویت اصلی) -->
+    <color name="brand_primary">#0B4F9E</color>
+    <color name="brand_primary_dark">#083A76</color>
+    <color name="brand_primary_light">#E2EDFB</color>
+
+    <!-- سبز سیگنال: فقط نوبت آزاد / موفقیت / تأیید -->
+    <color name="signal_green">#15803D</color>
+    <color name="signal_green_light">#E7F4EC</color>
+
+    <color name="background_light">#F5F7FA</color>
+    <color name="ic_launcher_background">#0B4F9E</color>
+    <color name="dark_background">#0B1220</color>
 </resources>

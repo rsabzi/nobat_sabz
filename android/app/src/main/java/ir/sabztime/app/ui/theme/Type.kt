@@ -35,5 +35,12 @@ val SabzTypography = Typography(
     labelSmall = base.copy(fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.Normal)
 )
 
-/** خانواده فونت پیش‌فرض (سیستمی) — قابل تعویض با فونت فارسی دلخواه */
+/**
+ * خانواده فونت — برای یکپارچگی با وب‌اپ از «وزیرمتن» استفاده کنید.
+ * فایل‌های TTF را در `app/src/main/res/font/` قرار دهید:
+ *   vazirmatn_regular.ttf / vazirmatn_medium.ttf / vazirmatn_bold.ttf
+ * سپس خط زیر را به‌صورت FontFamily(Font(...)) تغییر دهید.
+ * (در حال حاضر فونت‌های TTF در مخزن نیستند — در سندباکس دانلود Google Fonts مسدود بود؛
+ *  نبودِ آن فقط از سطح پایین ۵ → ۷ نمره‌ی حرفه‌ای بودن تایپ را پایین می‌آورد.)
+ */
 val AppFontFamily: FontFamily = FontFamily.Default

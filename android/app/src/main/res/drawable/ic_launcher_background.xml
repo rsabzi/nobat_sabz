@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- پس‌زمینه‌ی آیکون: گرادیان آبی برند -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
     <gradient
         android:type="linear"
         android:angle="270"
-        android:startColor="#17B871"
-        android:centerColor="#0B7A45"
-        android:endColor="#075C36" />
+        android:startColor="#1E6FE0"
+        android:centerColor="#0B4F9E"
+        android:endColor="#083A76" />
 </shape>
