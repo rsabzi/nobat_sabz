@@ -36,6 +36,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import ir.sabztime.app.ui.theme.BurgundyDeep
 import ir.sabztime.app.ui.theme.BurgundyGradient
 import ir.sabztime.app.ui.theme.Cocoa
 import ir.sabztime.app.ui.theme.CocoaSoft
@@ -55,6 +56,7 @@ import ir.sabztime.app.ui.theme.MetalGoldGradient
 import ir.sabztime.app.ui.theme.MetalGoldTop
 import ir.sabztime.app.ui.theme.PillShape
 import ir.sabztime.app.ui.theme.RingGold
+import ir.sabztime.app.ui.theme.SignalGreenLight
 import ir.sabztime.app.ui.theme.SuccessEmerald
 import ir.sabztime.app.ui.theme.SuccessEmeraldDeep
 import ir.sabztime.app.ui.theme.goldBorder
@@ -85,7 +87,7 @@ fun Modifier.brushedGoldTint(brush: Brush): Modifier = this
     }
 
 /**
- * سطح «قرص فلز طلای برجسته» — گرادیان #E8CE8A→#C9A227 با هایلایت بالا،
+ * سطح «قرص آبی برند» — گرادیان #1E6FE0→#0B4F9E با هایلایت بالا،
  * قاب برجسته (بالا روشن/پایین تیره) و سایه‌ی گرم.
  */
 fun Modifier.metalPill(shape: Shape): Modifier = this
@@ -100,7 +102,7 @@ fun Modifier.metalPill(shape: Shape): Modifier = this
     .topGloss(0.32f)
     .border(metalPillBorder(), shape)
 
-/** سطح «دکمه‌ی آیکون دایره‌ای کرم» — سفید→کرم با حلقه‌ی طلایی #B8860B */
+/** سطح «دکمه‌ی آیکون دایره‌ای روشن» — سفید→نرم آبی با حلقه‌ی آبی #1E6FE0 */
 fun Modifier.creamCircle(shape: Shape, ringWidth: Dp = 1.6.dp): Modifier = this
     .shadow(
         elevation = 6.dp,
@@ -120,21 +122,21 @@ private fun tileAccent(palette: TilePalette, selected: Boolean): List<Color> = w
         TilePalette.SAPPHIRE -> listOf(InfoSapphire, InfoSapphireDeep)
         else -> listOf(CocoaSoft, Cocoa)
     }
-    palette == TilePalette.ERROR -> listOf(Color(0xFFFFE3E8), Color(0xFFFFFFFF))
-    palette == TilePalette.EMERALD -> listOf(Color(0xFFE9FAF1), Color(0xFFFFFFFF))
-    palette == TilePalette.SAPPHIRE -> listOf(Color(0xFFE7F0FC), Color(0xFFFFFFFF))
-    palette == TilePalette.ROYAL -> listOf(Color(0xFFFFE9ED), Color(0xFFF2B9C0))
+    palette == TilePalette.ERROR -> listOf(Color(0xFFFDE8E8), Color(0xFFFFFFFF))
+    palette == TilePalette.EMERALD -> listOf(Color(0xFFE7F4EC), Color(0xFFFFFFFF))
+    palette == TilePalette.SAPPHIRE -> listOf(Color(0xFFE2EDFB), Color(0xFFFFFFFF))
+    palette == TilePalette.ROYAL -> listOf(Color(0xFFE2EDFB), Color(0xFFA9C6EA))
     else -> listOf(CocoaSoft, Cocoa)
 }
 
 private fun tileBase(palette: TilePalette, selected: Boolean): List<Color> = when {
-    !selected -> listOf(Color(0xE6FFFFFF), Color(0xD9F3ECDD)) // کرمِ نیمه‌شفاف
+    !selected -> listOf(Color(0xE6FFFFFF), Color(0xD9EDF1F6)) // سفیدِ نیمه‌شفاف
     palette == TilePalette.ERROR -> listOf(DangerRose, DangerRoseDeep)
-    palette == TilePalette.EMERALD -> listOf(Color(0xFF37B37F), SuccessEmeraldDeep)
+    palette == TilePalette.EMERALD -> listOf(SignalGreenLight, SuccessEmeraldDeep)
     palette == TilePalette.SAPPHIRE -> listOf(Color(0xFF3D76D6), InfoSapphireDeep)
     palette == TilePalette.ROYAL -> BurgundyGradient
-    palette == TilePalette.MUTED -> listOf(Color(0xFFE3D9BC), Color(0xFFCFC094))
-    else -> listOf(MetalGoldTop, Color(0xFFC9A227)) // کاشی طلایی برند
+    palette == TilePalette.MUTED -> listOf(Color(0xFFAFC0D2), Color(0xFF8FA3B8))
+    else -> listOf(MetalGoldTop, Color(0xFF0B4F9E)) // کاشی آبی برند
 }
 
 /**
@@ -215,22 +217,22 @@ fun GradientButton(
 ) {
     val (surface, border, contentColor) = when {
         !enabled -> Triple(
-            listOf(Color(0xFFE7DCC0), Color(0xFFD5C79E)),
+            listOf(Color(0xFFE4ECF5), Color(0xFFD0DCE8)),
             null as BorderStroke?,
             Cocoa.copy(alpha = 0.45f)
         )
         palette == TilePalette.ERROR -> Triple(
-            listOf(Color(0xFFE2566F), DangerRoseDeep),
+            listOf(Color(0xFFE05B5B), DangerRoseDeep),
             null,
             CreamLight
         )
         palette == TilePalette.EMERALD -> Triple(
-            listOf(Color(0xFF37B37F), SuccessEmeraldDeep),
+            listOf(SignalGreenLight, SuccessEmeraldDeep),
             null,
             CreamLight
         )
         palette == TilePalette.ROYAL -> Triple(
-            listOf(Color(0xFFB0303A), DangerRoseDeep),
+            listOf(Color(0xFF1E6FE0), BurgundyDeep),
             null,
             CreamLight
         )
@@ -345,7 +347,7 @@ fun SegmentedControl(
         modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(Brush.verticalGradient(listOf(Color(0x73FFFFFF), Color(0x59F3ECDD))))
+            .background(Brush.verticalGradient(listOf(Color(0x73FFFFFF), Color(0x59EDF1F6))))
             .border(goldBorder(0.3f), shape)
             .padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -402,7 +404,7 @@ fun GlassChip(
             .clip(PillShape)
             .background(
                 if (selected) Brush.verticalGradient(MetalGoldGradient)
-                else Brush.verticalGradient(listOf(Color(0x8CFFFFFF), Color(0x73F3ECDD)))
+                else Brush.verticalGradient(listOf(Color(0x8CFFFFFF), Color(0x73EDF1F6)))
             )
             .border(goldBorder(if (selected) 0f else 0.45f), PillShape)
             .clickable(onClick = onClick),

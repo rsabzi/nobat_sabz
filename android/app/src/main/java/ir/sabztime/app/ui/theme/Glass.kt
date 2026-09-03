@@ -32,7 +32,7 @@ fun goldBorder(alpha: Float = 0.55f, width: Dp = 1.dp): BorderStroke =
 
 /**
  * حاشیه‌ی گرادیانی لوکس کارت‌ها — امضای طلایی هر کارت:
- * «#FDE9B8 → #D4AF37 (٪۴۰) → #FFF6D9 (٪۶۰) → #8B6914»
+ * «#E2EDFB → #0B4F9E (٪۴۰) → #EFF5FC (٪۶۰) → #08418A»
  */
 fun goldGradientBorder(width: Dp = 1.4.dp): BorderStroke =
     BorderStroke(
@@ -77,7 +77,7 @@ fun metalPillBorder(width: Dp = 1.dp): BorderStroke =
 /**
  * پس‌زمینه‌ی سراسری همه‌ی صفحه‌ها:
  * رادیال طلای روشن با مرکز در ~٪۳۰ افقی و ~٪۱۵ عمودی (بالای صفحه):
- * «#F5E3A1 → #D4AF37 → #A8791F → #6B4E12»
+ * «#F3F7FC → #CFE2F7 → #7FA8D9 → #4A74AD»
  */
 @Composable
 fun GlassBackground(

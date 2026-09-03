@@ -10,13 +10,13 @@
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
     :root{
-        --ink:#241B22;--ink-soft:#7A6A72;
-        --brand:#7A2E43;--brand-dark:#5C2233;--brand-light:#F3E4E8;
-        --gold:#C9A15C;--gold-soft:#F3EAD6;
-        --bg:#FBF7F4;--surface:#FFFFFF;--surface-soft:#F7F0EC;
-        --sage:#5B7F5E;--sage-soft:#E7EFE7;
-        --danger:#B3453F;--danger-soft:#F7E7E5;
-        --border:#EDE2DC;
+        --ink:#111827;--ink-soft:#5B6472;
+        --brand:#0B4F9E;--brand-dark:#08418A;--brand-light:#E2EDFB;
+        --gold:#1E6FE0;--gold-soft:#EFF5FC;
+        --bg:#F5F7FA;--surface:#FFFFFF;--surface-soft:#EDF1F6;
+        --sage:#15803D;--sage-soft:#E7F4EC;
+        --danger:#C02525;--danger-soft:#FDE8E8;
+        --border:#D8DFE7;
         --shadow-sm:0 2px 8px -4px rgba(36,27,34,.14);--shadow-md:0 10px 30px -14px rgba(36,27,34,.28);
         --radius-lg:20px;--radius-md:14px;--radius-sm:10px;
     }
@@ -273,8 +273,8 @@ function initializeApp(telegramApp) {
     try { tg.ready?.(); } catch(e) {}
     try { tg.expand?.(); } catch(e) {}
     try { tg.MainButton?.hide?.(); } catch(e) {}
-    try { if (tg.setHeaderColor) tg.setHeaderColor('#FBF7F4'); } catch(e) {}
-    try { if (tg.setBackgroundColor) tg.setBackgroundColor('#FBF7F4'); } catch(e) {}
+    try { if (tg.setHeaderColor) tg.setHeaderColor('#F5F7FA'); } catch(e) {}
+    try { if (tg.setBackgroundColor) tg.setBackgroundColor('#F5F7FA'); } catch(e) {}
 
     const form = document.getElementById('business-form');
     const submitButton = document.getElementById('submit-button');

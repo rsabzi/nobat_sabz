@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- تم «طلایی لوکس» — تک‌حالته و روشن؛ نوارهای سیستمی شفاف -->
+    <!-- تم «آبی برند» — تک‌حالته و روشن؛ نوارهای سیستمی شفاف -->
     <style name="Theme.SabzTime" parent="android:Theme.Material.NoActionBar">
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>

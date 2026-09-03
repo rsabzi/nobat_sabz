@@ -169,7 +169,7 @@ fun GhostIconButton(
                     .padding(2.dp)
                     .size(11.dp)
                     .clip(CircleShape)
-                    .background(Brush.verticalGradient(listOf(Color(0xFFE2566F), DangerRose)))
+                    .background(Brush.verticalGradient(listOf(Color(0xFFE05B5B), DangerRose)))
                     .border(BorderStroke(1.5.dp, PureWhite), CircleShape)
             )
         }
@@ -199,7 +199,7 @@ fun LuxSearchBar(
                 spotColor = GoldBgEdge.copy(alpha = 0.45f)
             )
             .clip(LuxFieldShape)
-            .background(Brush.verticalGradient(listOf(Color(0xE6FFFFFF), Color(0xC9F3ECDD))))
+            .background(Brush.verticalGradient(listOf(Color(0xE6FFFFFF), Color(0xC9EDF1F6))))
             .topGloss(0.5f)
             .border(goldGradientBorder(1.4.dp), LuxFieldShape)
             .padding(horizontal = 18.dp),
@@ -240,7 +240,7 @@ fun LuxSearchBar(
                 Modifier
                     .size(26.dp)
                     .clip(CircleShape)
-                    .background(Brush.verticalGradient(listOf(Color(0xCCFFFFFF), Color(0xAAF3ECDD))))
+                    .background(Brush.verticalGradient(listOf(Color(0xCCFFFFFF), Color(0xAAEDF1F6))))
                     .border(goldBorder(0.4f), CircleShape)
                     .clickable { onValueChange("") },
                 contentAlignment = Alignment.Center
@@ -270,7 +270,7 @@ fun FilterButton(
             .clip(shape)
             .background(
                 if (active) Brush.verticalGradient(MetalGoldGradient)
-                else Brush.verticalGradient(listOf(Color(0xB3FFFFFF), Color(0x8CF3ECDD)))
+                else Brush.verticalGradient(listOf(Color(0xB3FFFFFF), Color(0x8CEDF1F6)))
             )
             .topGloss(if (active) 0.3f else 0.4f)
             .border(
@@ -606,7 +606,7 @@ fun SoftBanner(text: String, modifier: Modifier = Modifier) {
             .clip(RoundedCornerShape(16.dp))
             .background(
                 Brush.horizontalGradient(
-                    listOf(Color(0x66FDE9B8), Color(0x59D4AF37))
+                    listOf(Color(0x66E2EDFB), Color(0x590B4F9E))
                 )
             )
             .border(goldBorder(0.5f), RoundedCornerShape(16.dp))

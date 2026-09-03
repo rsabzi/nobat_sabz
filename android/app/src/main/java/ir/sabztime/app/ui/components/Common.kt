@@ -138,7 +138,7 @@ fun EmptyState(
                     .clip(RoundedCornerShape(30.dp))
                     .background(
                         androidx.compose.ui.graphics.Brush.verticalGradient(
-                            listOf(Color(0xCCFFFFFF), Color(0x99F3ECDD))
+                            listOf(Color(0xCCFFFFFF), Color(0x99EDF1F6))
                         )
                     )
                     .border(

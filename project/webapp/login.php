@@ -46,7 +46,7 @@ if ($_POST['action'] === 'login') {
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1E6FE0 0%, #0B4F9E 100%);
             margin: 0;
             padding: 0;
             min-height: 100vh;
@@ -87,12 +87,12 @@ if ($_POST['action'] === 'login') {
         }
         input[type="text"]:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #1E6FE0;
         }
         .btn {
             width: 100%;
             padding: 0.75rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1E6FE0 0%, #0B4F9E 100%);
             color: white;
             border: none;
             border-radius: 5px;

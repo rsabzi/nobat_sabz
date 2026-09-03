@@ -48,13 +48,13 @@ data class LuxNavItem(
 
 /** سه تب استاندارد اپ: خانه، نوبت‌ها، پروفایل */
 val DefaultNavItems: List<LuxNavItem> = listOf(
-    LuxNavItem("خانه", Icons.Filled.Cottage, Color(0xFFD4AF37)),
-    LuxNavItem("نوبت‌ها", Icons.Filled.CalendarMonth, Color(0xFFD4AF37)),
-    LuxNavItem("پروفایل", Icons.Filled.Person, Color(0xFFD4AF37))
+    LuxNavItem("خانه", Icons.Filled.Cottage, Color(0xFF0B4F9E)),
+    LuxNavItem("نوبت‌ها", Icons.Filled.CalendarMonth, Color(0xFF0B4F9E)),
+    LuxNavItem("پروفایل", Icons.Filled.Person, Color(0xFF0B4F9E))
 )
 
 /**
- * نوار پیمایش شناور — قرص فلز طلای برجسته (#E8CE8A→#C9A227) با سه آیکون
+ * نوار پیمایش شناور — قرص آبی برند (#1E6FE0→#0B4F9E) با سه آیکون
  * دایره‌ایِ کرم (۴۶dp) و حلقه‌ی طلایی؛ بدون برچسب متنی.
  */
 @Composable
@@ -127,7 +127,7 @@ private fun LuxNavButton(
                     Brush.verticalGradient(
                         listOf(
                             Color(0xFFFFFFFF),
-                            Color(0xFFF3ECDD)
+                            Color(0xFFEDF1F6)
                         )
                     )
                 )

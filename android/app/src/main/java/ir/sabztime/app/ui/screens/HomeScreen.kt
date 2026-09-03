@@ -365,7 +365,7 @@ private fun SelectionDialog(
                     .clip(LuxCardShape)
                     .background(
                         Brush.verticalGradient(
-                            listOf(Color(0xFFFFFDF4), Color(0xFFFFEFC2))
+                            listOf(Color(0xFFF7FAFD), Color(0xFFE4EEF9))
                         )
                     )
                     .border(ir.sabztime.app.ui.theme.goldGradientBorder(), LuxCardShape)

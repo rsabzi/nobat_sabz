@@ -375,7 +375,7 @@ private fun LuxStat(label: String, value: String) {
                 .clip(RoundedCornerShape(14.dp))
                 .background(
                     Brush.verticalGradient(
-                        listOf(Color(0xE6FFFFFF), Color(0xAAF3ECDD))
+                        listOf(Color(0xE6FFFFFF), Color(0xAAEDF1F6))
                     )
                 )
                 .border(

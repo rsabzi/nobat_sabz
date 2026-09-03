@@ -270,15 +270,15 @@ fun statusText(status: String): String = when (status) {
 @Composable
 fun statusColor(status: String): Color = when (status) {
     "cancelled" -> ir.sabztime.app.ui.theme.DangerRose
-    "completed" -> ir.sabztime.app.ui.theme.SuccessEmerald
-    "confirmed" -> ir.sabztime.app.ui.theme.GoldDim
-    else -> ir.sabztime.app.ui.theme.CocoaSoft
+    "completed" -> ir.sabztime.app.ui.theme.InfoSapphire
+    "confirmed" -> ir.sabztime.app.ui.theme.SuccessEmerald
+    else -> ir.sabztime.app.ui.theme.Amber
 }
 
 @Composable
 fun statusContainer(status: String): Color = when (status) {
-    "cancelled" -> Color(0x24C4264A)
-    "completed" -> Color(0x241F7A4D)
-    "confirmed" -> Color(0x26B8860B)
-    else -> Color(0x33D4AF37)
+    "cancelled" -> Color(0x24C02525)
+    "completed" -> Color(0x241E6FE0)
+    "confirmed" -> Color(0x2415803D)
+    else -> Color(0x26B45309)
 }

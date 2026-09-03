@@ -6,8 +6,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 /**
- * طرح رنگ «طلایی لوکس» — هویت بصری روشن و یکدست (Gold Metallic Light).
- * تمام صفحه‌ها از همین طرح تغذیه می‌شوند تا حس طلای برجسته و یکپارچه بماند.
+ * طرح رنگ «آبی برند» — هویت بصری روشن و یکدست (V3 Blue Brand).
+ * تمام صفحه‌ها از همین طرح تغذیه می‌شوند تا حس آبی برند و سبز سیگنال یکپارچه بماند.
  */
 private val LuxColors = lightColorScheme(
     primary = GoldInk,
@@ -18,8 +18,8 @@ private val LuxColors = lightColorScheme(
 
     secondary = BurgundyLight,
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFF6DEE0),
-    onSecondaryContainer = Color(0xFF4A0F18),
+    secondaryContainer = Color(0xFFE2EDFB),
+    onSecondaryContainer = Color(0xFF062A54),
 
     tertiary = RingGold,
     onTertiary = Color.White,
@@ -37,8 +37,8 @@ private val LuxColors = lightColorScheme(
 
     error = DangerRose,
     onError = Color.White,
-    errorContainer = Color(0xFFF8D7DB),
-    onErrorContainer = Color(0xFF5A0E22),
+    errorContainer = Color(0xFFFDE8E8),
+    onErrorContainer = Color(0xFF8E1630),
 
     outline = RingGold.copy(alpha = 0.55f),
     outlineVariant = OutlineFaint,
@@ -48,15 +48,15 @@ private val LuxColors = lightColorScheme(
     inverseOnSurface = CreamLight,
 
     surfaceContainerLowest = Color(0xFFFFFFFF),
-    surfaceContainerLow = Color(0xFFFFFBF0),
-    surfaceContainer = Color(0xFFFFF4D6),
-    surfaceContainerHigh = Color(0xFFFFEFC2),
-    surfaceContainerHighest = Color(0xFFFFE9AC)
+    surfaceContainerLow = Color(0xFFF7FAFD),
+    surfaceContainer = Color(0xFFEFF5FC),
+    surfaceContainerHigh = Color(0xFFE4EEF9),
+    surfaceContainerHighest = Color(0xFFD9E7F5)
 )
 
 /**
- * تم نوبت‌سبز — «طلایی لوکس». پارامتر darkTheme برای سازگاری با کدهای موجود
- * حفظ شده اما هویت بصری همیشه روشنِ طلایی است (طراحی تک‌حالته).
+ * تم نوبت‌سبز — «آبی برند». پارامتر darkTheme برای سازگاری با کدهای موجود
+ * حفظ شده اما هویت بصری همیشه روشنِ آبی است (طراحی تک‌حالته).
  */
 @Composable
 fun SabzTheme(
