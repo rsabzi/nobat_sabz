@@ -91,7 +91,12 @@ class SabzRepository(private val api: ApiClient) {
             "action" to "get_available_dates",
             "id" to businessId.toString()
         ))
-        return decode(DatesResponse.serializer(), json, DatesResponse()).data
+        // دیکد ردیف‌به‌ردیف: یک آیتم ناسازگار نباید کل تاریخ‌ها را حذف کند
+        val rows = json.arr("data") ?: json.arr("dates") ?: return emptyList()
+        return rows.mapNotNull { el ->
+            (el as? JsonObject)?.let { decodeOrNull(DateSlot.serializer(), it) }
+        }.map { if (it.date.isBlank() && !it.slotDate.isNullOrBlank()) it.copy(date = it.slotDate) else it }
+            .filter { it.isoDate.isNotBlank() }
     }
 
     suspend fun availableSlots(businessId: Int, date: String): List<TimeSlot> {
@@ -100,7 +105,10 @@ class SabzRepository(private val api: ApiClient) {
             "id" to businessId.toString(),
             "date" to date
         ))
-        return decode(SlotsResponse.serializer(), json, SlotsResponse()).data
+        val rows = json.arr("data") ?: json.arr("slots") ?: return emptyList()
+        return rows.mapNotNull { el ->
+            (el as? JsonObject)?.let { decodeOrNull(TimeSlot.serializer(), it) }
+        }.filter { it.startTime.isNotBlank() }
     }
 
     // --- رزرو ---
@@ -352,19 +360,6 @@ class SabzRepository(private val api: ApiClient) {
             "business_id" to businessId.toString()
         ))
         return json.obj("data")?.let { decodeOrNull(BusinessDetails.serializer(), it) }
-    }
-
-    suspend fun subscriptionStatus(businessId: Int): SubscriptionStatusResponse {
-        val json = api.post("api.php", body = jsonBody {
-            put("action", "get_subscription_status")
-            put("business_id", businessId)
-        })
-        return decode(SubscriptionStatusResponse.serializer(), json, SubscriptionStatusResponse())
-    }
-
-    suspend fun subscriptionPlans(): List<Plan> {
-        val json = api.post("api.php", body = jsonBody { put("action", "get_subscription_plans") })
-        return decode(PlansResponse.serializer(), json, PlansResponse()).plans
     }
 
     // --- بازاریاب ---

@@ -7,6 +7,7 @@ import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -405,5 +406,64 @@ class RepositoryTest {
         val body = req.body.readUtf8()
         assertTrue(body.contains("\"action\":\"create_booking\""))
         assertTrue(body.contains("\"business_id\":1"))
+    }
+
+    // --- رگرسیون «تاریخ/زمان‌ها لود نمی‌شد» ---
+
+    @Test
+    fun `available dates decode every row and tolerate slot_date and string counts`() = runTest {
+        server.enqueue(
+            MockResponse().setBody(
+                """{"status":"success","data":[
+                  {"date":"2026-09-05","jalali_date":"1405/06/14","day_name":"پنج‌شنبه","slot_count":"7"},
+                  {"slot_date":"2026-09-06","slot_count":0},
+                  {"date":"","day_name":"بی‌تاریخ"},
+                  {"date":"2026-09-07T00:00:00","slot_count":null}
+                ]}"""
+            )
+        )
+        val dates = repo.availableDates(5)
+        // ردیف بی‌تاریخ حذف می‌شود، بقیه حتی با نوع دادهٔ متفاوت حفظ می‌شوند
+        assertEquals(listOf("2026-09-05", "2026-09-06", "2026-09-07T00:00:00"), dates.map { it.date })
+        assertEquals(7, dates[0].slotCount)
+        assertNull(dates[0].slotDate)
+        assertEquals(0, dates[1].slotCount)
+        assertEquals("2026-09-06", dates[1].isoDate)
+        assertNull(dates[2].slotCount)
+        val path = server.takeRequest().path ?: ""
+        assertTrue(path.contains("action=get_available_dates"))
+        assertTrue(path.contains("id=5"))
+    }
+
+    @Test
+    fun `available slots keep rows without end_time and skip junk rows`() = runTest {
+        server.enqueue(
+            MockResponse().setBody(
+                """{"status":"success","data":[
+                  {"start_time":"09:00","end_time":"09:30"},
+                  {"start_time":"09:30","end_time":null},
+                  {"start_time":""},
+                  {"end_time":"11:00"},
+                  "not-an-object"
+                ]}"""
+            )
+        )
+        val slots = repo.availableSlots(5, "2026-09-05")
+        assertEquals(2, slots.size)
+        assertEquals("09:00", slots[0].startTime)
+        assertEquals("09:30", slots[0].endTime)
+        assertEquals("09:30", slots[1].startTime)
+        assertEquals("", slots[1].endTime) // end_time غایب → در لایهٔ نمایش ساخته می‌شود
+        val path = server.takeRequest().path ?: ""
+        assertTrue(path.contains("action=get_available_slots"))
+        assertTrue(path.contains("date=2026-09-05"))
+    }
+
+    @Test
+    fun `dates and slots fall back to alternate keys`() = runTest {
+        server.enqueue(MockResponse().setBody("""{"status":"success","dates":[{"date":"2026-09-08"}]}"""))
+        assertEquals(listOf("2026-09-08"), repo.availableDates(5).map { it.date })
+        server.enqueue(MockResponse().setBody("""{"status":"success","slots":[{"start_time":"10:00","end_time":"10:30"}]}"""))
+        assertEquals(listOf("10:00"), repo.availableSlots(5, "2026-09-08").map { it.startTime })
     }
 }

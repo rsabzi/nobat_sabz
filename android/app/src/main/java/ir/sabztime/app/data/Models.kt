@@ -113,23 +113,83 @@ data class Service(
 
 @Serializable
 data class DateSlot(
-    val date: String,
+    val date: String = "",
+    /** بعضی پاسخ‌های سرور تاریخ را در `slot_date` می‌فرستند (ردیف خام دیتابیس). */
+    @SerialName("slot_date") val slotDate: String? = null,
     @SerialName("jalali_date") val jalaliDate: String? = null,
     @SerialName("day_name") val dayName: String? = null,
     @SerialName("slot_count") @Serializable(with = LenientInt::class) val slotCount: Int? = null
-)
+) {
+    /** تاریخ میلادی ISO که در درخواست‌های تاریخ/اسلات/رزرو استفاده می‌شود. */
+    val isoDate: String get() = date.ifBlank { slotDate.orEmpty() }
+}
 
-@Serializable
-data class DatesResponse(val status: String = "", val data: List<DateSlot> = emptyList())
-
+/**
+ * بازهٔ زمانی آزاد.
+ * هر دو فیلد با مقدار پیش‌فرض تعریف شده‌اند تا یک ردیف ناقص از سمت سرور
+ * (مثلاً `end_time: null`) باعث شکست دیکد و «خالی دیده شدن کل زمان‌ها» نشود؛
+ * پایان زمان در نبود مقدار، از مدت اسلات کسب‌وکار محاسبه می‌شود.
+ */
 @Serializable
 data class TimeSlot(
-    @SerialName("start_time") val startTime: String,
-    @SerialName("end_time") val endTime: String
-)
+    @SerialName("start_time") val startTime: String = "",
+    @SerialName("end_time") val endTime: String = ""
+) {
+    /** زمان پایان معتبر به شکل «HH:MM» (در نبود `end_time`: شروع + مدت اسلات). */
+    fun effectiveEndTime(durationMinutes: Int = 30): String {
+        parseClock(endTime)?.let { return formatClock(it) }
+        val start = parseClock(startTime) ?: return ""
+        return formatClock((start + durationMinutes.coerceIn(5, 240)).coerceAtMost(24 * 60 - 1))
+    }
 
-@Serializable
-data class SlotsResponse(val status: String = "", val data: List<TimeSlot> = emptyList())
+    companion object {
+        /** "09:30" / "9:30" / "09:30:00" → تعداد دقیقه؛ نامعتبر → null */
+        fun parseClock(time: String?): Int? {
+            val parts = time?.trim()?.split(":") ?: return null
+            if (parts.size < 2) return null
+            val h = parts[0].toIntOrNull() ?: return null
+            val m = parts[1].toIntOrNull() ?: return null
+            if (h !in 0..23 || m !in 0..59) return null
+            return h * 60 + m
+        }
+
+        fun formatClock(totalMinutes: Int): String =
+            "%02d:%02d".format(totalMinutes / 60, totalMinutes % 60)
+    }
+}
+
+/**
+ * فهرست تاریخ‌ها را یکدست می‌کند: `date` از `slot_date` پر می‌شود،
+ * ردیف‌های بی‌تاریخ حذف و تکراری‌ها (یک تاریخ از دو منبع سرور) ادغام می‌شوند.
+ */
+fun sanitizeDates(dates: List<DateSlot>): List<DateSlot> =
+    dates
+        .map { if (it.date.isBlank() && !it.slotDate.isNullOrBlank()) it.copy(date = it.slotDate) else it }
+        .filter { it.isoDate.isNotBlank() }
+        .map { it.copy(date = it.isoDate.trim().take(10)) }
+        .distinctBy { it.date }
+        .sortedBy { it.date }
+
+/**
+ * فهرست زمان‌ها را یکدست می‌کند: ردیف‌های بی‌اعتبار حذف، `end_time` غایب از روی
+ * مدت اسلات ساخته، تکراری‌ها ادغام و مرتب‌سازی زمانی انجام می‌شود.
+ */
+fun sanitizeTimeSlots(slots: List<TimeSlot>, slotDurationMinutes: Int?): List<TimeSlot> {
+    val duration = (slotDurationMinutes ?: 30).coerceIn(5, 240)
+    return slots
+        .mapNotNull { slot ->
+            val start = TimeSlot.parseClock(slot.startTime) ?: return@mapNotNull null
+            val end = TimeSlot.parseClock(slot.endTime)
+                ?.takeIf { it > start }
+                ?: (start + duration)
+            TimeSlot(
+                startTime = TimeSlot.formatClock(start),
+                endTime = TimeSlot.formatClock(end.coerceAtMost(24 * 60 - 1))
+            )
+        }
+        .distinctBy { it.startTime }
+        .sortedBy { TimeSlot.parseClock(it.startTime) }
+}
 
 /** تبدیل رشته قیمت (از دیتابیس) به عدد؛ "250000.00" / "250000" / "250,000" همگی معتبرند */
 fun parsePrice(raw: String?): Long? {
@@ -236,31 +296,8 @@ data class QueueActionResponse(
 )
 
 // ---------------------------------------------------------------------------
-// اشتراک و کسب‌وکارهای مالک
+// کسب‌وکارهای مالک
 // ---------------------------------------------------------------------------
-
-@Serializable
-data class SubscriptionStatusResponse(
-    val status: String = "",
-    @SerialName("free_tokens_remaining") @Serializable(with = LenientInt::class) val freeTokensRemaining: Int = 0,
-    @SerialName("subscription_plan") val subscriptionPlan: String? = null,
-    @SerialName("expiry_date") val expiryDate: String? = null,
-    @SerialName("referral_code") val referralCode: String? = null
-)
-
-@Serializable
-data class Plan(
-    @Serializable(with = LenientInt::class) val id: Int,
-    val name: String,
-    val price: String? = null,
-    @SerialName("reservation_limit") @Serializable(with = LenientInt::class) val reservationLimit: Int = 0,
-    @SerialName("duration_days") @Serializable(with = LenientInt::class) val durationDays: Int = 30
-) {
-    val priceValue: Long? get() = parsePrice(price)
-}
-
-@Serializable
-data class PlansResponse(val status: String = "", val plans: List<Plan> = emptyList())
 
 @Serializable
 data class MyBusinessItem(

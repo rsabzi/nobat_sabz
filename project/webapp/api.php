@@ -239,11 +239,29 @@ function getDayName($input) {
     return $dayNames[$dayOfWeek] ?? 'نامشخص';
 }
 
+/**
+ * سخت‌گیری «اشتراک و توکن رزرو» فعال است یا نه؟
+ *
+ * با حذف بخش خرید اشتراک از اپلیکیشن موبایل، اگر این سخت‌گیری فعال بماند
+ * کسب‌وکاری که توکنش تمام شده دیگر هیچ رزروی نمی‌پذیرد و راه خرید دوباره هم
+ * در دسترس نیست (رزرو با پیام «توکن رایگان کافی نیست» می‌شکند). تا وقتی
+ * خرید اشتراک از نو راه‌اندازی نشود، پیش‌فرض خاموش است و برای فعال‌سازی آن
+ * در project/config.php این خط را تعریف کنید:
+ *     define('ENFORCE_SUBSCRIPTION_TOKENS', true);
+ */
+function subscription_enforcement_enabled() {
+    return defined('ENFORCE_SUBSCRIPTION_TOKENS') && ENFORCE_SUBSCRIPTION_TOKENS;
+}
+
 // تابع بررسی امکان دریافت رزرو برای کسب‌وکار
 function canBusinessReceiveBooking($pdo, $business_id) {
     if (!$pdo) {
         debug_log('عدم دسترسی به پایگاه داده برای بررسی ظرفیت رزرو', 'WARNING');
         return true; // در حالت تست اجازه می‌دهیم
+    }
+
+    if (!subscription_enforcement_enabled()) {
+        return true; // خرید اشتراک موقتاً حذف شده → ظرفیت، رزرو را بلاک نمی‌کند
     }
     
     try {
@@ -304,6 +322,496 @@ function canBusinessReceiveBooking($pdo, $business_id) {
     }
 }
 
+// ============================================================================
+// بخش ۱.۵: کمکی‌های برنامهٔ کاری و زمان‌های آزاد
+// ----------------------------------------------------------------------------
+// تجربهٔ نصب‌های مختلف نشان داده اسکیما یکسان نیست:
+//   • جدول schedules در create_tables.sql فقط ستون `is_working` را دارد،
+//     اما database_init.php هر دو ستون `is_working` و `is_active` را می‌سازد.
+//   • جدول schedule_overrides در بعضی نصب‌ها `is_day_off` دارد و در بعضی
+//     فقط `is_working`.
+//   • جدول specific_time_slots اصلاً در create_tables.sql تعریف نشده و فقط
+//     توسط database_init.php ساخته می‌شود.
+// کوئری‌های قبلی این نام‌ها را hard-code کرده بودند؛ روی نصبی که ستون
+// نداشت، PDOException (Unknown column) باعث پاسخ ۵۰۰ می‌شد و نتیجه در
+// اپلیکیشن موبایل این بود: «تاریخ‌ها می‌آیند اما هیچ زمانی لود نمی‌شود».
+// توابع زیر اول ستون/جدول موجود را پیدا می‌کنند و بعد کوئری می‌سازند.
+// ============================================================================
+
+/** منطقهٔ زمانی محلی کسب‌وکار (پیش‌فرض تهران) — برای مقایسهٔ «گذشته/آینده». */
+function sabz_now_local() {
+    static $now = null;
+    if ($now instanceof DateTimeImmutable) {
+        return $now;
+    }
+    $tz = defined('BOOKING_TIMEZONE') ? BOOKING_TIMEZONE : 'Asia/Tehran';
+    try {
+        $now = new DateTimeImmutable('now', new DateTimeZone($tz));
+    } catch (Exception $e) {
+        $now = new DateTimeImmutable('now');
+    }
+    return $now;
+}
+
+/** امروزِ محلی کسب‌وکار به شکل Y-m-d */
+function sabz_today_local() {
+    return sabz_now_local()->format('Y-m-d');
+}
+
+/** آیا استعلام INFORMATION_SCHEMA در این نصب کار می‌کند؟ */
+function sabz_schema_readable($pdo) {
+    static $ok = null;
+    if ($ok !== null) {
+        return $ok;
+    }
+    if (!$pdo) {
+        return $ok = false;
+    }
+    try {
+        $stmt = $pdo->query("SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() LIMIT 1");
+        return $ok = ($stmt !== false);
+    } catch (Exception $e) {
+        return $ok = false;
+    }
+}
+
+/** ستون‌های یک جدول (کش می‌شود). در نبود دسترسی به INFORMATION_SCHEMA خالی برمی‌گردد. */
+function sabz_table_columns($pdo, $table) {
+    static $cache = array();
+    if (!$pdo || !sabz_schema_readable($pdo)) {
+        return array();
+    }
+    if (array_key_exists($table, $cache)) {
+        return $cache[$table];
+    }
+    $cols = array();
+    try {
+        $stmt = $pdo->prepare("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?");
+        $stmt->execute(array($table));
+        foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $c) {
+            $cols[strtolower((string)$c)] = true;
+        }
+    } catch (Exception $e) {
+        error_log('sabz_table_columns(' . $table . ') failed: ' . $e->getMessage());
+        $cols = array();
+    }
+    return $cache[$table] = $cols;
+}
+
+/** آیا جدول در این نصب وجود دارد؟ */
+function sabz_table_exists($pdo, $table) {
+    static $cache = array();
+    if (!$pdo || !sabz_schema_readable($pdo)) {
+        return true; // حدس امن: فرض می‌کنیم هست؛ خطای کوئری در فراخوانی گرفته می‌شود
+    }
+    if (array_key_exists($table, $cache)) {
+        return $cache[$table];
+    }
+    try {
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?");
+        $stmt->execute(array($table));
+        return $cache[$table] = ((int)$stmt->fetchColumn() > 0);
+    } catch (Exception $e) {
+        error_log('sabz_table_exists(' . $table . ') failed: ' . $e->getMessage());
+        return $cache[$table] = false;
+    }
+}
+
+/** آیا ستونی در جدول هست؟ اگر INFORMATION_SCHEMA در دسترس نباشد، مقدار پیش‌فرض. */
+function sabz_has_column($pdo, $table, $column, $default = true) {
+    $cols = sabz_table_columns($pdo, $table);
+    if (empty($cols)) {
+        return (bool)$default;
+    }
+    return isset($cols[strtolower($column)]);
+}
+
+/**
+ * اگر جدول اسلات‌های خاصِ روز در این نصب ساخته نشده باشد، می‌سازدش.
+ * (create_tables.sql جدول specific_time_slots را ندارد؛ یعنی «زمان‌هایی که
+ * صاحب کسب‌وکار برای روزهای خاص تعریف می‌کند» جایی برای ذخیره شدن نداشتند و
+ * مشتری هرگز آن‌ها را نمی‌دید.) فقط در مسیر نوشتن صدا زده می‌شود.
+ */
+function sabz_ensure_schedule_tables($pdo) {
+    if (!$pdo) {
+        return;
+    }
+    try {
+        if (!sabz_table_exists($pdo, 'specific_time_slots')) {
+            $pdo->exec("
+                CREATE TABLE IF NOT EXISTS `specific_time_slots` (
+                    `id` INT(11) PRIMARY KEY AUTO_INCREMENT,
+                    `business_id` INT(11) NOT NULL,
+                    `slot_date` DATE NOT NULL,
+                    `start_time` TIME NOT NULL,
+                    `end_time` TIME DEFAULT NULL,
+                    `slot_duration_minutes` INT(11) DEFAULT 30,
+                    `is_available` TINYINT(1) DEFAULT 1,
+                    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    KEY (business_id),
+                    KEY (slot_date)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            ");
+            error_log("🧱 جدول specific_time_slots ساخته شد");
+        }
+    } catch (Exception $e) {
+        error_log('sabz_ensure_schedule_tables: ' . $e->getMessage());
+    }
+}
+
+/**
+ * شرط SQL برای «این روز فعال/کاری است» در جدول schedules —
+ * با هر دو اسکیما (is_active یا is_working یا هیچ‌کدام) کار می‌کند.
+ */
+function sabz_working_condition($pdo, $table = 'schedules', $columnPrefix = '') {
+    $p = $columnPrefix !== '' ? "`{$columnPrefix}`." : '';
+    if (sabz_has_column($pdo, $table, 'is_active')) {
+        return "{$p}`is_active` = 1";
+    }
+    if (sabz_has_column($pdo, $table, 'is_working')) {
+        return "{$p}`is_working` = 1";
+    }
+    return '1 = 1';
+}
+
+/** شرط «تعطیل بودن روز» در schedule_overrides (is_day_off یا is_working). */
+function sabz_day_off_condition($pdo) {
+    if (sabz_has_column($pdo, 'schedule_overrides', 'is_day_off')) {
+        return '`is_day_off` = 1';
+    }
+    if (sabz_has_column($pdo, 'schedule_overrides', 'is_working')) {
+        return '(`is_working` = 0 OR `start_time` IS NULL)';
+    }
+    return '(`start_time` IS NULL OR `end_time` IS NULL)';
+}
+
+/**
+ * اولین کوئری موفق از بین چند نسخهٔ جایگزین را اجرا می‌کند.
+ * برای نصب‌هایی که INFORMATION_SCHEMA قابل خواندن نیست و نام ستون
+ * «فعال/تعطیل بودن روز» در آن‌ها نامعلوم است، به‌کار می‌رود.
+ *
+ * @param list<string> $sqlVariants
+ * @return list|null rows یا null اگر همهٔ نسخه‌ها شکست بخورند
+ */
+function sabz_select_first($pdo, array $sqlVariants, array $params = array()) {
+    foreach ($sqlVariants as $sql) {
+        try {
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll();
+        } catch (Exception $e) {
+            error_log('sabz_select_first fallback: ' . $e->getMessage());
+        }
+    }
+    return null;
+}
+
+/** "09:30" / "09:30:00" / 570 → تعداد دقیقه؛ نامعتبر → null */
+function sabz_minutes($time) {
+    if ($time === null || $time === '') {
+        return null;
+    }
+    if (is_int($time)) {
+        return ($time >= 0 && $time < 1440) ? $time : null;
+    }
+    $parts = explode(':', trim((string)$time));
+    if (count($parts) < 2) {
+        return null;
+    }
+    $h = (int)$parts[0];
+    $m = (int)$parts[1];
+    if ($h < 0 || $h > 23 || $m < 0 || $m > 59) {
+        return null;
+    }
+    return $h * 60 + $m;
+}
+
+/** تعداد دقیقه → "HH:MM" */
+function sabz_hhmm($minutes) {
+    $minutes = (int)max(0, min(1439, (int)$minutes));
+    return sprintf('%02d:%02d', intdiv($minutes, 60), $minutes % 60);
+}
+
+/** شمارهٔ روز هفته برای یک تاریخ میلادی (۰=یکشنبه … ۶=شنبه) — مستقل از منطقهٔ زمانی */
+function sabz_day_of_week($date) {
+    try {
+        return (int)(new DateTimeImmutable($date))->format('w');
+    } catch (Exception $e) {
+        $ts = strtotime($date);
+        return $ts === false ? -1 : (int)date('w', $ts);
+    }
+}
+
+/** تاریخ معتبر (Y-m-d) از ورودی کاربر؛ "2026-09-05 00:00:00" و "2026/09/05" هم می‌پذیرد */
+function sabz_normalize_date($raw) {
+    if (empty($raw)) {
+        return null;
+    }
+    $s = trim((string)$raw);
+    $s = explode(' ', $s)[0];
+    $s = str_replace('/', '-', $s);
+    $parts = explode('-', $s);
+    if (count($parts) !== 3) {
+        return null;
+    }
+    $y = (int)$parts[0];
+    $mo = (int)$parts[1];
+    $d = (int)$parts[2];
+    if ($y < 2000 || $y > 2100 || $mo < 1 || $mo > 12 || $d < 1 || $d > 31) {
+        return null;
+    }
+    if (!checkdate($mo, $d, $y)) {
+        return null;
+    }
+    return sprintf('%04d-%02d-%02d', $y, $mo, $d);
+}
+
+/**
+ * نقشهٔ کامل برنامهٔ کاری یک کسب‌وکار برای بازه‌ای از تاریخ‌ها.
+ * هر بخش در try/catch جدا خوانده می‌شود تا نبودِ یک جدول/ستون،
+ * کل پاسخ را خراب نکند (این دقیقاً همان چیزی بود که زمان‌ها را لود نمی‌کرد).
+ *
+ * @return array{
+ *   slot_duration:int,
+ *   weekly:array<int,array<int,array{start:int,end:int}>>,
+ *   overrides:array<string,array{ranges:list,day_off:bool}>,
+ *   specific:array<string,list>,
+ *   booked:array<string,list>
+ * }
+ */
+function sabz_schedule_map($pdo, $business_id, $from_date, $to_date) {
+    $map = array(
+        'slot_duration' => 30,
+        'weekly' => array(),
+        'overrides' => array(),
+        'specific' => array(),
+        'booked' => array(),
+    );
+    if (!$pdo) {
+        return $map;
+    }
+
+    // --- مدت اسلات کسب‌وکار ---
+    try {
+        $stmt = $pdo->prepare("SELECT `slot_duration_minutes` FROM `businesses` WHERE `id` = ? LIMIT 1");
+        $stmt->execute(array($business_id));
+        $row = $stmt->fetch();
+        if ($row) {
+            $d = (int)($row['slot_duration_minutes'] ?? 30);
+            $map['slot_duration'] = ($d >= 5 && $d <= 240) ? $d : 30;
+        }
+    } catch (Exception $e) {
+        error_log('sabz_schedule_map slot_duration: ' . $e->getMessage());
+    }
+
+    // --- برنامهٔ هفتگی (همهٔ روزها؛ یک روز می‌تواند چند بازه داشته باشد) ---
+    {
+        $cond = sabz_working_condition($pdo, 'schedules');
+        $base = "SELECT `day_of_week`, `start_time`, `end_time` FROM `schedules` WHERE `business_id` = ?";
+        $rows = sabz_select_first($pdo, array(
+            "{$base} AND {$cond}",
+            "{$base} AND `is_working` = 1",
+            "{$base} AND `is_active` = 1",
+            $base
+        ), array($business_id));
+        foreach ((array)$rows as $row) {
+            $s = sabz_minutes($row['start_time'] ?? null);
+            $e = sabz_minutes($row['end_time'] ?? null);
+            if ($s === null || $e === null || $e <= $s) {
+                continue;
+            }
+            $dow = (int)$row['day_of_week'];
+            if (!isset($map['weekly'][$dow])) {
+                $map['weekly'][$dow] = array();
+            }
+            $map['weekly'][$dow][] = array('start' => $s, 'end' => $e);
+        }
+    }
+
+    // --- تغییرات خاص روز (تعطیلی یا ساعت متفاوت یک روز) ---
+    if (sabz_table_exists($pdo, 'schedule_overrides')) {
+        $dayOff = sabz_day_off_condition($pdo);
+        $ovWhere = "WHERE `business_id` = ? AND `override_date` BETWEEN ? AND ? ORDER BY `override_date` ASC, `start_time` ASC";
+        $rows = sabz_select_first($pdo, array(
+            "SELECT `override_date`, `start_time`, `end_time`, ({$dayOff}) AS `is_closed` FROM `schedule_overrides` {$ovWhere}",
+            "SELECT `override_date`, `start_time`, `end_time`, (`start_time` IS NULL OR `end_time` IS NULL) AS `is_closed` FROM `schedule_overrides` {$ovWhere}"
+        ), array($business_id, $from_date, $to_date));
+        foreach ((array)$rows as $row) {
+            $date = substr((string)$row['override_date'], 0, 10);
+            if (!isset($map['overrides'][$date])) {
+                $map['overrides'][$date] = array('ranges' => array(), 'day_off' => false);
+            }
+            if (!empty($row['is_closed'])) {
+                $map['overrides'][$date]['day_off'] = true;
+                continue;
+            }
+            $s = sabz_minutes($row['start_time'] ?? null);
+            $e = sabz_minutes($row['end_time'] ?? null);
+            if ($s === null || $e === null) {
+                // رکورد بدون ساعت = روز تعطیل
+                $map['overrides'][$date]['day_off'] = true;
+                continue;
+            }
+            if ($e > $s) {
+                $map['overrides'][$date]['ranges'][] = array('start' => $s, 'end' => $e);
+            }
+        }
+    }
+
+    // --- اسلات‌های تک‌به‌تکی که صاحب کسب‌وکار برای روزهای خاص تعریف کرده ---
+    if (sabz_table_exists($pdo, 'specific_time_slots')) {
+        $spWhere = "WHERE `business_id` = ? AND `slot_date` BETWEEN ? AND ? ORDER BY `slot_date` ASC, `start_time` ASC";
+        $rows = sabz_select_first($pdo, array(
+            "SELECT `slot_date`, `start_time`, `end_time` FROM `specific_time_slots` {$spWhere} AND `is_available` = 1",
+            "SELECT `slot_date`, `start_time`, `end_time` FROM `specific_time_slots` {$spWhere}"
+        ), array($business_id, $from_date, $to_date));
+        foreach ((array)$rows as $row) {
+            $date = substr((string)$row['slot_date'], 0, 10);
+            $s = sabz_minutes($row['start_time'] ?? null);
+            $e = sabz_minutes($row['end_time'] ?? null);
+            if ($s === null) {
+                continue;
+            }
+            if ($e === null || $e <= $s) {
+                $e = $s + $map['slot_duration'];
+            }
+            $map['specific'][$date][] = array('start' => $s, 'end' => $e);
+        }
+    }
+
+
+    // --- رزروهای ثبت‌شده (برای حذف زمان‌های پُرشده) ---
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT `booking_date`, `start_time`, `end_time`
+             FROM `bookings`
+             WHERE `business_id` = ? AND `booking_date` BETWEEN ? AND ? AND `status` != 'cancelled'"
+        );
+        $stmt->execute(array($business_id, $from_date, $to_date));
+        foreach ($stmt->fetchAll() as $row) {
+            $date = substr((string)$row['booking_date'], 0, 10);
+            $s = sabz_minutes($row['start_time'] ?? null);
+            $e = sabz_minutes($row['end_time'] ?? null);
+            if ($s === null) {
+                continue;
+            }
+            if ($e === null || $e <= $s) {
+                $e = $s + $map['slot_duration'];
+            }
+            $map['booked'][$date][] = array('start' => $s, 'end' => $e);
+        }
+    } catch (Exception $e) {
+        error_log('sabz_schedule_map bookings: ' . $e->getMessage());
+    }
+
+    return $map;
+}
+
+/**
+ * زمان‌های آزاد یک روز از روی نقشهٔ برنامهٔ کاری (بدون هیچ کوئری — قابل تست).
+ * ترتیب منابع مثل منطق قبلی است: اسلات‌های خاصِ روز، سپس تغییرات آن روز،
+ * سپس برنامهٔ هفتگی. برای «امروز» زمان‌های گذشته حذف می‌شوند.
+ *
+ * @return list<array{start_time:string,end_time:string}>
+ */
+function sabz_free_slots_for_date($map, $date) {
+    $duration = !empty($map['slot_duration']) ? (int)$map['slot_duration'] : 30;
+    $dayOff = false;
+
+    if (isset($map['overrides'][$date])) {
+        // علامت «تعطیل» صاحب کسب‌وکار بر هر منبع دیگری مقدم است
+        $dayOff = !empty($map['overrides'][$date]['day_off']);
+    }
+    if ($dayOff) {
+        return array();
+    }
+
+    $candidates = array();
+    if (!empty($map['specific'][$date])) {
+        // صاحب کسب‌وکار تک‌تک زمان‌ها را تعریف کرده: همان‌ها مرجع است
+        foreach ($map['specific'][$date] as $slot) {
+            $candidates[] = array('start' => (int)$slot['start'], 'end' => (int)$slot['end']);
+        }
+    } elseif (!empty($map['overrides'][$date]['ranges'])) {
+        foreach ($map['overrides'][$date]['ranges'] as $range) {
+            $candidates = array_merge($candidates, sabz_split_range((int)$range['start'], (int)$range['end'], $duration));
+        }
+    } else {
+        $dow = sabz_day_of_week($date);
+        if ($dow < 0) {
+            return array();
+        }
+        if (!empty($map['weekly'][$dow])) {
+            foreach ($map['weekly'][$dow] as $range) {
+                $candidates = array_merge($candidates, sabz_split_range((int)$range['start'], (int)$range['end'], $duration));
+            }
+        }
+    }
+
+    if (empty($candidates)) {
+        return array();
+    }
+
+    $booked = isset($map['booked'][$date]) ? $map['booked'][$date] : array();
+    $now = sabz_now_local();
+    $isToday = ($now->format('Y-m-d') === $date);
+    $nowMinutes = ((int)$now->format('G') * 60) + (int)$now->format('i');
+
+    $slots = array();
+    $seen = array();
+    foreach ($candidates as $slot) {
+        $s = (int)$slot['start'];
+        $e = (int)$slot['end'];
+        if ($e <= $s) {
+            continue;
+        }
+        // زمان‌های گذشتهٔ امروز قابل رزرو نیستند
+        if ($isToday && $s <= $nowMinutes) {
+            continue;
+        }
+        // تداخل با رزرو ثبت‌شده
+        $conflict = false;
+        foreach ($booked as $b) {
+            if ($s < (int)$b['end'] && (int)$b['start'] < $e) {
+                $conflict = true;
+                break;
+            }
+        }
+        if ($conflict) {
+            continue;
+        }
+        $key = $s . '-' . $e;
+        if (isset($seen[$key])) {
+            continue;
+        }
+        $seen[$key] = true;
+        $slots[] = array('start_time' => sabz_hhmm($s), 'end_time' => sabz_hhmm($e));
+    }
+
+    usort($slots, function ($a, $b) {
+        return strcmp($a['start_time'], $b['start_time']);
+    });
+
+    return $slots;
+}
+
+/** برش یک بازهٔ کاری به اسلات‌های `duration` دقیقه‌ای (فقط اسلات‌های کامل) */
+function sabz_split_range($start, $end, $duration) {
+    $slots = array();
+    if ($duration < 5) {
+        $duration = 30;
+    }
+    for ($t = $start; $t + $duration <= $end; $t += $duration) {
+        $slots[] = array('start' => $t, 'end' => $t + $duration);
+    }
+    return $slots;
+}
+
+/** فهرست روزهای فعال هفتگی (برای تشخیص اینکه اصلاً کسب‌وکاری برنامه دارد یا نه) */
+function sabz_weekly_days($map) {
+    return array_keys($map['weekly']);
+}
 function validateTelegramData($initData) {
     error_log("🔐 === شروع اعتبارسنجی تلگرام ===");
     error_log("🔧 DEV_MODE: " . (DEV_MODE ? 'فعال' : 'غیرفعال'));
@@ -623,37 +1131,86 @@ function handle_get_request($pdo, $internal_user_id) {
                 send_json_response('error', 'Business not found or access denied.', [], 404);
             }
 
-            $scheduleStmt = $pdo->prepare("SELECT * FROM schedules WHERE business_id = ?");
-            $scheduleStmt->execute([$business_id]);
-            $schedules = $scheduleStmt->fetchAll();
+            // برنامهٔ هفتگی — نام ستون «فعال/کاری» بین اسکیماها فرق می‌کند،
+            // پس هر دو کلید is_active و is_working به‌صورت یکسان برگردانده می‌شود
+            // تا ویرایشگر برنامهٔ کاری (اپ موبایل/وب) همهٔ روزها را درست نشان دهد.
+            $schedCols = "`id`, `business_id`, `day_of_week`, `start_time`, `end_time`";
+            $schedFlag = null;
+            if (sabz_has_column($pdo, 'schedules', 'is_active')) {
+                $schedFlag = 'is_active';
+            } elseif (sabz_has_column($pdo, 'schedules', 'is_working')) {
+                $schedFlag = 'is_working';
+            }
+            $weekQuery = "SELECT {$schedCols}" . ($schedFlag !== null ? ", `{$schedFlag}`" : '')
+                . " FROM `schedules` WHERE `business_id` = ?";
+
+            $schedules = [];
+            try {
+                $scheduleStmt = $pdo->prepare($weekQuery);
+                $scheduleStmt->execute([$business_id]);
+                foreach ($scheduleStmt->fetchAll() as $row) {
+                    $active = $schedFlag !== null ? (!empty($row[$schedFlag]) ? 1 : 0) : 1;
+                    if (empty($row['start_time']) || empty($row['end_time'])) {
+                        $active = 0;
+                    }
+                    $schedules[] = [
+                        'id' => $row['id'] ?? null,
+                        'business_id' => $row['business_id'],
+                        'day_of_week' => (int)$row['day_of_week'],
+                        'start_time' => $row['start_time'] ? substr((string)$row['start_time'], 0, 5) : null,
+                        'end_time' => $row['end_time'] ? substr((string)$row['end_time'], 0, 5) : null,
+                        'is_active' => $active,
+                        'is_working' => $active,
+                        'is_available' => $active
+                    ];
+                }
+            } catch (Exception $e) {
+                error_log('get_schedule schedules: ' . $e->getMessage());
+            }
 
             // بازیابی تاریخ‌های خاص و گروه‌بندی بازه‌های زمانی
-            $overrideStmt = $pdo->prepare("SELECT * FROM schedule_overrides WHERE business_id = ? ORDER BY override_date ASC, start_time ASC");
-            $overrideStmt->execute([$business_id]);
-            $overrideRows = $overrideStmt->fetchAll();
-            
+            $overrideRows = [];
+            if (sabz_table_exists($pdo, 'schedule_overrides')) {
+                try {
+                    $overrideStmt = $pdo->prepare("SELECT * FROM schedule_overrides WHERE business_id = ? ORDER BY override_date ASC, start_time ASC");
+                    $overrideStmt->execute([$business_id]);
+                    $overrideRows = $overrideStmt->fetchAll();
+                } catch (Exception $e) {
+                    error_log('get_schedule overrides: ' . $e->getMessage());
+                }
+            }
+
             // گروه‌بندی بازه‌های زمانی بر اساس تاریخ
             $overrides = [];
             $groupedOverrides = [];
-            
+
             foreach ($overrideRows as $row) {
                 $jalali_date = to_jalali($row['override_date']);
                 $date_key = $row['override_date'];
-                
+
+                // «تعطیل بودن روز» از ستون موجود خوانده می‌شود (is_day_off یا is_working)
+                if (array_key_exists('is_day_off', $row)) {
+                    $isDayOff = !empty($row['is_day_off']);
+                } elseif (array_key_exists('is_working', $row)) {
+                    $isDayOff = ((int)$row['is_working'] === 0);
+                } else {
+                    $isDayOff = empty($row['start_time']) || empty($row['end_time']);
+                }
+
                 if (!isset($groupedOverrides[$date_key])) {
                     $groupedOverrides[$date_key] = [
                         'jalali_date' => $jalali_date,
                         'override_date' => $row['override_date'],
-                        'is_day_off' => $row['is_day_off'],
+                        'is_day_off' => $isDayOff ? 1 : 0,
                         'time_slots' => []
                     ];
                 }
-                
+
                 // اگر روز تعطیل نیست و زمان‌های شروع و پایان موجود است، آن را به بازه‌های زمانی اضافه کن
-                if (!$row['is_day_off'] && $row['start_time'] && $row['end_time']) {
+                if (!$isDayOff && !empty($row['start_time']) && !empty($row['end_time'])) {
                     $groupedOverrides[$date_key]['time_slots'][] = [
-                        'start_time' => $row['start_time'],
-                        'end_time' => $row['end_time']
+                        'start_time' => substr((string)$row['start_time'], 0, 5),
+                        'end_time' => substr((string)$row['end_time'], 0, 5)
                     ];
                 }
             }
@@ -1159,14 +1716,15 @@ function handle_get_request($pdo, $internal_user_id) {
         error_log("🎯 get_available_slots action detected");
         error_log("📅 Date parameter: " . ($_GET['date'] ?? 'NULL'));
         error_log("🏢 Business ID: " . ($business_id ?? 'NULL'));
-        
-        $date = $_GET['date'] ?? null;
-        
+
+        $rawDate = $_GET['date'] ?? null;
+        $date = sabz_normalize_date($rawDate);
+
         if (!$date) {
-            error_log("❌ Date parameter missing");
+            error_log("❌ Date parameter missing or invalid: " . (is_string($rawDate) ? $rawDate : gettype($rawDate)));
             send_json_response('error', 'Date parameter is required.', [], 400);
         }
-        
+
         if (!$pdo) {
             error_log("❌ دیتابیس در دسترس نیست - بازگشت داده‌های تست");
             $test_slots = [
@@ -1182,186 +1740,56 @@ function handle_get_request($pdo, $internal_user_id) {
             error_log("✅ Returning test slots: " . json_encode($test_slots));
             send_json_response('success', 'Test slots fetched.', ['data' => $test_slots]);
         }
-        
+
         try {
             // بررسی وجود کسب‌وکار
-            $businessStmt = $pdo->prepare("SELECT slot_duration_minutes FROM businesses WHERE id = ? AND is_active = 1");
+            $businessStmt = $pdo->prepare("SELECT id, slot_duration_minutes FROM businesses WHERE id = ? AND is_active = 1");
             $businessStmt->execute([$business_id]);
             $business = $businessStmt->fetch();
-            
+
             if (!$business) {
                 send_json_response('error', 'Business not found or inactive.', [], 404);
             }
-            
-            $slotDuration = $business['slot_duration_minutes'] ?? 30;
-            
-            // دریافت زمان‌بندی روز هفته
-            $dayOfWeek = date('w', strtotime($date)); // 0=یکشنبه، 6=شنبه
-            error_log("📅 Day of week for {$date}: {$dayOfWeek}");
-            
-            $scheduleStmt = $pdo->prepare("
-                SELECT start_time, end_time 
-                FROM schedules 
-                WHERE business_id = ? AND day_of_week = ? AND is_active = 1
-            ");
-            $scheduleStmt->execute([$business_id, $dayOfWeek]);
-            $schedule = $scheduleStmt->fetch();
-            error_log("📋 Schedule found: " . ($schedule ? json_encode($schedule) : 'NULL'));
-            
-            // بررسی تغییرات خاص روز
-            $overrideStmt = $pdo->prepare("
-                SELECT start_time, end_time, is_day_off 
-                FROM schedule_overrides 
-                WHERE business_id = ? AND override_date = ?
-            ");
-            $overrideStmt->execute([$business_id, $date]);
-            $override = $overrideStmt->fetch();
-            error_log("📋 Override found: " . ($override ? json_encode($override) : 'NULL'));
-            
-            // بررسی اسلات‌های خاص از جدول specific_time_slots
-            $specificSlotsStmt = $pdo->prepare("
-                SELECT start_time, end_time, is_available 
-                FROM specific_time_slots 
-                WHERE business_id = ? AND slot_date = ? AND is_available = 1
-                ORDER BY start_time ASC
-            ");
-            $specificSlotsStmt->execute([$business_id, $date]);
-            $specificSlots = $specificSlotsStmt->fetchAll();
-            error_log("📋 Specific slots found: " . count($specificSlots) . " slots");
-            
-            // اگر اسلات‌های خاص وجود دارد، از آنها استفاده کن
-            if (!empty($specificSlots)) {
-                error_log("✅ Using specific time slots");
-                $slots = [];
-                foreach ($specificSlots as $slot) {
-                    $slotStart = substr($slot['start_time'], 0, 5); // HH:MM format
-                    $slotEnd = substr($slot['end_time'], 0, 5);
-                    
-                    // بررسی رزرو موجود برای این اسلات خاص
-                    $bookingStmt = $pdo->prepare("
-                        SELECT id FROM bookings 
-                        WHERE business_id = ? AND booking_date = ? AND start_time = ? AND status != 'cancelled'
-                    ");
-                    $bookingStmt->execute([$business_id, $date, $slotStart]);
-                    $isBooked = $bookingStmt->fetch() !== false;
-                    
-                    // فقط اسلات‌های رزرو نشده را اضافه کن
-                    if (!$isBooked) {
-                        $slots[] = [
-                            'start_time' => $slotStart,
-                            'end_time' => $slotEnd
-                        ];
-                    } else {
-                        error_log("🚫 Slot {$slotStart}-{$slotEnd} is already booked, excluding from available slots");
-                    }
+
+            // یک نقشهٔ واحد از برنامهٔ کاری ساخته می‌شود (همان منطق فهرست تاریخ‌ها)
+            // تا تاریخ و زمان‌ها هرگز با هم نخوانده شوند.
+            $map = sabz_schedule_map($pdo, $business_id, $date, $date);
+            if (!empty($business['slot_duration_minutes'])) {
+                $d = (int)$business['slot_duration_minutes'];
+                if ($d >= 5 && $d <= 240) {
+                    $map['slot_duration'] = $d;
                 }
-                
-                error_log("📊 Total available slots after filtering: " . count($slots));
-                send_json_response('success', 'Available slots fetched from specific schedule.', ['data' => $slots]);
-                return;
             }
-            
-            // اگر تغییر خاص وجود دارد، از آن استفاده کن
-            if ($override) {
-                if ($override['is_day_off']) {
-                    error_log("🚫 Day off according to override");
-                    send_json_response('success', 'No slots available - day off.', ['data' => []]);
-                    return;
-                }
-                $workStart = $override['start_time'];
-                $workEnd = $override['end_time'];
-                error_log("⏰ Using override schedule: {$workStart} - {$workEnd}");
-            } elseif ($schedule) {
-                $workStart = $schedule['start_time'];
-                $workEnd = $schedule['end_time'];
-                error_log("⏰ Using regular schedule: {$workStart} - {$workEnd}");
-            } else {
-                error_log("❌ No schedule found for business {$business_id} on day {$dayOfWeek}");
-                send_json_response('success', 'No schedule found for this day.', ['data' => []]);
-                return;
-            }
-            
-            // تولید اسلات‌های زمانی (فقط زمان‌های آینده)
-            error_log("🔧 Generating time slots from {$workStart} to {$workEnd} with {$slotDuration} min duration");
-            $slots = [];
-            $currentTime = strtotime($workStart);
-            $endTime = strtotime($workEnd);
-            
-            if ($currentTime === false || $endTime === false) {
-                error_log("❌ Invalid time format: start={$workStart}, end={$workEnd}");
-                send_json_response('error', 'Invalid schedule time format.', [], 500);
-                return;
-            }
-            
-            // اگر تاریخ امروز است، زمان شروع را به زمان فعلی تنظیم کن
-            $today = date('Y-m-d');
-            $currentDateTime = time();
-            if ($date === $today) {
-                $currentHour = date('H:i');
-                $minStartTime = strtotime($currentHour);
-                if ($minStartTime > $currentTime) {
-                    $currentTime = $minStartTime;
-                    // گرد کردن به نزدیک‌ترین اسلات
-                    $remainder = $currentTime % ($slotDuration * 60);
-                    if ($remainder > 0) {
-                        $currentTime += ($slotDuration * 60) - $remainder;
-                    }
-                }
-                error_log("📅 امروز است - زمان شروع تنظیم شد به: " . date('H:i', $currentTime));
-            }
-            
-            $slotCount = 0;
-            while ($currentTime < $endTime) {
-                $slotStart = date('H:i', $currentTime);
-                $slotEnd = date('H:i', $currentTime + ($slotDuration * 60));
-                
-                // بررسی رزرو موجود
-                $bookingStmt = $pdo->prepare("
-                    SELECT id FROM bookings 
-                    WHERE business_id = ? AND booking_date = ? AND start_time = ? AND status != 'cancelled'
-                ");
-                $bookingStmt->execute([$business_id, $date, $slotStart]);
-                $isBooked = $bookingStmt->fetch() !== false;
-                
-                // اضافه کردن اسلات اگر در دسترس باشد
-                if (!$isBooked && ($currentTime + ($slotDuration * 60)) <= $endTime) {
-                    $slots[] = [
-                        'start_time' => $slotStart,
-                        'end_time' => $slotEnd
-                    ];
-                    $slotCount++;
-                }
-                
-                $currentTime += ($slotDuration * 60);
-            }
-            
-            error_log("✅ Generated {$slotCount} available slots");
-            
+
+            $slots = sabz_free_slots_for_date($map, $date);
+
+            debug_log('زمان‌های در دسترس محاسبه شد', 'INFO', [
+                'business_id' => $business_id,
+                'date' => $date,
+                'slot_count' => count($slots),
+                'slot_duration' => $map['slot_duration'],
+                'weekly_days' => sabz_weekly_days($map),
+                'has_specific_slots' => !empty($map['specific'][$date])
+            ]);
+            error_log("✅ Available slots for {$date}: " . count($slots));
+
             send_json_response('success', 'Available slots fetched.', ['data' => $slots]);
-            
+
         } catch (PDOException $e) {
             error_log("❌ PDO Error in get_available_slots: " . $e->getMessage());
-            error_log("📍 Error Code: " . $e->getCode());
-            error_log("📍 Error File: " . $e->getFile() . " Line: " . $e->getLine());
-            error_log("🔍 Business ID: " . $business_id . ", Date: " . $date);
             debug_log('خطای PDO در get_available_slots', 'ERROR', [
                 'error_message' => $e->getMessage(),
                 'error_code' => $e->getCode(),
                 'business_id' => $business_id,
-                'date' => $date,
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
+                'date' => $date
             ]);
             send_json_response('error', 'Server error while fetching available slots.', [], 500);
         } catch (Exception $e) {
             error_log("❌ General Error in get_available_slots: " . $e->getMessage());
-            error_log("📍 Error File: " . $e->getFile() . " Line: " . $e->getLine());
             debug_log('خطای عمومی در get_available_slots', 'ERROR', [
                 'error_message' => $e->getMessage(),
                 'business_id' => $business_id,
-                'date' => $date,
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
+                'date' => $date
             ]);
             send_json_response('error', 'Server error while fetching available slots.', [], 500);
         }
@@ -1371,86 +1799,105 @@ function handle_get_request($pdo, $internal_user_id) {
     if ($action === 'get_available_dates') {
         error_log("📅 get_available_dates action detected");
         error_log("🏢 Business ID: " . ($business_id ?? 'NULL'));
-        
+
         if (!$pdo) {
             error_log("❌ دیتابیس در دسترس نیست - بازگشت داده‌های تست");
-            $today = date('Y-m-d');
-            $test_dates = [
-                ['date' => $today, 'jalali_date' => convertToJalali($today), 'day_name' => getDayName($today)],
-                ['date' => date('Y-m-d', strtotime($today . ' +1 day')), 'jalali_date' => convertToJalali(date('Y-m-d', strtotime($today . ' +1 day'))), 'day_name' => getDayName(date('Y-m-d', strtotime($today . ' +1 day')))],
-                ['date' => date('Y-m-d', strtotime($today . ' +2 days')), 'jalali_date' => convertToJalali(date('Y-m-d', strtotime($today . ' +2 days'))), 'day_name' => getDayName(date('Y-m-d', strtotime($today . ' +2 days')))]
-            ];
+            $today = sabz_today_local();
+            $test_dates = [];
+            for ($i = 0; $i < 3; $i++) {
+                $d = date('Y-m-d', strtotime($today . ' +' . $i . ' days'));
+                $test_dates[] = [
+                    'date' => $d,
+                    'jalali_date' => convertToJalali($d),
+                    'day_name' => getDayName(sabz_day_of_week($d))
+                ];
+            }
             send_json_response('success', 'Test dates fetched.', ['data' => $test_dates]);
         }
-        
+
         try {
             // بررسی وجود کسب‌وکار
-            $businessStmt = $pdo->prepare("SELECT id FROM businesses WHERE id = ? AND is_active = 1");
+            $businessStmt = $pdo->prepare("SELECT id, slot_duration_minutes FROM businesses WHERE id = ? AND is_active = 1");
             $businessStmt->execute([$business_id]);
             $business = $businessStmt->fetch();
-            
+
             if (!$business) {
                 send_json_response('error', 'Business not found or inactive.', [], 404);
             }
-            
-            // دریافت تاریخ‌های موجود از specific_time_slots (فقط امروز به بعد)
-            $today = date('Y-m-d');
-            $datesStmt = $pdo->prepare("
-                SELECT DISTINCT slot_date, COUNT(*) as slot_count
-                FROM specific_time_slots 
-                WHERE business_id = ? AND slot_date >= ? AND is_available = 1
-                GROUP BY slot_date 
-                ORDER BY slot_date ASC
-                LIMIT 30
-            ");
-            $datesStmt->execute([$business_id, $today]);
-            $availableDates = $datesStmt->fetchAll();
-            
-            // اگر تاریخ خاصی وجود ندارد، از schedules استفاده کن (فقط امروز به بعد)
-            if (empty($availableDates)) {
-                $dates = [];
-                
-                // تولید 30 روز آینده بر اساس schedules (شروع از امروز)
-                for ($i = 0; $i < 30; $i++) {
-                    $checkDate = date('Y-m-d', strtotime($today . ' +' . $i . ' days'));
-                    $dayOfWeek = date('w', strtotime($checkDate));
-                    
-                    error_log("🔍 بررسی تاریخ: {$checkDate} (روز هفته: {$dayOfWeek})");
-                    
-                    // بررسی وجود schedule برای این روز
-                    $scheduleStmt = $pdo->prepare("
-                        SELECT id FROM schedules 
-                        WHERE business_id = ? AND day_of_week = ? AND is_working = 1
-                    ");
-                    $scheduleStmt->execute([$business_id, $dayOfWeek]);
-                    
-                    if ($scheduleStmt->fetch()) {
-                        $dates[] = [
-                            'date' => $checkDate,
-                            'jalali_date' => to_jalali($checkDate),
-                            'day_name' => getDayName($dayOfWeek)
-                        ];
-                    }
+
+            $today = sabz_today_local();
+            $windowDays = 30;
+            $lastDate = date('Y-m-d', strtotime($today . ' +' . ($windowDays - 1) . ' days'));
+
+            $map = sabz_schedule_map($pdo, $business_id, $today, $lastDate);
+            if (!empty($business['slot_duration_minutes'])) {
+                $d = (int)$business['slot_duration_minutes'];
+                if ($d >= 5 && $d <= 240) {
+                    $map['slot_duration'] = $d;
                 }
-                
-                send_json_response('success', 'Available dates from schedule.', ['data' => $dates]);
-            } else {
-                // تبدیل تاریخ‌های موجود به فرمت مناسب
-                $dates = [];
-                foreach ($availableDates as $dateRow) {
-                    $dates[] = [
-                        'date' => $dateRow['slot_date'],
-                        'jalali_date' => to_jalali($dateRow['slot_date']),
-                        'day_name' => getDayName(date('w', strtotime($dateRow['slot_date']))),
-                        'slot_count' => $dateRow['slot_count']
-                    ];
-                }
-                
-                send_json_response('success', 'Available dates fetched.', ['data' => $dates]);
             }
-            
+
+            // نامزد‌های تاریخ: ۱) روزهایی که صاحب کسب‌وکار تک‌تک زمان‌هایش را تعریف کرده،
+            // ۲) روزهای دارای تغییر خاص (تعطیلی/ساعت متفاوت)، ۳) روزهای برنامهٔ هفتگی.
+            $candidates = array();
+            foreach (array_keys($map['specific']) as $d) {
+                $candidates[$d] = true;
+            }
+            foreach ($map['overrides'] as $d => $ov) {
+                if (!empty($ov['ranges'])) {
+                    $candidates[$d] = true;
+                }
+            }
+            if (!empty($map['weekly'])) {
+                for ($i = 0; $i < $windowDays; $i++) {
+                    $d = date('Y-m-d', strtotime($today . ' +' . $i . ' days'));
+                    $candidates[$d] = true;
+                }
+            }
+
+            $dates = [];
+            $candidateList = array_keys($candidates);
+            sort($candidateList);
+            foreach ($candidateList as $checkDate) {
+                if (count($dates) >= $windowDays) {
+                    break;
+                }
+                $slots = sabz_free_slots_for_date($map, $checkDate);
+                if (empty($slots)) {
+                    // روزهایی که هیچ زمان آزادی ندارند (تعطیل، پر، یا گذشته) نمایش داده نمی‌شوند
+                    continue;
+                }
+                $dates[] = [
+                    'date' => $checkDate,
+                    'jalali_date' => to_jalali($checkDate),
+                    'day_name' => getDayName(sabz_day_of_week($checkDate)),
+                    'slot_count' => count($slots)
+                ];
+            }
+
+            debug_log('تاریخ‌های در دسترس محاسبه شد', 'INFO', [
+                'business_id' => $business_id,
+                'today' => $today,
+                'date_count' => count($dates),
+                'sources' => [
+                    'specific_dates' => array_keys($map['specific']),
+                    'override_dates' => array_keys($map['overrides']),
+                    'weekly_days' => sabz_weekly_days($map)
+                ]
+            ]);
+            error_log("📅 Available dates: " . count($dates));
+
+            send_json_response('success', 'Available dates fetched.', ['data' => $dates]);
+
         } catch (PDOException $e) {
             error_log("❌ PDO Error in get_available_dates: " . $e->getMessage());
+            debug_log('خطای PDO در get_available_dates', 'ERROR', [
+                'error_message' => $e->getMessage(),
+                'business_id' => $business_id
+            ]);
+            send_json_response('error', 'Server error while fetching available dates.', [], 500);
+        } catch (Exception $e) {
+            error_log("❌ General Error in get_available_dates: " . $e->getMessage());
             send_json_response('error', 'Server error while fetching available dates.', [], 500);
         }
     }
@@ -2024,52 +2471,152 @@ function handle_post_request($pdo, $internal_user_id) {
             $updateBusinessStmt = $pdo->prepare("UPDATE businesses SET slot_duration_minutes = ? WHERE id = ?");
             $updateBusinessStmt->execute([$formData['slot_duration_minutes'], $business_id]);
 
-            $upsertSql = "INSERT INTO schedules (business_id, day_of_week, start_time, end_time, is_active) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE start_time = VALUES(start_time), end_time = VALUES(end_time), is_active = VALUES(is_active)";
-            $upsertStmt = $pdo->prepare($upsertSql);
-            foreach ($formData['schedules'] as $day) {
-                $upsertStmt->execute([
-                    $business_id, $day['day_of_week'],
-                    $day['is_active'] ? $day['start_time'] : null,
-                    $day['is_active'] ? $day['end_time'] : null,
-                    $day['is_active'] ? 1 : 0
-                ]);
+            // ⚠️ سازگاری با اسکیما: در create_tables.sql جدول schedules فقط ستون
+            // `is_working` را دارد و در database_init.php هر دو ستون `is_active` و
+            // `is_working` ساخته می‌شود. کوئری قبلی `is_active` را hard-code کرده بود
+            // و روی نصب‌های قدیمی با خطای «Unknown column» ذخیرهٔ برنامهٔ کاری را
+            // کامل از کار می‌انداخت. اینجا همان مقدار در هر ستون موجود نوشته می‌شود
+            // تا فهرست تاریخ‌ها (is_working) و زمان‌های آزاد (is_active) هیچ‌گاه
+            // با هم نخوانده شوند.
+            $flagCols = array();
+            if (sabz_has_column($pdo, 'schedules', 'is_active')) {
+                $flagCols[] = 'is_active';
+            }
+            if (sabz_has_column($pdo, 'schedules', 'is_working')) {
+                $flagCols[] = 'is_working';
             }
 
-            $deleteOverridesStmt = $pdo->prepare("DELETE FROM schedule_overrides WHERE business_id = ?");
-            $deleteOverridesStmt->execute([$business_id]);
+            $cols = array('business_id', 'day_of_week', 'start_time', 'end_time');
+            $placeholders = array('?', '?', '?', '?');
+            $updates = array('start_time = VALUES(start_time)', 'end_time = VALUES(end_time)');
+            foreach ($flagCols as $flagCol) {
+                $cols[] = $flagCol;
+                $placeholders[] = '?';
+                $updates[] = "`{$flagCol}` = VALUES(`{$flagCol}`)";
+            }
+            $upsertSql = "INSERT INTO schedules (`" . implode('`, `', $cols) . "`) VALUES ("
+                . implode(', ', $placeholders) . ") ON DUPLICATE KEY UPDATE " . implode(', ', $updates);
+            $upsertStmt = $pdo->prepare($upsertSql);
+
+            foreach ($formData['schedules'] as $day) {
+                // «فعال» از هر دو شکل ورودی پذیرفته می‌شود (is_active یا is_working)
+                if (array_key_exists('is_active', $day)) {
+                    $active = !empty($day['is_active']) ? 1 : 0;
+                } elseif (array_key_exists('is_working', $day)) {
+                    $active = !empty($day['is_working']) ? 1 : 0;
+                } else {
+                    $active = 1;
+                }
+                $startTime = !empty($day['start_time']) ? substr($day['start_time'], 0, 5) : null;
+                $endTime = !empty($day['end_time']) ? substr($day['end_time'], 0, 5) : null;
+                if (!$active || $startTime === null || $endTime === null) {
+                    $startTime = null;
+                    $endTime = null;
+                    $active = 0;
+                }
+
+                $params = array($business_id, (int)($day['day_of_week'] ?? 0), $startTime, $endTime);
+                foreach ($flagCols as $flagCol) {
+                    $params[] = $active;
+                }
+                $upsertStmt->execute($params);
+            }
+
+            if (sabz_table_exists($pdo, 'schedule_overrides')) {
+                $deleteOverridesStmt = $pdo->prepare("DELETE FROM schedule_overrides WHERE business_id = ?");
+                $deleteOverridesStmt->execute([$business_id]);
+            }
 
             // پردازش تاریخ‌های خاص با پشتیبانی از چندین بازه زمانی
-            if (!empty($formData['overrides'])) {
-                $insertOverrideSql = "INSERT INTO schedule_overrides (business_id, override_date, start_time, end_time, is_day_off) VALUES (?, ?, ?, ?, ?)";
+            if (!empty($formData['overrides']) && sabz_table_exists($pdo, 'schedule_overrides')) {
+                // نام ستون «تعطیل بودن» بین نصب‌ها فرق می‌کند
+                $offCol = null;
+                $offValues = null;
+                if (sabz_has_column($pdo, 'schedule_overrides', 'is_day_off')) {
+                    $offCol = 'is_day_off';
+                    $offValues = array(1, 0); // [روز تعطیل، روز کاری]
+                } elseif (sabz_has_column($pdo, 'schedule_overrides', 'is_working')) {
+                    $offCol = 'is_working';
+                    $offValues = array(0, 1);
+                }
+
+                $overCols = array('business_id', 'override_date', 'start_time', 'end_time');
+                $overPlace = array('?', '?', '?', '?');
+                if ($offCol !== null) {
+                    $overCols[] = $offCol;
+                    $overPlace[] = '?';
+                }
+                $overUpdates = array(
+                    'start_time = VALUES(start_time)',
+                    'end_time = VALUES(end_time)'
+                );
+                if ($offCol !== null) {
+                    $overUpdates[] = "`{$offCol}` = VALUES(`{$offCol}`)";
+                }
+                $insertOverrideSql = "INSERT INTO schedule_overrides (`" . implode('`, `', $overCols) . "`) VALUES ("
+                    . implode(', ', $overPlace) . ") ON DUPLICATE KEY UPDATE " . implode(', ', $overUpdates);
                 $insertOverrideStmt = $pdo->prepare($insertOverrideSql);
-                
+
                 foreach ($formData['overrides'] as $override) {
-                    $gregorian_date = to_gregorian($override['jalali_date']);
-                    
-                    if ($override['is_day_off']) {
-                        // اگر روز تعطیل است، فقط یک رکورد با is_day_off = 1 ذخیره می‌کنیم
-                        $insertOverrideStmt->execute([
-                            $business_id, $gregorian_date, null, null, 1
-                        ]);
-                    } else {
-                        // اگر روز کاری است، هر بازه زمانی را جداگانه ذخیره می‌کنیم
-                        if (isset($override['time_slots']) && is_array($override['time_slots'])) {
-                            foreach ($override['time_slots'] as $slot) {
-                                $insertOverrideStmt->execute([
-                                    $business_id, $gregorian_date,
-                                    $slot['start_time'], $slot['end_time'], 0
-                                ]);
-                            }
-                        } else {
-                            // پشتیبانی از فرمت قدیمی (برای سازگاری با نسخه‌های قبلی)
-                            if (isset($override['start_time']) && isset($override['end_time'])) {
-                                $insertOverrideStmt->execute([
-                                    $business_id, $gregorian_date,
-                                    $override['start_time'], $override['end_time'], 0
-                                ]);
+                    $gregorian_date = sabz_normalize_date(
+                        isset($override['gregorian_date'])
+                            ? $override['gregorian_date']
+                            : to_gregorian($override['jalali_date'] ?? null)
+                    );
+                    if (!$gregorian_date) {
+                        error_log("⚠️ update_schedule: تاریخ override نامعتبر بود - " . json_encode($override, JSON_UNESCAPED_UNICODE));
+                        continue;
+                    }
+
+                    if (!empty($override['is_day_off'])) {
+                        // روز تعطیل: بدون ساعت، فقط علامت تعطیلی
+                        $params = array($business_id, $gregorian_date, null, null);
+                        if ($offCol !== null) {
+                            $params[] = $offValues[0];
+                        }
+                        $insertOverrideStmt->execute($params);
+                        continue;
+                    }
+
+                    // روز کاری: بازه‌ها می‌آیند. کلید یکتای (business_id, override_date)
+                    // اجازهٔ چند رکورد برای یک روز را نمی‌دهد، پس کلان‌ترین بازهٔ روز
+                    // (از earliest start تا latest end) ثبت می‌شود.
+                    $ranges = array();
+                    if (isset($override['time_slots']) && is_array($override['time_slots'])) {
+                        foreach ($override['time_slots'] as $slot) {
+                            if (!empty($slot['start_time']) && !empty($slot['end_time'])) {
+                                $ranges[] = array(
+                                    'start' => sabz_minutes($slot['start_time']),
+                                    'end' => sabz_minutes($slot['end_time'])
+                                );
                             }
                         }
+                    } elseif (!empty($override['start_time']) && !empty($override['end_time'])) {
+                        // فرمت قدیمی
+                        $ranges[] = array(
+                            'start' => sabz_minutes($override['start_time']),
+                            'end' => sabz_minutes($override['end_time'])
+                        );
                     }
+                    $ranges = array_values(array_filter($ranges, function ($r) {
+                        return $r['start'] !== null && $r['end'] !== null && $r['end'] > $r['start'];
+                    }));
+                    if (empty($ranges)) {
+                        continue;
+                    }
+                    $dayStart = min(array_column($ranges, 'start'));
+                    $dayEnd = max(array_column($ranges, 'end'));
+
+                    $params = array(
+                        $business_id,
+                        $gregorian_date,
+                        sabz_hhmm($dayStart),
+                        sabz_hhmm($dayEnd)
+                    );
+                    if ($offCol !== null) {
+                        $params[] = $offValues[1];
+                    }
+                    $insertOverrideStmt->execute($params);
                 }
             }
 
@@ -2106,6 +2653,9 @@ function handle_post_request($pdo, $internal_user_id) {
             send_json_response('error', 'مدت زمان اسلات معتبر نیست.', [], 400);
         }
         
+        // اگر جدول اسلات‌های خاص در این نصب ساخته نشده باشد، همین‌جا ساخته می‌شود
+        sabz_ensure_schedule_tables($pdo);
+
         try {
             error_log("🔄 شروع تراکنش دیتابیس");
             $pdo->beginTransaction();
@@ -2144,6 +2694,17 @@ function handle_post_request($pdo, $internal_user_id) {
             $deleteDailyStmt = $pdo->prepare("DELETE FROM daily_schedules WHERE business_id = ?");
             $deleteDailyResult = $deleteDailyStmt->execute([$business_id]);
             $deletedDailyRows = $deleteDailyStmt->rowCount();
+
+            // اسلات‌های آینده یک‌بار کامل پاک می‌شوند: قبلاً اگر صاحب کسب‌وکار روزی را
+            // تعطیل یا حذف می‌کرد، زمان‌های قدیمی آن روز باقی می‌ماند و مشتری هنوز
+            // می‌توانست آن‌ها را ببیند و رزرو کند.
+            try {
+                $deleteFutureSlotsStmt = $pdo->prepare("DELETE FROM specific_time_slots WHERE business_id = ? AND slot_date >= ?");
+                $deleteFutureSlotsStmt->execute([$business_id, sabz_today_local()]);
+                error_log("🗑️ اسلات‌های آیندهٔ قبلی پاک شد: " . $deleteFutureSlotsStmt->rowCount());
+            } catch (Exception $e) {
+                error_log('clearing future specific_time_slots failed: ' . $e->getMessage());
+            }
             
             error_log("📊 تعداد ردیف‌های حذف شده از schedule_overrides: " . $deletedOverrideRows);
             error_log("📊 تعداد ردیف‌های حذف شده از daily_schedules: " . $deletedDailyRows);
@@ -2664,11 +3225,13 @@ function handle_post_request($pdo, $internal_user_id) {
             ]);
             
             // بررسی توکن‌های موجود قبل از شروع transaction
+            // (فقط وقتی سخت‌گیری اشتراک فعال باشد؛ وگرنه رزرو آزاد است)
             $tokenCheckStmt = $pdo->prepare("SELECT free_reservation_tokens FROM businesses WHERE id = ?");
             $tokenCheckStmt->execute([$booking_business_id]);
             $tokenCheckData = $tokenCheckStmt->fetch();
             
-            if (!$tokenCheckData || $tokenCheckData['free_reservation_tokens'] < $requiredTokens) {
+            if (subscription_enforcement_enabled()
+                && (!$tokenCheckData || $tokenCheckData['free_reservation_tokens'] < $requiredTokens)) {
                 $availableTokens = $tokenCheckData ? $tokenCheckData['free_reservation_tokens'] : 0;
                 debug_log('توکن‌های کافی موجود نیست', 'ERROR', [
                     'business_id' => $booking_business_id,
@@ -2904,7 +3467,14 @@ function handle_post_request($pdo, $internal_user_id) {
             $tokenStmt->execute([$booking_business_id]);
             $tokenData = $tokenStmt->fetch();
             
-            if ($tokenData && $tokenData['free_reservation_tokens'] >= $requiredTokens) {
+            if (!subscription_enforcement_enabled() && !($tokenData && (int)$tokenData['free_reservation_tokens'] >= $requiredTokens)) {
+                // خرید اشتراک موقتاً حذف شده: توکن کم باشد هم رزرو ثبت می‌شود
+                debug_log('توکن کافی نبود اما رزرو ثبت شد (سخت‌گیری اشتراک غیرفعال است)', 'WARNING', [
+                    'business_id' => $booking_business_id,
+                    'available_tokens' => $tokenData['free_reservation_tokens'] ?? 0,
+                    'required_tokens' => $requiredTokens
+                ]);
+            } elseif ($tokenData && $tokenData['free_reservation_tokens'] >= $requiredTokens) {
                 $updateTokenStmt = $pdo->prepare("UPDATE businesses SET free_reservation_tokens = free_reservation_tokens - ? WHERE id = ?");
                 $updateTokenStmt->execute([$requiredTokens, $booking_business_id]);
                 debug_log('توکن‌های رایگان کسب‌وکار کاهش یافت', 'INFO', [

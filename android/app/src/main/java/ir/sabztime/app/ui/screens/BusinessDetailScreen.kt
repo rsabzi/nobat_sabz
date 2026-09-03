@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -41,6 +42,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,6 +67,8 @@ import ir.sabztime.app.data.BusinessDetails
 import ir.sabztime.app.data.DateSlot
 import ir.sabztime.app.data.Service
 import ir.sabztime.app.data.TimeSlot
+import ir.sabztime.app.data.sanitizeDates
+import ir.sabztime.app.data.sanitizeTimeSlots
 import ir.sabztime.app.ui.Routes
 import ir.sabztime.app.ui.components.EmptyState
 import ir.sabztime.app.ui.components.ErrorState
@@ -81,6 +85,7 @@ import ir.sabztime.app.ui.components.TilePalette
 import ir.sabztime.app.ui.components.businessTypeIcon
 import ir.sabztime.app.util.Jalali
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -91,9 +96,11 @@ data class BusinessDetailState(
     val business: UiState<BusinessDetails> = UiState.Loading,
     val dates: List<DateSlot> = emptyList(),
     val datesLoading: Boolean = false,
+    val datesError: String? = null,
     val selectedDate: DateSlot? = null,
     val slots: List<TimeSlot> = emptyList(),
     val slotsLoading: Boolean = false,
+    val slotsError: String? = null,
     val selectedSlot: TimeSlot? = null,
     val selectedServiceId: Int? = null,
     val submit: UiState<BookingCreatedResponse>? = null,
@@ -108,6 +115,12 @@ class BusinessDetailViewModel(private val graph: AppGraph, private val businessI
 
     var userId: Long = 0
         private set
+
+    /**
+     * فقط آخرین درخواست اسلات معتبر است؛ با عوض‌کردن سریع تاریخ، پاسخ قبلی
+     * باید دور ریخته شود تا زمان‌های تاریخ نادرست نمایش داده نشود.
+     */
+    private var slotsJob: Job? = null
 
     init {
         load()
@@ -142,29 +155,88 @@ class BusinessDetailViewModel(private val graph: AppGraph, private val businessI
     }
 
     fun loadDates() {
-        _state.update { it.copy(datesLoading = true) }
+        _state.update { it.copy(datesLoading = true, datesError = null) }
         viewModelScope.launch {
             try {
                 val d = graph.repository.availableDates(businessId)
-                _state.update { it.copy(dates = d, datesLoading = false, selectedDate = null, slots = emptyList(), selectedSlot = null) }
+                val duration = (_state.value.business as? UiState.Success)?.data?.slotDurationMinutes
+                val normalized = sanitizeDates(d)
+                // اولین تاریخ به‌طور خودکار انتخاب می‌شود تا زمان‌های همان روز بی‌درنگ بارگذاری شوند
+                val keepSelected = normalized.firstOrNull { it.date == _state.value.selectedDate?.date }
+                    ?: normalized.firstOrNull()
+                _state.update {
+                    it.copy(
+                        dates = normalized,
+                        datesLoading = false,
+                        datesError = if (normalized.isEmpty() && d.isNotEmpty())
+                            "ساختار پاسخ سرور برای تاریخ‌ها قابل خواندن نبود." else null,
+                        selectedDate = keepSelected,
+                        slots = emptyList(),
+                        selectedSlot = null,
+                        slotsError = null,
+                        slotsLoading = keepSelected != null
+                    )
+                }
+                keepSelected?.let { fetchSlots(it, duration) }
             } catch (e: CancellationException) {
                 throw e
-            } catch (_: Exception) {
-                _state.update { it.copy(datesLoading = false) }
+            } catch (e: Exception) {
+                val s = classify(e)
+                _state.update { it.copy(datesLoading = false, datesError = s.message) }
             }
         }
     }
 
     fun selectDate(date: DateSlot) {
-        _state.update { it.copy(selectedDate = date, selectedSlot = null, slotsLoading = true) }
-        viewModelScope.launch {
+        if (_state.value.selectedDate?.date == date.date) return
+        _state.update { it.copy(selectedDate = date, selectedSlot = null, slots = emptyList(), slotsError = null, slotsLoading = true) }
+        val duration = (_state.value.business as? UiState.Success)?.data?.slotDurationMinutes
+        fetchSlots(date, duration)
+    }
+
+    fun retryDates() = loadDates()
+
+    fun retrySlots() {
+        val date = _state.value.selectedDate ?: return
+        _state.update { it.copy(slotsLoading = true, slotsError = null) }
+        val duration = (_state.value.business as? UiState.Success)?.data?.slotDurationMinutes
+        fetchSlots(date, duration)
+    }
+
+    /** بارگذاری زمان‌های یک تاریخ (با لغو درخواست قبلی و یکدست‌سازی پاسخ). */
+    private fun fetchSlots(date: DateSlot, slotDurationMinutes: Int?) {
+        slotsJob?.cancel()
+        val iso = date.isoDate
+        slotsJob = viewModelScope.launch {
             try {
-                val s = graph.repository.availableSlots(businessId, date.date)
-                _state.update { it.copy(slots = s, slotsLoading = false) }
+                val raw = graph.repository.availableSlots(businessId, iso)
+                val clean = sanitizeTimeSlots(raw, slotDurationMinutes)
+                // اگر کاربر تا حالا تاریخ دیگری را انتخاب نکرده باشد، نتیجه اعمال می‌شود
+                if (_state.value.selectedDate?.isoDate == iso) {
+                    val keepSlot = _state.value.selectedSlot?.startTime
+                    _state.update {
+                        it.copy(
+                            slots = clean,
+                            slotsLoading = false,
+                            slotsError = null,
+                            selectedSlot = clean.firstOrNull { s -> s.startTime == keepSlot }
+                        )
+                    }
+                }
             } catch (e: CancellationException) {
                 throw e
-            } catch (_: Exception) {
-                _state.update { it.copy(slots = emptyList(), slotsLoading = false) }
+            } catch (e: Exception) {
+                val s = classify(e)
+                if (_state.value.selectedDate?.isoDate == iso) {
+                    _state.update {
+                        it.copy(
+                            slots = emptyList(),
+                            slotsLoading = false,
+                            // خطای واقعی سرور پنهان نمی‌شود؛ کاربر دکمهٔ «تلاش دوباره» می‌بیند
+                            slotsError = s.message
+                        )
+                    }
+                }
             }
         }
     }
@@ -194,15 +266,19 @@ class BusinessDetailViewModel(private val graph: AppGraph, private val businessI
             try {
                 val resp = graph.repository.createBooking(
                     businessId = businessId,
-                    date = date.date,
+                    date = date.isoDate.take(10), // همیشه YYYY-MM-DD؛ حتی اگر سرور datetime فرستاده باشد
                     startTime = slot.startTime,
-                    endTime = slot.endTime,
+                    endTime = slot.effectiveEndTime(
+                        (_state.value.business as? UiState.Success)?.data?.slotDurationMinutes ?: 30
+                    ),
                     customerName = name,
                     customerPhone = phone,
                     customerNotes = notes,
                     userId = userId
                 )
                 _state.update { it.copy(submit = UiState.Success(resp)) }
+                // زمان رزروشده باید از فهرست خارج شود و تاریخ‌ها به‌روز شوند
+                loadDates()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -211,6 +287,19 @@ class BusinessDetailViewModel(private val graph: AppGraph, private val businessI
             }
         }
     }
+
+    companion object {
+        /**
+         * تاریخ‌های تکراری/بی‌اعتبار حذف و مرتب می‌شوند.
+         * (سرور ممکن است یک تاریخ را هم از `specific_time_slots` و هم از
+         * `schedule_overrides` برگرداند؛ تکرار کلید، لیست Compose را می‌شکست.)
+         */
+        internal fun normalizeDates(dates: List<DateSlot>): List<DateSlot> = sanitizeDates(dates)
+
+        /** زمان‌ها: یکدست، بدون تکرار و مرتب (با ساخت `end_time` غایب). */
+        internal fun normalizeSlots(slots: List<TimeSlot>, slotDurationMinutes: Int?): List<TimeSlot> =
+            sanitizeTimeSlots(slots, slotDurationMinutes)
+    }
 }
 
 @Composable
@@ -218,7 +307,7 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
     val viewModel: BusinessDetailViewModel = viewModel(key = "biz-$businessId") {
         BusinessDetailViewModel(graph, businessId)
     }
-    val state = viewModel.state.value
+    val state by viewModel.state.collectAsState()
     val submitState = state.submit
 
     var name by rememberSaveable { mutableStateOf("") }
@@ -332,33 +421,46 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
                         // --- انتخاب تاریخ ---
                         item { SectionHeader(Icons.Filled.DateRange, "انتخاب تاریخ") }
                         item {
+                            val datesErr = state.datesError
                             when {
-                                state.datesLoading -> Row(Modifier.padding(vertical = 8.dp)) {
-                                    CircularProgressIndicator(Modifier.size(22.dp))
-                                }
+                                state.datesLoading -> InlineLoading("در حال دریافت تاریخ‌های رزرو…")
+                                datesErr != null && state.dates.isEmpty() -> InlineError(
+                                    message = "تاریخ‌های رزرو بارگذاری نشد.\n$datesErr",
+                                    onRetry = viewModel::retryDates
+                                )
                                 state.dates.isEmpty() -> Text(
                                     "برای این کسب‌وکار هنوز زمان رزرو ثبت نشده است.",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                                else -> LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    items(state.dates, key = { it.date }) { d ->
-                                        val sel = state.selectedDate?.date == d.date
-                                        GlassChip(
-                                            selected = sel,
-                                            onClick = { viewModel.selectDate(d) }
-                                        ) {
-                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                                Text(
-                                                    Jalali.format(d.date),
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = if (sel) Color.White else MaterialTheme.colorScheme.onSurface
-                                                )
-                                                Text(
-                                                    d.dayName ?: Jalali.weekdayName(d.date),
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = if (sel) Color.White.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
+                                else -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    if (datesErr != null) {
+                                        InlineError(message = datesErr, onRetry = viewModel::retryDates)
+                                    }
+                                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        items(state.dates, key = { it.date }) { d ->
+                                            val sel = state.selectedDate?.date == d.date
+                                            GlassChip(
+                                                selected = sel,
+                                                onClick = { viewModel.selectDate(d) }
+                                            ) {
+                                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                    Text(
+                                                        Jalali.format(d.date),
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = if (sel) Color.White else MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                    Text(
+                                                        listOfNotNull(
+                                                            d.dayName?.takeIf { it.isNotBlank() }
+                                                                ?: Jalali.weekdayName(d.date).takeIf { it.isNotBlank() },
+                                                            d.slotCount?.takeIf { it > 0 }
+                                                                ?.let { "${Jalali.persianDigits(it)} زمان" }
+                                                        ).joinToString(" • "),
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = if (sel) Color.White.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -370,10 +472,13 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
                         if (state.selectedDate != null) {
                             item { SectionHeader(Icons.Filled.AccessTime, "انتخاب ساعت") }
                             item {
+                                val slotsErr = state.slotsError
                                 when {
-                                    state.slotsLoading -> Row(Modifier.padding(vertical = 8.dp)) {
-                                        CircularProgressIndicator(Modifier.size(22.dp))
-                                    }
+                                    state.slotsLoading -> InlineLoading("در حال دریافت زمان‌های آزاد…")
+                                    slotsErr != null -> InlineError(
+                                        message = "زمان‌های این تاریخ بارگذاری نشد.\n$slotsErr",
+                                        onRetry = viewModel::retrySlots
+                                    )
                                     state.slots.isEmpty() -> Text(
                                         "زمان آزادی در این تاریخ وجود ندارد.",
                                         style = MaterialTheme.typography.bodyMedium,
@@ -390,15 +495,24 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
 
                         item { Spacer(Modifier.height(4.dp)) }
                         item {
+                            val selDate = state.selectedDate
+                            val selSlot = state.selectedSlot
+                            val slotsErrCta = state.slotsError
+                            val canContinue = selDate != null && selSlot != null &&
+                                !state.slotsLoading && slotsErrCta == null
                             GradientButton(
-                                enabled = state.selectedDate != null && state.selectedSlot != null,
+                                enabled = canContinue,
                                 onClick = viewModel::openForm,
                                 modifier = Modifier.fillMaxWidth().height(54.dp)
                             ) {
                                 Text(
                                     when {
-                                        state.selectedSlot == null -> "زمان را انتخاب کنید"
-                                        else -> "ادامه رزرو — ساعت ${Jalali.persianDigits(state.selectedSlot.startTime)}"
+                                        selDate == null && state.dates.isEmpty() -> "زمان رزرو موجود نیست"
+                                        selDate == null -> "ابتدا تاریخ را انتخاب کنید"
+                                        state.slotsLoading -> "در حال دریافت زمان‌ها…"
+                                        slotsErrCta != null -> "بارگذاری زمان‌ها ناموفق بود"
+                                        selSlot == null -> "ساعت را انتخاب کنید"
+                                        else -> "ادامه رزرو — ساعت ${Jalali.persianDigits(selSlot.startTime)}"
                                     },
                                     fontWeight = FontWeight.Bold
                                 )
@@ -445,13 +559,52 @@ private fun TimeSlotGrid(slots: List<TimeSlot>, selected: String?, onSelect: (Ti
         slots.forEach { slot ->
             val sel = selected == slot.startTime
             GlassChip(selected = sel, onClick = { onSelect(slot) }) {
-                Text(
-                    Jalali.persianDigits(slot.startTime),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium,
-                    color = if (sel) Color.White else MaterialTheme.colorScheme.onSurface
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        Jalali.persianDigits(slot.startTime),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium,
+                        color = if (sel) Color.White else MaterialTheme.colorScheme.onSurface
+                    )
+                    if (slot.endTime.isNotBlank() && slot.endTime != slot.startTime) {
+                        Text(
+                            "تا ${Jalali.persianDigits(slot.endTime)}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (sel) Color.White.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun InlineLoading(label: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier.padding(vertical = 8.dp)
+    ) {
+        CircularProgressIndicator(Modifier.size(20.dp))
+        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun InlineError(message: String, onRetry: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    GlassCard(shape = RoundedCornerShape(18.dp)) {
+        Text(
+            message,
+            style = MaterialTheme.typography.bodySmall,
+            color = cs.error
+        )
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(onClick = onRetry) {
+            Icon(Icons.Filled.Refresh, null, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("تلاش دوباره", style = MaterialTheme.typography.labelLarge)
         }
     }
 }
