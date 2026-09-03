@@ -1,0 +1,51 @@
+name: Android Diagnostic (temp)
+
+on:
+  push:
+    branches: ["arena/01a0665a-nobat-sabz"]
+
+permissions:
+  contents: read
+
+jobs:
+  diag:
+    name: Diag build+unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: "8.7"
+      - name: Generate Gradle wrapper
+        working-directory: android
+        run: gradle --no-daemon wrapper --gradle-version 8.7
+      - name: Compile (assembleRelease) with annotation capture
+        working-directory: android
+        shell: bash
+        run: |
+          set +e
+          gradle --no-daemon assembleRelease > /tmp/build.log 2>&1
+          code=$?
+          # Kotlin compiler errors first (e: file:line:col message)
+          grep -nE '^e: ' /tmp/build.log | head -10 | sed -E 's/^(.*)$/::error::\1/' || true
+          if [ $code -ne 0 ]; then
+            grep -nE '^\* What went wrong|^> Task .*FAILED|Caused by:|Could not (find|resolve|download|compile)' /tmp/build.log | head -8 | sed -E 's/^(.*)$/::error::\1/' || true
+            tail -6 /tmp/build.log | sed -E 's/^(.*)$/::error::[tail] \1/' || true
+          fi
+          exit $code
+      - name: Unit tests (testDebugUnitTest) with annotation capture
+        working-directory: android
+        shell: bash
+        continue-on-error: true
+        run: |
+          set +e
+          gradle --no-daemon testDebugUnitTest --stacktrace > /tmp/test.log 2>&1
+          code=$?
+          grep -nE '^e: ' /tmp/test.log | head -10 | sed -E 's/^(.*)$/::error::\1/' || true
+          grep -nE 'FAILED|AssertionError|Exception|expected:|but was:' /tmp/test.log | head -10 | sed -E 's/^(.*)$/::error::\1/' || true
+          tail -10 /tmp/test.log | sed -E 's/^(.*)$/::error::[tail] \1/' || true
+          exit $code
