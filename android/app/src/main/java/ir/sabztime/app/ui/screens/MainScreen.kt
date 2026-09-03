@@ -22,8 +22,8 @@ import ir.sabztime.app.ui.components.LuxBottomBar
 import ir.sabztime.app.ui.theme.GlassBackground
 
 /**
- * صفحه‌ی اصلی — چهار تب (خانه، نوبت‌ها، پیام‌ها، پروفایل)
- * روی پس‌زمینه‌ی گرادیانی لوکس، با نوار پیمایش شناور شیشه‌ای.
+ * صفحه‌ی اصلی — سه تب (خانه، نوبت‌ها، پروفایل) روی زمینه‌ی رادیال طلایی،
+ * با نوار پیمایش شناورِ فلز طلایی (فقط آیکون، بدون برچسب).
  *
  * نوار پایین «شناور» است: محتوا زیر آن ادامه دارد و هر صفحه در انتهای خود
  * فضای خالی (BottomBarSpacer) می‌گذارد تا چیزی پشت نوار پنهان نشود.
@@ -48,7 +48,6 @@ fun MainScreen(graph: AppGraph, navController: NavHostController) {
                     when (tab) {
                         0 -> HomeScreen(graph, navController)
                         1 -> BookingsScreen(graph, navController, onGoHome = { selectedTab = 0 })
-                        2 -> NotificationsScreen(graph, navController, embedded = true)
                         else -> ProfileScreen(graph, navController)
                     }
                 }

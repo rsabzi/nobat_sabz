@@ -393,12 +393,12 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
                                                 Text(
                                                     Jalali.format(d.date),
                                                     fontWeight = FontWeight.Bold,
-                                                    color = if (sel) Color.White else MaterialTheme.colorScheme.onSurface
+                                                    color = if (sel) ir.sabztime.app.ui.theme.Cocoa else MaterialTheme.colorScheme.onSurface
                                                 )
                                                 Text(
                                                     d.dayName ?: Jalali.weekdayName(d.date),
                                                     style = MaterialTheme.typography.labelSmall,
-                                                    color = if (sel) Color.White.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant
+                                                    color = if (sel) ir.sabztime.app.ui.theme.Cocoa.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
                                             }
                                         }
@@ -504,7 +504,7 @@ private fun TimeSlotGrid(slots: List<TimeSlot>, selected: String?, onSelect: (Ti
                     Jalali.persianDigits(slot.startTime),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium,
-                    color = if (sel) Color.White else MaterialTheme.colorScheme.onSurface
+                    color = if (sel) ir.sabztime.app.ui.theme.Cocoa else MaterialTheme.colorScheme.onSurface
                 )
             }
         }

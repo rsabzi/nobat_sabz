@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
 import ir.sabztime.app.ui.AppNav
 import ir.sabztime.app.ui.theme.SabzTheme
+import ir.sabztime.app.ui.theme.GoldBgTop
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -18,17 +19,17 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         val graph = (application as SabzApp).graph
         setContent {
-            // هویت بصری «پرایم» همیشه تیره‌ی لوکس است
+            // هویت بصری همیشه «طلایی لوکس»ِ روشن است
             SabzTheme {
                 LaunchedEffect(Unit) {
-                    // آیکون‌های نوار وضعیت روشن روی پس‌زمینه‌ی سرمه‌ای تیره
+                    // آیکون‌های نوار وضعیت تیره روی زمینه‌ی طلایی روشن
                     val controller = WindowCompat.getInsetsController(window, window.decorView)
-                    controller.isAppearanceLightStatusBars = false
-                    controller.isAppearanceLightNavigationBars = false
+                    controller.isAppearanceLightStatusBars = true
+                    controller.isAppearanceLightNavigationBars = true
                 }
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = ir.sabztime.app.ui.theme.Midnight
+                    color = GoldBgTop
                 ) {
                     AppNav(graph)
                 }

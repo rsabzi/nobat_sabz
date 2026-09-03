@@ -30,13 +30,17 @@ import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -47,28 +51,31 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import ir.sabztime.app.ui.theme.BurgundyGradient
-import ir.sabztime.app.ui.theme.Cream
-import ir.sabztime.app.ui.theme.CreamDim
+import ir.sabztime.app.ui.theme.Cocoa
+import ir.sabztime.app.ui.theme.CocoaSoft
+import ir.sabztime.app.ui.theme.CreamLight
+import ir.sabztime.app.ui.theme.DangerRose
 import ir.sabztime.app.ui.theme.Gold
-import ir.sabztime.app.ui.theme.GoldBright
-import ir.sabztime.app.ui.theme.GoldDeep
-import ir.sabztime.app.ui.theme.GoldDim
-import ir.sabztime.app.ui.theme.GoldLight
+import ir.sabztime.app.ui.theme.GoldBgEdge
+import ir.sabztime.app.ui.theme.GoldInk
+import ir.sabztime.app.ui.theme.GoldPale
+import ir.sabztime.app.ui.theme.IconCreamBottom
+import ir.sabztime.app.ui.theme.IconCreamTop
 import ir.sabztime.app.ui.theme.LuxCardShape
 import ir.sabztime.app.ui.theme.LuxFieldShape
-import ir.sabztime.app.ui.theme.MidnightDeep
-import ir.sabztime.app.ui.theme.NavyCardGradient
-import ir.sabztime.app.ui.theme.NavyInk
+import ir.sabztime.app.ui.theme.MetalGoldGradient
 import ir.sabztime.app.ui.theme.PureWhite
-import ir.sabztime.app.ui.theme.TextMuted
+import ir.sabztime.app.ui.theme.RingGold
 import ir.sabztime.app.ui.theme.goldBorder
+import ir.sabztime.app.ui.theme.goldGradientBorder
 import ir.sabztime.app.ui.theme.goldRing
+import ir.sabztime.app.ui.theme.topGloss
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  اجزای امضای طراحی «پرایم»: هدر، سرچ‌بار، فیلترها، کارت کسب‌وکار، منوی پروفایل
+//  اجزای امضای طراحی «طلایی لوکس»: هدر، سرچ‌بار، فیلترها، کارت کسب‌وکار، منو
 // ═══════════════════════════════════════════════════════════════════════════
 
-/** متن با رنگ‌آمیزی طلایی برس‌خورده (گرادیانی) */
+/** متن با رنگ‌آمیزی طلایی برس‌خورده (گرادیانی درخشان) */
 @Composable
 fun GoldText(
     text: String,
@@ -90,7 +97,8 @@ fun GoldText(
 }
 
 /**
- * سرصفحه‌ی خوش‌آمدگویی — «درود، {نام} 👋» + تاریخ جلالی + اکشن‌های سمت چپ.
+ * سرصفحه‌ی خوش‌آمدگویی — «روز بخیر» + تاریخ جلالی + اکشن‌های سمت چپ
+ * (دو دکمه‌ی دایره‌ای کرم با حلقه‌ی طلایی).
  */
 @Composable
 fun WelcomeHeader(
@@ -106,38 +114,38 @@ fun WelcomeHeader(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "درود، $name",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = Cream,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(Modifier.width(8.dp))
-                Text("👋", style = MaterialTheme.typography.titleLarge)
-            }
-            Spacer(Modifier.height(4.dp))
             Text(
-                dateLine,
+                "روز بخیر 👋",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = Cocoa,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(2.dp))
+            val sub = if (name.isNotBlank() && name != "مهمان") "$name • $dateLine" else dateLine
+            Text(
+                sub,
                 style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Normal,
-                color = PureWhite.copy(alpha = 0.62f)
+                fontWeight = FontWeight.Medium,
+                color = CocoaSoft,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
+        Spacer(Modifier.width(10.dp))
         actions()
     }
 }
 
-/** دکمه‌ی گرد شیشه‌ای برای اکشن‌های هدر (اعلان، تازه‌سازی، …) */
+/** دکمه‌ی گرد کرم با حلقه‌ی طلایی برای اکشن‌های هدر (اعلان، تازه‌سازی، …) */
 @Composable
 fun GhostIconButton(
     icon: ImageVector,
     contentDescription: String?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    tint: Color = Gold,
+    tint: Color = Cocoa,
     size: Dp = 42.dp,
     badge: Boolean = false
 ) {
@@ -145,28 +153,32 @@ fun GhostIconButton(
         Box(
             Modifier
                 .fillMaxSize()
-                .clip(CircleShape)
-                .background(Brush.verticalGradient(listOf(Color(0x1FFFFFFF), Color(0x0AFFFFFF))))
-                .border(goldBorder(0.26f), CircleShape)
+                .creamCircle(CircleShape)
                 .clickable(onClick = onClick)
         )
-        Icon(icon, contentDescription = contentDescription, tint = tint, modifier = Modifier.size(size * 0.46f))
+        Icon(
+            icon,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(size * 0.46f)
+        )
         if (badge) {
             Box(
                 Modifier
                     .align(Alignment.TopEnd)
-                    .padding(4.dp)
-                    .size(8.dp)
+                    .padding(2.dp)
+                    .size(11.dp)
                     .clip(CircleShape)
-                    .background(GoldLight)
+                    .background(Brush.verticalGradient(listOf(Color(0xFFE2566F), DangerRose)))
+                    .border(BorderStroke(1.5.dp, PureWhite), CircleShape)
             )
         }
     }
 }
 
 /**
- * سرچ‌بار لوکس — کارت سرمه‌ای تیره با حاشیه‌ی طلایی برس‌خورده،
- * آیکون ذره‌بین در سمت راست (RTL) و متن راهنمای کرم.
+ * سرچ‌بار لوکس — کارت کرمِ شیشه‌ای روشن با قاب گرادیانی طلایی،
+ * آیکون ذره‌بین در سمت راست (RTL) و متن قهوه‌ایِ تیره.
  */
 @Composable
 fun LuxSearchBar(
@@ -180,16 +192,23 @@ fun LuxSearchBar(
         modifier = modifier
             .fillMaxWidth()
             .height(58.dp)
+            .shadow(
+                elevation = 8.dp,
+                shape = LuxFieldShape,
+                ambientColor = GoldBgEdge.copy(alpha = 0.4f),
+                spotColor = GoldBgEdge.copy(alpha = 0.45f)
+            )
             .clip(LuxFieldShape)
-            .background(Brush.verticalGradient(listOf(Color(0xFF16203C), NavyInk)))
-            .border(BorderStroke(1.dp, Brush.linearGradient(listOf(GoldBright.copy(alpha = 0.65f), Gold.copy(alpha = 0.25f), GoldBright.copy(alpha = 0.5f)))), LuxFieldShape)
+            .background(Brush.verticalGradient(listOf(Color(0xE6FFFFFF), Color(0xC9F3ECDD))))
+            .topGloss(0.5f)
+            .border(goldGradientBorder(1.4.dp), LuxFieldShape)
             .padding(horizontal = 18.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             Icons.Filled.Search,
             contentDescription = null,
-            tint = Cream,
+            tint = CocoaSoft,
             modifier = Modifier.size(22.dp)
         )
         Spacer(Modifier.width(12.dp))
@@ -198,7 +217,7 @@ fun LuxSearchBar(
                 Text(
                     placeholder,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = PureWhite.copy(alpha = 0.55f),
+                    color = CocoaSoft.copy(alpha = 0.62f),
                     maxLines = 1
                 )
             }
@@ -207,9 +226,9 @@ fun LuxSearchBar(
                 onValueChange = onValueChange,
                 singleLine = true,
                 textStyle = LocalTextStyle.current.merge(
-                    MaterialTheme.typography.bodyMedium.copy(color = Cream)
+                    MaterialTheme.typography.bodyMedium.copy(color = Cocoa)
                 ),
-                cursorBrush = SolidColor(Gold),
+                cursorBrush = SolidColor(GoldInk),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { onSearch() }),
                 modifier = Modifier.fillMaxWidth()
@@ -221,19 +240,20 @@ fun LuxSearchBar(
                 Modifier
                     .size(26.dp)
                     .clip(CircleShape)
-                    .background(Color(0x1FFFFFFF))
+                    .background(Brush.verticalGradient(listOf(Color(0xCCFFFFFF), Color(0xAAF3ECDD))))
+                    .border(goldBorder(0.4f), CircleShape)
                     .clickable { onValueChange("") },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Filled.Close, contentDescription = "پاک کردن", tint = CreamDim, modifier = Modifier.size(15.dp))
+                Icon(Icons.Filled.Close, contentDescription = "پاک کردن", tint = CocoaSoft, modifier = Modifier.size(15.dp))
             }
         }
     }
 }
 
 /**
- * دکمه‌ی فیلتر (استان / دسته‌بندی) — سرمه‌ای شفاف با آیکون طلایی؛
- * وقتی مقداری انتخاب شده باشد، سطح طلایی می‌شود.
+ * دکمه‌ی فیلتر (استان / دسته‌بندی) — کرم شفاف با آیکون قهوه‌ای؛
+ * وقتی مقداری انتخاب شده باشد، قرص فلز طلاییِ برجسته می‌شود.
  */
 @Composable
 fun FilterButton(
@@ -243,16 +263,20 @@ fun FilterButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val shape = RoundedCornerShape(18.dp)
+    val shape = RoundedCornerShape(50)
     Row(
         modifier = modifier
             .height(48.dp)
             .clip(shape)
             .background(
-                if (active) Brush.verticalGradient(listOf(GoldLight, GoldDim))
-                else Brush.verticalGradient(listOf(Color(0xFF16203C), NavyInk))
+                if (active) Brush.verticalGradient(MetalGoldGradient)
+                else Brush.verticalGradient(listOf(Color(0xB3FFFFFF), Color(0x8CF3ECDD)))
             )
-            .border(goldBorder(if (active) 0.0f else 0.30f), shape)
+            .topGloss(if (active) 0.3f else 0.4f)
+            .border(
+                if (active) ir.sabztime.app.ui.theme.metalPillBorder() else goldBorder(0.5f),
+                shape
+            )
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -261,7 +285,7 @@ fun FilterButton(
         Icon(
             icon,
             contentDescription = null,
-            tint = if (active) MidnightDeep else Gold,
+            tint = if (active) Cocoa else CocoaSoft,
             modifier = Modifier.size(19.dp)
         )
         Spacer(Modifier.width(8.dp))
@@ -269,7 +293,7 @@ fun FilterButton(
             label,
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
-            color = if (active) MidnightDeep else Cream,
+            color = if (active) Cocoa else CocoaSoft,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f, fill = false)
@@ -278,7 +302,7 @@ fun FilterButton(
         Icon(
             Icons.Filled.ExpandMore,
             contentDescription = null,
-            tint = if (active) MidnightDeep.copy(alpha = 0.7f) else CreamDim.copy(alpha = 0.7f),
+            tint = if (active) Cocoa.copy(alpha = 0.7f) else CocoaSoft.copy(alpha = 0.7f),
             modifier = Modifier.size(16.dp)
         )
     }
@@ -315,8 +339,8 @@ fun FilterRow(
 }
 
 /**
- * کارت کسب‌وکار (VIP) — پس‌زمینه‌ی سرمه‌ای با بافت خطوط طلایی،
- * کاشی آیکون سه‌بعدی در سمت چپ، عنوان طلایی و توضیحات سفید.
+ * کارت کسب‌وکار (VIP) — شیشه‌ی روشن با بافت طلایی،
+ * عنوان قهوه‌ایِ تیره و کاشی برندِ طلایی.
  */
 @Composable
 fun VipBusinessCard(
@@ -337,9 +361,13 @@ fun VipBusinessCard(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    GoldText(
+                    Text(
                         text = title,
                         style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Cocoa,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
                     )
                     if (badge != null) {
@@ -351,7 +379,7 @@ fun VipBusinessCard(
                 Text(
                     location,
                     style = MaterialTheme.typography.bodySmall,
-                    color = PureWhite.copy(alpha = 0.88f),
+                    color = CocoaSoft,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -360,7 +388,7 @@ fun VipBusinessCard(
                     Text(
                         services,
                         style = MaterialTheme.typography.bodySmall,
-                        color = PureWhite.copy(alpha = 0.70f),
+                        color = CocoaSoft.copy(alpha = 0.8f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -372,25 +400,26 @@ fun VipBusinessCard(
     }
 }
 
-/** برچسب کوچک طلایی (VIP، ممتاز، …) */
+/** برچسب کوچک طلایی (VIP، ممتاز، …) — قرص فلز برجسته */
 @Composable
 fun GoldBadge(text: String, modifier: Modifier = Modifier) {
     Box(
         modifier
             .clip(RoundedCornerShape(50))
-            .background(Brush.horizontalGradient(listOf(GoldLight, GoldDim)))
+            .background(Brush.verticalGradient(MetalGoldGradient))
+            .border(ir.sabztime.app.ui.theme.metalPillBorder(0.8.dp), RoundedCornerShape(50))
             .padding(horizontal = 9.dp, vertical = 3.dp)
     ) {
         Text(
             text,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
-            color = MidnightDeep
+            color = Cocoa
         )
     }
 }
 
-/** آواتار دایره‌ای با حلقه‌ی طلایی */
+/** آواتار دایره‌ای کرم با حلقه‌ی طلایی */
 @Composable
 fun GoldAvatar(name: String, modifier: Modifier = Modifier, size: Dp = 56.dp) {
     val initial = name.trim().take(1).ifBlank { "؟" }
@@ -398,7 +427,8 @@ fun GoldAvatar(name: String, modifier: Modifier = Modifier, size: Dp = 56.dp) {
         modifier
             .size(size)
             .clip(CircleShape)
-            .background(Brush.verticalGradient(listOf(Color(0xFF1B2748), NavyInk)))
+            .background(Brush.verticalGradient(listOf(IconCreamTop, IconCreamBottom)))
+            .topGloss(0.5f)
             .goldRing(CircleShape, 2.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -406,13 +436,14 @@ fun GoldAvatar(name: String, modifier: Modifier = Modifier, size: Dp = 56.dp) {
             initial,
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
-            color = GoldLight
+            color = Cocoa
         )
     }
 }
 
 /**
- * ردیف منوی پروفایل — آیکون طلایی سمت راست، متن کرم، فلش کوچک سفید سمت چپ.
+ * ردیف منوی پروفایل — کاشی رنگی سمت راست، متن قهوه‌ای (از LocalContentColor)،
+ * فلش کوچک سمت چپ. داخل کارت زرشکی، رنگ متن به‌صورت خودکار کرم می‌شود.
  */
 @Composable
 fun LuxMenuRow(
@@ -437,7 +468,6 @@ fun LuxMenuRow(
             label,
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Medium,
-            color = Cream,
             modifier = Modifier.weight(1f),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -446,7 +476,7 @@ fun LuxMenuRow(
             Text(
                 trailing,
                 style = MaterialTheme.typography.labelMedium,
-                color = GoldDim,
+                color = LocalContentColor.current.copy(alpha = 0.7f),
                 maxLines = 1
             )
             Spacer(Modifier.width(8.dp))
@@ -454,7 +484,7 @@ fun LuxMenuRow(
         Icon(
             Icons.Filled.ChevronLeft,
             contentDescription = null,
-            tint = PureWhite.copy(alpha = 0.55f),
+            tint = LocalContentColor.current.copy(alpha = 0.6f),
             modifier = Modifier.size(20.dp)
         )
     }
@@ -469,13 +499,13 @@ fun GoldDivider(modifier: Modifier = Modifier) {
             .height(1.dp)
             .background(
                 Brush.horizontalGradient(
-                    listOf(Color.Transparent, Gold.copy(alpha = 0.28f), Color.Transparent)
+                    listOf(Color.Transparent, RingGold.copy(alpha = 0.45f), Color.Transparent)
                 )
             )
     )
 }
 
-/** عنوان بخش — خط طلایی کوتاه + متن کرم */
+/** عنوان بخش — میله‌ی طلایی کوتاه + متن قهوه‌ای */
 @Composable
 fun SectionTitle(text: String, modifier: Modifier = Modifier, trailing: (@Composable () -> Unit)? = null) {
     Row(
@@ -484,16 +514,17 @@ fun SectionTitle(text: String, modifier: Modifier = Modifier, trailing: (@Compos
     ) {
         Box(
             Modifier
-                .size(width = 3.dp, height = 18.dp)
+                .size(width = 4.dp, height = 19.dp)
                 .clip(RoundedCornerShape(50))
-                .background(Brush.verticalGradient(listOf(GoldLight, GoldDeep)))
+                .background(Brush.verticalGradient(MetalGoldGradient))
+                .border(ir.sabztime.app.ui.theme.metalPillBorder(0.7.dp), RoundedCornerShape(50))
         )
         Spacer(Modifier.width(9.dp))
         Text(
             text,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
-            color = Cream,
+            color = Cocoa,
             modifier = Modifier.weight(1f)
         )
         trailing?.invoke()
@@ -501,8 +532,8 @@ fun SectionTitle(text: String, modifier: Modifier = Modifier, trailing: (@Compos
 }
 
 /**
- * کارت زرشکی داشبورد پروفایل — ردیف هویت (ستاره، نام، امتیاز، آواتار)
- * به‌همراه محتوای دلخواه (لیست منو).
+ * کارت زرشکی داشبورد پروفایل — پنل رنگی برند با قاب طلایی؛
+ * ردیف هویت (آواتار، نام، امتیاز) به‌همراه محتوای دلخواه (لیست منو).
  */
 @Composable
 fun ProfileHeroCard(
@@ -517,71 +548,80 @@ fun ProfileHeroCard(
         gradient = BurgundyGradient,
         contentPadding = 18.dp
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            // در RTL: تصویر پروفایل سمت راست، ستاره‌ی طلایی سمت چپ
-            GoldAvatar(name = name, size = 58.dp)
-            Spacer(Modifier.width(14.dp))
-            Column(
-                Modifier.weight(1f),
-                horizontalAlignment = Alignment.Start
-            ) {
-                Text(
-                    name,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = Cream,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(Modifier.height(3.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
+        CompositionLocalProvider(LocalContentColor provides CreamLight) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // در RTL: تصویر پروفایل سمت راست، ستاره‌ی طلایی سمت چپ
+                GoldAvatar(name = name, size = 58.dp)
+                Spacer(Modifier.width(14.dp))
+                Column(
+                    Modifier.weight(1f),
+                    horizontalAlignment = Alignment.Start
+                ) {
                     Text(
-                        level,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = CreamDim.copy(alpha = 0.85f)
+                        name,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = CreamLight,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(Modifier.width(6.dp))
-                    GoldText(
-                        text = rating,
-                        style = MaterialTheme.typography.labelLarge
-                    )
+                    Spacer(Modifier.height(3.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            level,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = CreamLight.copy(alpha = 0.85f)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = rating,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = GoldPale
+                        )
+                    }
                 }
+                Spacer(Modifier.width(14.dp))
+                IconTile(
+                    icon = Icons.Filled.Star,
+                    tileSize = 44.dp,
+                    palette = TilePalette.GOLD,
+                    contentDescription = null
+                )
             }
-            Spacer(Modifier.width(14.dp))
-            IconTile(
-                icon = Icons.Filled.Star,
-                tileSize = 44.dp,
-                palette = TilePalette.GOLD,
-                contentDescription = null
-            )
+            Spacer(Modifier.height(14.dp))
+            GoldDivider()
+            Spacer(Modifier.height(6.dp))
+            content()
         }
-        Spacer(Modifier.height(14.dp))
-        GoldDivider()
-        Spacer(Modifier.height(6.dp))
-        content()
     }
 }
 
-/** نوار اطلاع‌رسانی نرم (آفلاین، هشدار) */
+/** نوار اطلاع‌رسانی نرم (آفلاین، هشدار) — کهربایی روشن */
 @Composable
 fun SoftBanner(text: String, modifier: Modifier = Modifier) {
     Row(
         modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Brush.horizontalGradient(listOf(Color(0x33D8B569), Color(0x14D8B569))))
-            .border(goldBorder(0.22f), RoundedCornerShape(16.dp))
+            .background(
+                Brush.horizontalGradient(
+                    listOf(Color(0x66FDE9B8), Color(0x59D4AF37))
+                )
+            )
+            .border(goldBorder(0.5f), RoundedCornerShape(16.dp))
             .padding(horizontal = 14.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text,
             style = MaterialTheme.typography.bodySmall,
-            color = Cream
+            fontWeight = FontWeight.Medium,
+            color = Cocoa
         )
     }
 }
 
 /** فضای خالی استاندارد پایین صفحه تا زیر نوار پیمایش شناور */
 @Composable
-fun BottomBarSpacer() = Spacer(Modifier.height(112.dp))
+fun BottomBarSpacer() = Spacer(Modifier.height(104.dp))

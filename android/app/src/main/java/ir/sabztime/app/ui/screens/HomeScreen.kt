@@ -1,6 +1,7 @@
 package ir.sabztime.app.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -224,8 +225,7 @@ fun HomeScreen(graph: AppGraph, navController: NavHostController) {
                     GhostIconButton(
                         icon = Icons.Filled.Refresh,
                         contentDescription = "تازه‌سازی",
-                        onClick = viewModel::refresh,
-                        tint = GoldDim
+                        onClick = viewModel::refresh
                     )
                 }
             )
@@ -261,7 +261,7 @@ fun HomeScreen(graph: AppGraph, navController: NavHostController) {
                     Text(
                         "حذف فیلترها",
                         style = MaterialTheme.typography.labelMedium,
-                        color = GoldLight,
+                        color = GoldDim,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier
                             .clip(RoundedCornerShape(50))
@@ -299,7 +299,7 @@ fun HomeScreen(graph: AppGraph, navController: NavHostController) {
                         .heightIn(min = 220.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = Gold, strokeWidth = 2.5.dp)
+                    CircularProgressIndicator(color = GoldDim, strokeWidth = 2.5.dp)
                 }
                 is UiState.Error -> ErrorState(r.message, r.kind, onRetry = viewModel::refresh)
                 UiState.Empty -> EmptyState(
@@ -363,7 +363,12 @@ private fun SelectionDialog(
             Column(
                 Modifier
                     .clip(LuxCardShape)
-                    .background(Brush.verticalGradient(listOf(MidnightSoft, NavyCardDeep)))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color(0xFFFFFDF4), Color(0xFFFFEFC2))
+                        )
+                    )
+                    .border(ir.sabztime.app.ui.theme.goldGradientBorder(), LuxCardShape)
                     .fillMaxWidth()
             ) {
                 Text(
@@ -371,7 +376,7 @@ private fun SelectionDialog(
                     modifier = Modifier.padding(horizontal = 22.dp, vertical = 16.dp),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = GoldLight
+                    color = ir.sabztime.app.ui.theme.Cocoa
                 )
                 GoldDivider()
                 LazyColumn(Modifier.heightIn(max = 420.dp)) {
@@ -385,21 +390,25 @@ private fun SelectionDialog(
                         ) {
                             Box(
                                 Modifier
-                                    .size(6.dp)
+                                    .size(7.dp)
                                     .clip(RoundedCornerShape(50))
-                                    .background(Gold.copy(alpha = 0.7f))
+                                    .background(
+                                        Brush.verticalGradient(
+                                            ir.sabztime.app.ui.theme.MetalGoldGradient
+                                        )
+                                    )
                             )
                             Spacer(Modifier.width(10.dp))
                             Text(
                                 label,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Cream,
+                                color = ir.sabztime.app.ui.theme.Cocoa,
                                 modifier = Modifier.weight(1f)
                             )
                             Text(
                                 "${Jalali.persianDigits(count)} کسب‌وکار",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = PureWhite.copy(alpha = 0.5f)
+                                color = ir.sabztime.app.ui.theme.CocoaSoft
                             )
                         }
                     }

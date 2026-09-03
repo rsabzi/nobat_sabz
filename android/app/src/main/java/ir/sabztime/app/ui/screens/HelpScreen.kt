@@ -220,7 +220,6 @@ fun HelpScreen(graph: AppGraph, navController: NavHostController) {
                                 androidx.compose.material3.Icon(
                                     Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = null,
-                                    tint = Color.White,
                                     modifier = Modifier.width(18.dp)
                                 )
                                 Spacer(Modifier.width(6.dp))

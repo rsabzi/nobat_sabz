@@ -182,7 +182,7 @@ fun MyBusinessesScreen(graph: AppGraph, navController: NavHostController) {
                             onClick = { showAddDialog = true },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Icon(Icons.Filled.Add, contentDescription = null, tint = Color.White)
+                            Icon(Icons.Filled.Add, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
                             Text("افزودن کسب‌وکار", fontWeight = FontWeight.Bold)
                         }

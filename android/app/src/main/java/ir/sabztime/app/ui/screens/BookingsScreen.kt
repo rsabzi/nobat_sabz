@@ -189,7 +189,7 @@ fun BookingsScreen(
 @Composable
 fun BookingCard(b: BookingSummary, onClick: () -> Unit, badge: (@Composable () -> Unit)? = null) {
     val parts = Jalali.parts(b.bookingDate)
-    GlassCard(onClick = onClick, shape = RoundedCornerShape(25.dp), pattern = true) {
+    GlassCard(onClick = onClick, shape = RoundedCornerShape(26.dp), pattern = true) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             // بلوک تاریخ
             Box(
@@ -271,12 +271,14 @@ fun statusText(status: String): String = when (status) {
 fun statusColor(status: String): Color = when (status) {
     "cancelled" -> ir.sabztime.app.ui.theme.DangerRose
     "completed" -> ir.sabztime.app.ui.theme.SuccessEmerald
-    else -> ir.sabztime.app.ui.theme.GoldLight
+    "confirmed" -> ir.sabztime.app.ui.theme.GoldDim
+    else -> ir.sabztime.app.ui.theme.CocoaSoft
 }
 
 @Composable
 fun statusContainer(status: String): Color = when (status) {
-    "cancelled" -> ir.sabztime.app.ui.theme.DangerRoseDeep.copy(alpha = 0.35f)
-    "completed" -> ir.sabztime.app.ui.theme.SuccessEmeraldDeep.copy(alpha = 0.30f)
-    else -> ir.sabztime.app.ui.theme.GoldDeep.copy(alpha = 0.28f)
+    "cancelled" -> Color(0x24C4264A)
+    "completed" -> Color(0x241F7A4D)
+    "confirmed" -> Color(0x26B8860B)
+    else -> Color(0x33D4AF37)
 }

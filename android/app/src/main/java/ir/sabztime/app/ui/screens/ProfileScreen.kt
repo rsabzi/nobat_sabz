@@ -1,6 +1,7 @@
 package ir.sabztime.app.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -68,6 +69,7 @@ import ir.sabztime.app.ui.components.TilePalette
 import ir.sabztime.app.ui.theme.Cream
 import ir.sabztime.app.ui.theme.CreamDim
 import ir.sabztime.app.ui.theme.Gold
+import ir.sabztime.app.ui.theme.GoldDim
 import ir.sabztime.app.ui.theme.GoldLight
 import ir.sabztime.app.ui.theme.LuxCardShape
 import ir.sabztime.app.ui.theme.MidnightSoft
@@ -214,7 +216,7 @@ fun ProfileScreen(graph: AppGraph, navController: NavHostController) {
                             Text(
                                 Jalali.persianDigits(p.user.phone),
                                 style = MaterialTheme.typography.labelMedium,
-                                color = PureWhite.copy(alpha = 0.55f)
+                                color = CocoaSoft
                             )
                         }
                         GhostIconButton(
@@ -337,8 +339,8 @@ fun ProfileScreen(graph: AppGraph, navController: NavHostController) {
             onDismissRequest = { showLogoutDialog = false },
             shape = LuxCardShape,
             containerColor = MidnightSoft,
-            titleContentColor = GoldLight,
-            textContentColor = Cream,
+            titleContentColor = Cream,
+            textContentColor = CreamDim,
             title = { Text("خروج از حساب", fontWeight = FontWeight.Bold) },
             text = { Text("آیا از حساب کاربری خود خارج می‌شوید؟") },
             confirmButton = {
@@ -356,14 +358,14 @@ fun ProfileScreen(graph: AppGraph, navController: NavHostController) {
             },
             dismissButton = {
                 TextButton(onClick = { showLogoutDialog = false }) {
-                    Text("منصرف شدم", color = Gold)
+                    Text("منصرف شدم", color = GoldDim)
                 }
             }
         )
     }
 }
 
-/** آمار کوچک لوکس: عدد طلایی + برچسب کم‌رنگ */
+/** آمار کوچک لوکس: عدد طلایی برس‌خورده + برچسب قهوه‌ایِ ملایم */
 @Composable
 private fun LuxStat(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -371,7 +373,13 @@ private fun LuxStat(label: String, value: String) {
             Modifier
                 .clip(RoundedCornerShape(14.dp))
                 .background(
-                    Brush.verticalGradient(listOf(Color(0x1FFFFFFF), Color(0x0AFFFFFF)))
+                    Brush.verticalGradient(
+                        listOf(Color(0xE6FFFFFF), Color(0xAAF3ECDD))
+                    )
+                )
+                .border(
+                    ir.sabztime.app.ui.theme.goldBorder(0.4f),
+                    RoundedCornerShape(14.dp)
                 )
                 .padding(horizontal = 12.dp, vertical = 6.dp)
         ) {

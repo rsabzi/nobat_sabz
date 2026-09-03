@@ -2,7 +2,6 @@ package ir.sabztime.app.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -60,7 +59,7 @@ fun LoadingState(modifier: Modifier = Modifier, label: String = "در حال ب�
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             CircularProgressIndicator(
-                color = ir.sabztime.app.ui.theme.Gold,
+                color = MaterialTheme.colorScheme.primary,
                 strokeWidth = 2.5.dp,
                 modifier = Modifier.size(30.dp)
             )
@@ -68,7 +67,7 @@ fun LoadingState(modifier: Modifier = Modifier, label: String = "در حال ب�
             Text(
                 label,
                 style = MaterialTheme.typography.bodySmall,
-                color = ir.sabztime.app.ui.theme.TextMuted
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -125,7 +124,6 @@ fun EmptyState(
     modifier: Modifier = Modifier,
     action: (@Composable () -> Unit)? = null
 ) {
-    val dark = isSystemInDarkTheme()
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -140,11 +138,11 @@ fun EmptyState(
                     .clip(RoundedCornerShape(30.dp))
                     .background(
                         androidx.compose.ui.graphics.Brush.verticalGradient(
-                            listOf(Color(0x33182343), Color(0x0DFFFFFF))
+                            listOf(Color(0xCCFFFFFF), Color(0x99F3ECDD))
                         )
                     )
                     .border(
-                        ir.sabztime.app.ui.theme.goldBorder(0.22f),
+                        ir.sabztime.app.ui.theme.goldBorder(0.55f),
                         RoundedCornerShape(30.dp)
                     ),
                 contentAlignment = Alignment.Center
@@ -157,7 +155,7 @@ fun EmptyState(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
-                color = ir.sabztime.app.ui.theme.Cream
+                color = MaterialTheme.colorScheme.onSurface
             )
             if (subtitle != null) {
                 Spacer(Modifier.height(8.dp))

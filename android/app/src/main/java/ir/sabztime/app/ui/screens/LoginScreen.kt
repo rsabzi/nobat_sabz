@@ -197,7 +197,7 @@ fun LoginScreen(graph: AppGraph, navController: NavHostController) {
             Text(
                 "جستجو، رزرو و مدیریت نوبت — با تجربه‌ای لوکس",
                 style = MaterialTheme.typography.bodySmall,
-                color = ir.sabztime.app.ui.theme.PureWhite.copy(alpha = 0.6f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
             Spacer(Modifier.height(22.dp))
@@ -264,7 +264,7 @@ fun LoginScreen(graph: AppGraph, navController: NavHostController) {
                     ) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(24.dp),
-                            color = ir.sabztime.app.ui.theme.Gold,
+                            color = MaterialTheme.colorScheme.primary,
                             strokeWidth = 2.dp
                         )
                     }
@@ -299,7 +299,7 @@ fun LoginScreen(graph: AppGraph, navController: NavHostController) {
 
             Spacer(Modifier.height(12.dp))
             TextButton(onClick = { navController.navigate(Routes.HELP) }) {
-                Text("درباره سرویس نوبت‌سبز", color = ir.sabztime.app.ui.theme.GoldLight)
+                Text("درباره سرویس نوبت‌سبز", color = ir.sabztime.app.ui.theme.GoldDim)
             }
             Text(
                 "نکته: اطلاعات شما با حساب تلگرام و سیستم رزرو نوبت‌سبز یکپارچه است.",
@@ -364,16 +364,16 @@ private fun GlassTextField(
         shape = RoundedCornerShape(18.dp),
         // فقط پارامترهایی که در همه‌ی نسخه‌های M3 1.x وجود دارند (سازگار با 1.2.1)
         colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = Color.White.copy(alpha = 0.06f),
-            unfocusedContainerColor = Color.White.copy(alpha = 0.04f),
-            focusedTextColor = ir.sabztime.app.ui.theme.Cream,
-            unfocusedTextColor = ir.sabztime.app.ui.theme.Cream,
+            focusedContainerColor = Color.White.copy(alpha = 0.55f),
+            unfocusedContainerColor = Color.White.copy(alpha = 0.32f),
+            focusedTextColor = ir.sabztime.app.ui.theme.Cocoa,
+            unfocusedTextColor = ir.sabztime.app.ui.theme.Cocoa,
             cursorColor = MaterialTheme.colorScheme.primary,
             focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = Color.White.copy(alpha = 0.16f),
-            focusedLeadingIconColor = ir.sabztime.app.ui.theme.Gold,
-            unfocusedLeadingIconColor = ir.sabztime.app.ui.theme.TextMuted,
-            unfocusedLabelColor = ir.sabztime.app.ui.theme.TextMuted,
+            unfocusedBorderColor = ir.sabztime.app.ui.theme.RingGold.copy(alpha = 0.45f),
+            focusedLeadingIconColor = ir.sabztime.app.ui.theme.GoldDim,
+            unfocusedLeadingIconColor = ir.sabztime.app.ui.theme.CocoaSoft,
+            unfocusedLabelColor = ir.sabztime.app.ui.theme.CocoaSoft,
             focusedLabelColor = MaterialTheme.colorScheme.primary,
             errorLabelColor = MaterialTheme.colorScheme.error,
             errorBorderColor = MaterialTheme.colorScheme.error,

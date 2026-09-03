@@ -5,18 +5,18 @@ import androidx.compose.material3.Shapes
 import androidx.compose.ui.unit.dp
 
 /**
- * گوشه‌های گرد و نرم — امضای بصری «پرایم» (~۲۵dp روی کارت‌های اصلی).
+ * گوشه‌های گرد و نرم — امضای بصری «طلایی لوکس» (۲۶dp روی کارت‌های اصلی).
  */
 val SabzShapes = Shapes(
     extraSmall = RoundedCornerShape(14.dp),
     small = RoundedCornerShape(18.dp),
     medium = RoundedCornerShape(22.dp),
-    large = RoundedCornerShape(25.dp),
+    large = RoundedCornerShape(26.dp),
     extraLarge = RoundedCornerShape(32.dp)
 )
 
 /** فرم استاندارد کارت‌های لوکس */
-val LuxCardShape = RoundedCornerShape(25.dp)
+val LuxCardShape = RoundedCornerShape(26.dp)
 
 /** فرم سرچ‌بار و فیلدهای ورودی */
 val LuxFieldShape = RoundedCornerShape(20.dp)
@@ -25,7 +25,7 @@ val LuxFieldShape = RoundedCornerShape(20.dp)
 val PillShape = RoundedCornerShape(50)
 
 /** نوار پیمایش شناور */
-val NavBarShape = RoundedCornerShape(28.dp)
+val NavBarShape = RoundedCornerShape(30.dp)
 
 /** سازگاری با کد قدیمی */
 val GlassShape = LuxCardShape

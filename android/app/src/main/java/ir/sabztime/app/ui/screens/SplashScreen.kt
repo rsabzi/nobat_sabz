@@ -38,21 +38,18 @@ import androidx.navigation.NavHostController
 import ir.sabztime.app.core.AppGraph
 import ir.sabztime.app.ui.Routes
 import ir.sabztime.app.ui.components.GoldText
-import ir.sabztime.app.ui.components.brushedGoldTint
-import ir.sabztime.app.ui.theme.Cream
-import ir.sabztime.app.ui.theme.Gold
-import ir.sabztime.app.ui.theme.GoldBright
-import ir.sabztime.app.ui.theme.GoldDeep
-import ir.sabztime.app.ui.theme.GoldLight
+import ir.sabztime.app.ui.theme.Cocoa
+import ir.sabztime.app.ui.theme.CocoaSoft
+import ir.sabztime.app.ui.theme.GoldBgEdge
+import ir.sabztime.app.ui.theme.GoldPale
 import ir.sabztime.app.ui.theme.GlassBackground
-import ir.sabztime.app.ui.theme.NavyInk
-import ir.sabztime.app.ui.theme.PureWhite
-import ir.sabztime.app.ui.theme.goldBorder
-import ir.sabztime.app.ui.theme.goldLinePattern
+import ir.sabztime.app.ui.theme.MetalGoldGradient
+import ir.sabztime.app.ui.theme.RingGold
+import ir.sabztime.app.ui.theme.metalPillBorder
 import ir.sabztime.app.ui.theme.neonGlow
 
 /**
- * صفحه‌ی خوش‌آمد — پس‌زمینه‌ی سرمه‌ای→زغالی با نشان طلایی نفس‌کش (Breathing glow).
+ * صفحه‌ی خوش‌آمد — زمینه‌ی رادیال طلایی با نشان طلاییِ برجسته و نفس‌کش (Breathing glow).
  */
 @Composable
 fun SplashScreen(graph: AppGraph, navController: NavHostController) {
@@ -77,38 +74,33 @@ fun SplashScreen(graph: AppGraph, navController: NavHostController) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Box(Modifier.size(140.dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(150.dp), contentAlignment = Alignment.Center) {
                 Box(
                     Modifier
-                        .size(120.dp)
+                        .size(128.dp)
                         .scale(pulse)
-                        .neonGlow(color = GoldLight, alpha = 0.5f)
+                        .neonGlow(color = GoldPale, alpha = 0.55f)
                 )
-                val shape = RoundedCornerShape(36.dp)
+                val shape = RoundedCornerShape(38.dp)
                 Box(
                     Modifier
-                        .size(108.dp)
-                        .shadow(24.dp, shape, ambientColor = Color.Black, spotColor = Color.Black)
+                        .size(112.dp)
+                        .shadow(
+                            26.dp, shape,
+                            ambientColor = GoldBgEdge.copy(alpha = 0.6f),
+                            spotColor = GoldBgEdge.copy(alpha = 0.65f)
+                        )
                         .clip(shape)
-                        .background(Brush.verticalGradient(listOf(Color(0xFF17234A), NavyInk)))
-                        .goldLinePattern(alpha = 0.10f, spacing = 10.dp)
-                        .border(goldBorder(0.45f), shape),
+                        .background(Brush.verticalGradient(MetalGoldGradient))
+                        .border(metalPillBorder(1.4.dp), shape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        Modifier
-                            .size(52.dp)
-                            .brushedGoldTint(
-                                Brush.linearGradient(listOf(GoldLight, Gold, GoldDeep, GoldBright))
-                            )
-                    ) {
-                        Icon(
-                            Icons.Filled.ContentCut,
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxSize(),
-                            tint = Color.White
-                        )
-                    }
+                    Icon(
+                        Icons.Filled.ContentCut,
+                        contentDescription = null,
+                        modifier = Modifier.size(54.dp),
+                        tint = Cocoa
+                    )
                 }
             }
 
@@ -121,31 +113,31 @@ fun SplashScreen(graph: AppGraph, navController: NavHostController) {
             Text(
                 "تجربه‌ای لوکس از رزرو نوبت",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Cream.copy(alpha = 0.75f),
+                color = CocoaSoft,
                 fontWeight = FontWeight.Normal
             )
             Spacer(Modifier.height(20.dp))
             Box(
                 Modifier
                     .width(58.dp)
-                    .height(1.dp)
+                    .height(1.5.dp)
                     .background(
                         Brush.horizontalGradient(
-                            listOf(Color.Transparent, GoldLight.copy(alpha = 0.8f), Color.Transparent)
+                            listOf(Color.Transparent, RingGold.copy(alpha = 0.9f), Color.Transparent)
                         )
                     )
             )
             Spacer(Modifier.height(40.dp))
             CircularProgressIndicator(
                 modifier = Modifier.size(26.dp),
-                color = Gold,
+                color = RingGold,
                 strokeWidth = 2.dp
             )
             Spacer(Modifier.height(14.dp))
             Text(
                 "در حال آماده‌سازی…",
                 style = MaterialTheme.typography.labelSmall,
-                color = PureWhite.copy(alpha = 0.45f)
+                color = CocoaSoft.copy(alpha = 0.8f)
             )
         }
     }

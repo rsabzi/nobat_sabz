@@ -1,65 +1,66 @@
 package ir.sabztime.app.ui.theme
 
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 
 /**
- * طرح رنگ «لوکس» — هویت بصری واحد و تک‌حالته (Dark Premium).
- * تمام صفحه‌ها از همین طرح تغذیه می‌شوند تا حس یکدست و گران‌قیمت حفظ شود.
+ * طرح رنگ «طلایی لوکس» — هویت بصری روشن و یکدست (Gold Metallic Light).
+ * تمام صفحه‌ها از همین طرح تغذیه می‌شوند تا حس طلای برجسته و یکپارچه بماند.
  */
-private val LuxColors = darkColorScheme(
-    primary = Gold,
-    onPrimary = MidnightDeep,
-    primaryContainer = GoldDeep,
-    onPrimaryContainer = GoldLight,
-    inversePrimary = GoldBright,
+private val LuxColors = lightColorScheme(
+    primary = GoldInk,
+    onPrimary = Color.White,
+    primaryContainer = GoldPale,
+    onPrimaryContainer = Cocoa,
+    inversePrimary = GoldPale,
 
-    secondary = Burgundy,
-    onSecondary = Cream,
-    secondaryContainer = BurgundyDeep,
-    onSecondaryContainer = Cream,
+    secondary = BurgundyLight,
+    onSecondary = Color.White,
+    secondaryContainer = Color(0xFFF6DEE0),
+    onSecondaryContainer = Color(0xFF4A0F18),
 
-    tertiary = GoldBright,
-    onTertiary = MidnightDeep,
-    tertiaryContainer = GoldContainer,
-    onTertiaryContainer = GoldLight,
+    tertiary = RingGold,
+    onTertiary = Color.White,
+    tertiaryContainer = GoldTint,
+    onTertiaryContainer = Cocoa,
 
-    background = Midnight,
-    onBackground = Cream,
+    background = GoldBgTop,
+    onBackground = Cocoa,
 
     surface = NavyCard,
-    onSurface = Cream,
+    onSurface = Cocoa,
     surfaceVariant = NavyCardDeep,
-    onSurfaceVariant = TextMuted,
+    onSurfaceVariant = CocoaSoft,
     surfaceTint = Gold,
 
     error = DangerRose,
-    onError = PureWhite,
-    errorContainer = DangerRoseDeep,
-    onErrorContainer = RoseContainerText,
+    onError = Color.White,
+    errorContainer = Color(0xFFF8D7DB),
+    onErrorContainer = Color(0xFF5A0E22),
 
-    outline = GoldDim,
+    outline = RingGold.copy(alpha = 0.55f),
     outlineVariant = OutlineFaint,
     scrim = ScrimDeep,
 
-    inverseSurface = Cream,
-    inverseOnSurface = MidnightDeep,
+    inverseSurface = BurgundyDeep,
+    inverseOnSurface = CreamLight,
 
-    surfaceContainerLowest = CharcoalDeep,
-    surfaceContainerLow = Midnight,
-    surfaceContainer = NavyCardDeep,
-    surfaceContainerHigh = NavyCard,
-    surfaceContainerHighest = MidnightSoft
+    surfaceContainerLowest = Color(0xFFFFFFFF),
+    surfaceContainerLow = Color(0xFFFFFBF0),
+    surfaceContainer = Color(0xFFFFF4D6),
+    surfaceContainerHigh = Color(0xFFFFEFC2),
+    surfaceContainerHighest = Color(0xFFFFE9AC)
 )
 
 /**
- * تم نوبت‌سبز — «پرایم». پارامتر darkTheme برای سازگاری با کدهای موجود
- * حفظ شده اما هویت بصری همیشه تیره‌ی لوکس است (طراحی تک‌حالته).
+ * تم نوبت‌سبز — «طلایی لوکس». پارامتر darkTheme برای سازگاری با کدهای موجود
+ * حفظ شده اما هویت بصری همیشه روشنِ طلایی است (طراحی تک‌حالته).
  */
 @Composable
 fun SabzTheme(
-    darkTheme: Boolean = true,
+    darkTheme: Boolean = false,
     content: @Composable () -> Unit
 ) {
     MaterialTheme(

@@ -346,8 +346,7 @@ private fun ActivationCard(
                 if (busy) {
                     CircularProgressIndicator(
                         modifier = Modifier.width(18.dp).height(18.dp),
-                        strokeWidth = 2.dp,
-                        color = Color.White
+                        strokeWidth = 2.dp
                     )
                     Spacer(Modifier.width(8.dp))
                 }

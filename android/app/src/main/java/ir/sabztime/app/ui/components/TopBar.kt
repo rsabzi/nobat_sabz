@@ -1,14 +1,12 @@
 package ir.sabztime.app.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -31,14 +29,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import ir.sabztime.app.ui.theme.Cream
-import ir.sabztime.app.ui.theme.Gold
-import ir.sabztime.app.ui.theme.GoldLight
-import ir.sabztime.app.ui.theme.goldBorder
+import ir.sabztime.app.ui.theme.Cocoa
+import ir.sabztime.app.ui.theme.CocoaSoft
+import ir.sabztime.app.ui.theme.RingGold
 
 /**
- * نوار بالای صفحه — شفاف روی پس‌زمینه‌ی لوکس، عنوان کرم/طلایی،
- * دکمه‌ی بازگشت دایره‌ای شیشه‌ای و خط مویی طلایی در پایین.
+ * نوار بالای صفحه — شفاف روی زمینه‌ی طلایی، عنوان قهوه‌ایِ تیره،
+ * دکمه‌ی بازگشتِ کرمِ دایره‌ای (حلقه‌ی طلایی) و خط مویی طلایی در پایین.
  */
 @Composable
 fun GlassTopBar(
@@ -64,16 +61,14 @@ fun GlassTopBar(
                 Box(
                     Modifier
                         .size(40.dp)
-                        .clip(CircleShape)
-                        .background(Brush.verticalGradient(listOf(Color(0x1FFFFFFF), Color(0x0AFFFFFF))))
-                        .border(goldBorder(0.24f), CircleShape)
+                        .creamCircle(CircleShape)
                         .clickable(onClick = onBack),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "بازگشت",
-                        tint = Gold,
+                        tint = Cocoa,
                         modifier = Modifier.size(19.dp)
                     )
                 }
@@ -84,7 +79,7 @@ fun GlassTopBar(
                     title,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = Cream,
+                    color = Cocoa,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -92,7 +87,7 @@ fun GlassTopBar(
                     Text(
                         subtitle,
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color.White.copy(alpha = 0.5f),
+                        color = CocoaSoft,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -107,7 +102,11 @@ fun GlassTopBar(
                 .height(1.dp)
                 .background(
                     Brush.horizontalGradient(
-                        listOf(Color.Transparent, Gold.copy(alpha = 0.22f), Color.Transparent)
+                        listOf(
+                            Color.Transparent,
+                            RingGold.copy(alpha = 0.5f),
+                            Color.Transparent
+                        )
                     )
                 )
         )
@@ -121,7 +120,7 @@ fun NotificationIconButton(onClick: () -> Unit) {
         icon = Icons.Filled.Notifications,
         contentDescription = "اعلان‌ها",
         onClick = onClick,
-        tint = GoldLight,
+        tint = CocoaSoft,
         size = 40.dp
     )
 }
