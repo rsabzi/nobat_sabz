@@ -20,7 +20,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Queue
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
@@ -62,7 +61,6 @@ import ir.sabztime.app.data.QueueItem
 import ir.sabztime.app.data.QueueResponse
 import ir.sabztime.app.data.ScheduleData
 import ir.sabztime.app.data.Service
-import ir.sabztime.app.data.SubscriptionStatusResponse
 import ir.sabztime.app.ui.Routes
 import ir.sabztime.app.ui.components.EmptyState
 import ir.sabztime.app.ui.components.ErrorState
@@ -84,7 +82,6 @@ import kotlinx.coroutines.launch
 
 data class OwnerState(
     val queue: UiState<QueueResponse> = UiState.Loading,
-    val subscription: SubscriptionStatusResponse? = null,
     val actionBusy: Boolean = false,
     val actionMessage: String? = null,
     val actionError: Boolean = false
@@ -116,7 +113,6 @@ class OwnerBusinessViewModel(private val graph: AppGraph, private val businessId
     fun refreshAll() {
         loadBusiness()
         refreshQueue()
-        refreshSubscription()
         refreshServices()
         loadSchedule()
         refreshBookings()
@@ -155,17 +151,6 @@ class OwnerBusinessViewModel(private val graph: AppGraph, private val businessId
             } catch (e: Exception) {
                 val s = classify(e)
                 _state.value = _state.value.copy(queue = UiState.Error(s.message, s.kind))
-            }
-        }
-    }
-
-    fun refreshSubscription() {
-        viewModelScope.launch {
-            try {
-                val s = graph.repository.subscriptionStatus(businessId)
-                _state.value = _state.value.copy(subscription = s)
-            } catch (e: Exception) {
-                // اختیاری
             }
         }
     }
@@ -448,43 +433,6 @@ fun OwnerBusinessScreen(graph: AppGraph, businessId: Int, navController: NavHost
                                     contentDescription = "حذف کسب‌وکار",
                                     tint = MaterialTheme.colorScheme.error
                                 )
-                            }
-                        }
-                    }
-                }
-
-                item {
-                    // اشتراک
-                    state.subscription?.let { s ->
-                        GlassCard {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconTile(
-                                    icon = Icons.Filled.Star,
-                                    tileSize = 44.dp,
-                                    palette = TilePalette.AMBER,
-                                    contentDescription = null
-                                )
-                                Spacer(Modifier.width(12.dp))
-                                Text(
-                                    "اشتراک و ظرفیت",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            InfoRow("نوبت‌های رایگان باقی‌مانده", Jalali.persianDigits(s.freeTokensRemaining))
-                            InfoRow("پلن فعلی", s.subscriptionPlan ?: "—")
-                            InfoRow("انقضا", Jalali.formatLong(s.expiryDate))
-                            s.referralCode?.let {
-                                InfoRow("لینک اختصاصی", "@$it")
-                            }
-                            Spacer(Modifier.height(10.dp))
-                            GradientButton(
-                                onClick = { navController.navigate(Routes.subscription(businessId)) },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("مشاهده پلن‌ها و خرید اشتراک", fontWeight = FontWeight.Bold)
                             }
                         }
                     }

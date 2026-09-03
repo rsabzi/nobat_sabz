@@ -469,6 +469,13 @@ if (!function_exists('initDatabase')) {
                 if ($verbose) echo "  ✅ جدول schedules ایجاد شد\n";
             } else {
                 if ($verbose) echo "  ✓ جدول schedules وجود دارد\n";
+                // پایگاه‌های قدیمی که پیش از افزودن is_active ساخته شده‌اند را ارتقا بده؛
+                // api.php (ذخیره برنامه، دریافت تاریخ/ساعت) به is_active وابسته است.
+                if (!columnExists($pdo, 'schedules', 'is_active')) {
+                    if ($verbose) echo "  🔄 اضافه کردن ستون is_active به schedules...\n";
+                    $pdo->exec("ALTER TABLE schedules ADD COLUMN is_active tinyint(1) DEFAULT 1 COMMENT 'آیا فعال است؟' AFTER is_working");
+                    if ($verbose) echo "  ✅ ستون is_active اضافه شد\n";
+                }
             }
             
             // =============== جدول schedule_overrides ===============
@@ -498,6 +505,13 @@ if (!function_exists('initDatabase')) {
                 if ($verbose) echo "  ✅ جدول schedule_overrides ایجاد شد\n";
             } else {
                 if ($verbose) echo "  ✓ جدول schedule_overrides وجود دارد\n";
+                // پایگاه‌های قدیمی که ستون is_day_off ندارند را ارتقا بده؛
+                // api.php در get_available_slots / get_schedule / update_schedule به آن نیاز دارد.
+                if (!columnExists($pdo, 'schedule_overrides', 'is_day_off')) {
+                    if ($verbose) echo "  🔄 اضافه کردن ستون is_day_off به schedule_overrides...\n";
+                    $pdo->exec("ALTER TABLE schedule_overrides ADD COLUMN is_day_off tinyint(1) DEFAULT 0 COMMENT 'روز تعطیل است؟' AFTER is_working");
+                    if ($verbose) echo "  ✅ ستون is_day_off اضافه شد\n";
+                }
             }
             
             // =============== جدول daily_schedules ===============

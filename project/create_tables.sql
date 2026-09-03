@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS `schedules` (
   `start_time` time DEFAULT NULL COMMENT 'زمان شروع کار',
   `end_time` time DEFAULT NULL COMMENT 'زمان پایان کار',
   `is_working` tinyint(1) DEFAULT 1 COMMENT 'آیا در این روز کار می‌کند؟',
+  `is_active` tinyint(1) DEFAULT 1 COMMENT 'آیا فعال است؟ (منبع حقیقت روز کاری در api.php)',
   `break_start` time DEFAULT NULL COMMENT 'زمان شروع استراحت',
   `break_end` time DEFAULT NULL COMMENT 'زمان پایان استراحت',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'زمان ایجاد',
@@ -92,6 +93,7 @@ CREATE TABLE IF NOT EXISTS `schedule_overrides` (
   `start_time` time DEFAULT NULL COMMENT 'زمان شروع (NULL = تعطیل)',
   `end_time` time DEFAULT NULL COMMENT 'زمان پایان (NULL = تعطیل)',
   `is_working` tinyint(1) DEFAULT 0 COMMENT 'آیا در این روز کار می‌کند؟',
+  `is_day_off` tinyint(1) DEFAULT 0 COMMENT 'روز تعطیل است؟ (منبع حقیقت در api.php)',
   `reason` varchar(255) DEFAULT NULL COMMENT 'دلیل تغییر',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'زمان ایجاد',
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'زمان آخرین به‌روزرسانی',
@@ -137,32 +139,32 @@ INSERT IGNORE INTO `businesses` (`owner_id`, `name`, `description`, `address`, `
 (3, 'مرکز ماساژ درمانی', 'ماساژ درمانی و فیزیوتراپی', 'تهران، خیابان شریعتی، پلاک 789', '02155667788', 'info@massage.com', 'درمانی', 60, 7);
 
 -- زمان‌بندی‌های عمومی نمونه (آرایشگاه زیبا - شنبه تا چهارشنبه)
-INSERT IGNORE INTO `schedules` (`business_id`, `day_of_week`, `start_time`, `end_time`, `is_working`) VALUES
-(1, 6, '09:00:00', '18:00:00', 1), -- شنبه
-(1, 0, '09:00:00', '18:00:00', 1), -- یکشنبه
-(1, 1, '09:00:00', '18:00:00', 1), -- دوشنبه
-(1, 2, '09:00:00', '18:00:00', 1), -- سه‌شنبه
-(1, 3, '09:00:00', '18:00:00', 1), -- چهارشنبه
-(1, 4, NULL, NULL, 0), -- پنج‌شنبه (تعطیل)
-(1, 5, NULL, NULL, 0); -- جمعه (تعطیل)
+INSERT IGNORE INTO `schedules` (`business_id`, `day_of_week`, `start_time`, `end_time`, `is_working`, `is_active`) VALUES
+(1, 6, '09:00:00', '18:00:00', 1, 1), -- شنبه
+(1, 0, '09:00:00', '18:00:00', 1, 1), -- یکشنبه
+(1, 1, '09:00:00', '18:00:00', 1, 1), -- دوشنبه
+(1, 2, '09:00:00', '18:00:00', 1, 1), -- سه‌شنبه
+(1, 3, '09:00:00', '18:00:00', 1, 1), -- چهارشنبه
+(1, 4, NULL, NULL, 0, 0), -- پنج‌شنبه (تعطیل)
+(1, 5, NULL, NULL, 0, 0); -- جمعه (تعطیل)
 
 -- زمان‌بندی‌های عمومی نمونه (کلینیک دندانپزشکی - شنبه تا چهارشنبه)
-INSERT IGNORE INTO `schedules` (`business_id`, `day_of_week`, `start_time`, `end_time`, `is_working`, `break_start`, `break_end`) VALUES
-(2, 6, '08:00:00', '20:00:00', 1, '12:00:00', '14:00:00'), -- شنبه
-(2, 0, '08:00:00', '20:00:00', 1, '12:00:00', '14:00:00'), -- یکشنبه
-(2, 1, '08:00:00', '20:00:00', 1, '12:00:00', '14:00:00'), -- دوشنبه
-(2, 2, '08:00:00', '20:00:00', 1, '12:00:00', '14:00:00'), -- سه‌شنبه
-(2, 3, '08:00:00', '20:00:00', 1, '12:00:00', '14:00:00'), -- چهارشنبه
-(2, 4, NULL, NULL, 0, NULL, NULL), -- پنج‌شنبه (تعطیل)
-(2, 5, NULL, NULL, 0, NULL, NULL); -- جمعه (تعطیل)
+INSERT IGNORE INTO `schedules` (`business_id`, `day_of_week`, `start_time`, `end_time`, `is_working`, `is_active`, `break_start`, `break_end`) VALUES
+(2, 6, '08:00:00', '20:00:00', 1, 1, '12:00:00', '14:00:00'), -- شنبه
+(2, 0, '08:00:00', '20:00:00', 1, 1, '12:00:00', '14:00:00'), -- یکشنبه
+(2, 1, '08:00:00', '20:00:00', 1, 1, '12:00:00', '14:00:00'), -- دوشنبه
+(2, 2, '08:00:00', '20:00:00', 1, 1, '12:00:00', '14:00:00'), -- سه‌شنبه
+(2, 3, '08:00:00', '20:00:00', 1, 1, '12:00:00', '14:00:00'), -- چهارشنبه
+(2, 4, NULL, NULL, 0, 0, NULL, NULL), -- پنج‌شنبه (تعطیل)
+(2, 5, NULL, NULL, 0, 0, NULL, NULL); -- جمعه (تعطیل)
 
 -- تغییرات زمان‌بندی نمونه
-INSERT IGNORE INTO `schedule_overrides` (`business_id`, `override_date`, `start_time`, `end_time`, `is_working`, `reason`) VALUES
-(1, '2024-12-31', NULL, NULL, 0, 'تعطیلات سال نو'),
-(1, '2024-01-15', '10:00:00', '16:00:00', 1, 'ساعت کاری کوتاه‌تر'),
-(2, '2024-12-31', NULL, NULL, 0, 'تعطیلات سال نو'),
-(2, '2024-01-20', '09:00:00', '15:00:00', 1, 'جلسه آموزشی عصر'),
-(3, '2024-01-10', '14:00:00', '22:00:00', 1, 'ساعت کاری عصر');
+INSERT IGNORE INTO `schedule_overrides` (`business_id`, `override_date`, `start_time`, `end_time`, `is_working`, `is_day_off`, `reason`) VALUES
+(1, '2024-12-31', NULL, NULL, 0, 1, 'تعطیلات سال نو'),
+(1, '2024-01-15', '10:00:00', '16:00:00', 1, 0, 'ساعت کاری کوتاه‌تر'),
+(2, '2024-12-31', NULL, NULL, 0, 1, 'تعطیلات سال نو'),
+(2, '2024-01-20', '09:00:00', '15:00:00', 1, 0, 'جلسه آموزشی عصر'),
+(3, '2024-01-10', '14:00:00', '22:00:00', 1, 0, 'ساعت کاری عصر');
 
 -- زمان‌بندی‌های روزانه نمونه
 INSERT IGNORE INTO `daily_schedules` (`business_id`, `schedule_date`, `start_time`, `end_time`, `is_available`, `notes`) VALUES

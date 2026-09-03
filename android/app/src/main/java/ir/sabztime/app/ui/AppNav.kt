@@ -21,7 +21,6 @@ import ir.sabztime.app.ui.screens.NotificationsScreen
 import ir.sabztime.app.ui.screens.OwnerBusinessScreen
 import ir.sabztime.app.ui.screens.ProfileScreen
 import ir.sabztime.app.ui.screens.SplashScreen
-import ir.sabztime.app.ui.screens.SubscriptionScreen
 
 object Routes {
     const val SPLASH = "splash"
@@ -33,7 +32,6 @@ object Routes {
     const val PROFILE = "profile"
     const val MY_BUSINESSES = "my_businesses"
     const val OWNER = "owner/{businessId}"
-    const val SUBSCRIPTION = "subscription/{businessId}"
     const val MARKETER = "marketer"
     const val NOTIFICATIONS = "notifications"
     const val HELP = "help"
@@ -41,7 +39,6 @@ object Routes {
     fun business(id: Int) = "business/$id"
     fun booking(id: Int) = "booking/$id"
     fun owner(businessId: Int) = "owner/$businessId"
-    fun subscription(businessId: Int) = "subscription/$businessId"
 }
 
 @Composable
@@ -93,10 +90,6 @@ fun AppNav(graph: AppGraph) {
         composable(Routes.OWNER) { backStackEntry ->
             val id = backStackEntry.arguments?.getString("businessId")?.toIntOrNull() ?: 0
             OwnerBusinessScreen(graph, id, navController)
-        }
-        composable(Routes.SUBSCRIPTION) { backStackEntry ->
-            val id = backStackEntry.arguments?.getString("businessId")?.toIntOrNull() ?: 0
-            SubscriptionScreen(graph, id, navController)
         }
         composable(Routes.MARKETER) {
             MarketerScreen(graph, navController)

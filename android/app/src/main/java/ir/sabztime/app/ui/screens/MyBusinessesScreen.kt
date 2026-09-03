@@ -242,7 +242,6 @@ fun MyBusinessesScreen(graph: AppGraph, navController: NavHostController) {
                                 InfoRow("خدمات", Jalali.persianDigits(b.servicesCount))
                                 InfoRow("کل رزروها", Jalali.persianDigits(b.bookingsCount))
                             }
-                            InfoRow("اشتراک", b.subscriptionPlanName ?: "پایه (رایگان)")
                             Spacer(Modifier.height(8.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
