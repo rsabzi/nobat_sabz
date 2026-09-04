@@ -355,6 +355,7 @@ private fun SelectionDialog(
     onDismiss: () -> Unit,
     onSelect: (String) -> Unit
 ) {
+    val p = ir.sabztime.app.ui.theme.luxPalette()
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = LuxCardShape,
@@ -365,7 +366,8 @@ private fun SelectionDialog(
                     .clip(LuxCardShape)
                     .background(
                         Brush.verticalGradient(
-                            listOf(Color(0xFFF7FAFD), Color(0xFFE4EEF9))
+                            if (p.isDark) listOf(Color(0xFF1E2A3F), Color(0xFF141C2E))
+                            else listOf(Color(0xFFF7FAFD), Color(0xFFE4EEF9))
                         )
                     )
                     .border(ir.sabztime.app.ui.theme.goldGradientBorder(), LuxCardShape)

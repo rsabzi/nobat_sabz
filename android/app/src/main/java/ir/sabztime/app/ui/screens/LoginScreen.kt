@@ -64,6 +64,7 @@ import ir.sabztime.app.core.networkMessage
 import ir.sabztime.app.data.AuthResponse
 import ir.sabztime.app.ui.Routes
 import ir.sabztime.app.ui.theme.GlassBackground
+import ir.sabztime.app.ui.theme.luxPalette
 import ir.sabztime.app.ui.components.GlassCard
 import ir.sabztime.app.ui.components.GradientButton
 import ir.sabztime.app.ui.components.IconTile
@@ -363,8 +364,9 @@ private fun GlassTextField(
         shape = RoundedCornerShape(18.dp),
         // فقط پارامترهایی که در همه‌ی نسخه‌های M3 1.x وجود دارند (سازگار با 1.2.1)
         colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = Color.White.copy(alpha = 0.55f),
-            unfocusedContainerColor = Color.White.copy(alpha = 0.32f),
+            // در حالت تاریک، حوضچه‌ی ورودی نباید سفیدِ روشن بماند (متن روشن روی آن ناخوانا می‌شود)
+            focusedContainerColor = if (luxPalette().isDark) Color(0xFF202B42) else Color.White.copy(alpha = 0.55f),
+            unfocusedContainerColor = if (luxPalette().isDark) Color(0xFF18233A) else Color.White.copy(alpha = 0.32f),
             focusedTextColor = ir.sabztime.app.ui.theme.Cocoa,
             unfocusedTextColor = ir.sabztime.app.ui.theme.Cocoa,
             cursorColor = MaterialTheme.colorScheme.primary,
