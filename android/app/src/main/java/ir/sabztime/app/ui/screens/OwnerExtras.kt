@@ -256,7 +256,9 @@ fun LinkCard(
     onCopy: (String) -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
-    val fullLink = currentAlias?.let { "https://webnovo.ir/start/$it" }
+    // لینک دعوت به ربات تلگرام می‌رود (نه وب) — ربات /start <نامک> را می‌فهمد
+    // و کاربر مستقیم به صفحه‌ی رزرو همان کسب‌وکار می‌رسد.
+    val fullLink = currentAlias?.let { "https://t.me/Sabztime_bot?start=$it" }
     GlassCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -292,7 +294,7 @@ fun LinkCard(
                 maxLines = 1
             )
             Text(
-                "این لینک را با مشتری‌ها به اشتراک بگذارید؛ با باز کردن آن مستقیم به صفحهٔ رزرو شما می‌رسند.",
+                "این لینک را با مشتری‌ها به اشتراک بگذارید؛ با باز کردن آن در تلگرام، مستقیم به رزرو نوبت شما می‌رسند.",
                 style = MaterialTheme.typography.bodySmall,
                 color = cs.onSurfaceVariant
             )

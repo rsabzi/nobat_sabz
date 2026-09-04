@@ -215,10 +215,10 @@ function advancedSearch($params) {
         $totalCount = $count_stmt->fetch()['total'];
         
         // صفحه‌بندی
+        // نکته: MySQL 8 عدد داخل کوتیشن را در LIMIT/OFFSET نمی‌پذیرد؛
+        // مقادیر به‌صورت int امن درج می‌شوند (نه bind رشته‌ای)
         $offset = ($page - 1) * $limit;
-        $sql .= " LIMIT :limit OFFSET :offset";
-        $params_array[':limit'] = $limit;
-        $params_array[':offset'] = $offset;
+        $sql .= " LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
         
         // اجرای کوئری اصلی
         $stmt = $pdo->prepare($sql);

@@ -7,10 +7,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
  * لوگوی اختصاصی نوبت‌سبز — برگ ساده و مدرن (هم‌راستا با آیکون لانچر).
- * جایگزین آیکون ژنریک «گل اسپا» در صفحات خوش‌آمد و ورود.
+ * جایگزین آیکون ژنریک «قیچی/گل» در صفحات خوش‌آمد و ورود.
  */
 val SabzLeafIcon: ImageVector = materialIcon(name = "SabzLeaf") {
-    materialPath(fillType = PathFillType.EvenOdd) {
+    materialPath(pathFillType = PathFillType.EvenOdd) {
         // بدنه‌ی برگ (عدسی عمودی با نوک بالا و پایین) + بریدگی رگبرگ به‌صورت برش‌خورده
         moveTo(12f, 2.2f)
         curveTo(5.6f, 6.8f, 4.2f, 13.6f, 12f, 21.8f)

@@ -352,6 +352,9 @@ function validateTelegramData($initData) {
     return false;
 }
 
+// گاردهای مشترک درخواست (اعتبارسنجی شناسه‌ی کسب‌وکار) — قابل تست مستقل
+require_once __DIR__ . '/request_guards.php';
+
 function authenticate_user() {
     error_log("🔐 === شروع احراز هویت کاربر ===");
     
@@ -568,11 +571,9 @@ function handle_get_request($pdo, $internal_user_id) {
     error_log("🎯 Action: " . ($action ?: 'خالی'));
     error_log("🏢 Business ID: " . ($business_id ?: 'خالی'));
     
-    // برای action های خاص که نیاز به business_id ندارند، این بررسی را رد می‌کنیم
-    if (!$business_id && !in_array($action, ['health_check', 'test', 'get_bot_info', 'get_business'])) {
-        error_log("❌ Business ID موجود نیست");
-        send_json_response('error', 'Business ID is required.', [], 400);
-    }
+    // فقط اکشن‌هایی که واقعاً به کسب‌وکار وابسته‌اند، شناسه لازم دارند
+    // (مثلاً get_my_businesses فهرست کسب‌وکارهای خودِ کاربر است و شناسه نمی‌خواهد)
+    $business_id = require_business_id_if_needed($action, $business_id);
 
     if ($action === 'get_business_for_edit') {
         // بررسی وجود اتصال دیتابیس
@@ -1203,6 +1204,7 @@ function handle_get_request($pdo, $internal_user_id) {
                 SELECT start_time, end_time 
                 FROM schedules 
                 WHERE business_id = ? AND day_of_week = ? AND is_active = 1
+                  AND start_time IS NOT NULL AND end_time IS NOT NULL
             ");
             $scheduleStmt->execute([$business_id, $dayOfWeek]);
             $schedule = $scheduleStmt->fetch();
@@ -1409,6 +1411,31 @@ function handle_get_request($pdo, $internal_user_id) {
             // اگر تاریخ خاصی وجود ندارد، از schedules استفاده کن (فقط امروز به بعد)
             if (empty($availableDates)) {
                 $dates = [];
+                $datesSeen = [];
+                
+                // ⚠️ یکپارچه‌سازی منبع حقیقت برای «روز کاری»:
+                // - اپ/مالک هنگام ذخیره‌ی برنامه‌ی کاری، روزها را با is_active روشن/خاموش می‌کند و
+                //   get_available_slots نیز روز کاری را با is_active = 1 می‌خواند.
+                // - این‌جا قبلاً is_working خوانده می‌شد که هرگز توسط اپ به‌روز نمی‌شد؛ در نتیجه
+                //   روزی که مالک روشن کرده بود در لیست مشتری نمی‌آمد و روزِ خاموش می‌آمد ولی بدون
+                //   ساعت. حالا هر دو سمت (تاریخ و ساعت) با is_active هماهنگ‌اند.
+                $horizonEnd = date('Y-m-d', strtotime($today . ' +29 days'));
+                
+                // تغییرات خاصِ روزها (تعطیل اعلامی یا روز کاری فوق‌العاده) در افق ۳۰ روزه
+                $overrideByDate = [];
+                try {
+                    $overrideListStmt = $pdo->prepare("
+                        SELECT override_date, is_day_off
+                        FROM schedule_overrides
+                        WHERE business_id = ? AND override_date >= ? AND override_date <= ?
+                    ");
+                    $overrideListStmt->execute([$business_id, $today, $horizonEnd]);
+                    while ($overrideRow = $overrideListStmt->fetch()) {
+                        $overrideByDate[$overrideRow['override_date']] = (int)$overrideRow['is_day_off'];
+                    }
+                } catch (PDOException $e) {
+                    error_log("⚠️ خواندن schedule_overrides ممکن نشد: " . $e->getMessage());
+                }
                 
                 // تولید 30 روز آینده بر اساس schedules (شروع از امروز)
                 for ($i = 0; $i < 30; $i++) {
@@ -1417,14 +1444,35 @@ function handle_get_request($pdo, $internal_user_id) {
                     
                     error_log("🔍 بررسی تاریخ: {$checkDate} (روز هفته: {$dayOfWeek})");
                     
-                    // بررسی وجود schedule برای این روز
-                    $scheduleStmt = $pdo->prepare("
-                        SELECT id FROM schedules 
-                        WHERE business_id = ? AND day_of_week = ? AND is_working = 1
-                    ");
-                    $scheduleStmt->execute([$business_id, $dayOfWeek]);
+                    $isWorkDay = false;
+                    if (array_key_exists($checkDate, $overrideByDate)) {
+                        // اگر برای این روز تغییر خاص ثبت شده، همان تعیین‌کننده است:
+                        // is_day_off = 1 → تعطیل اعلامی؛ is_day_off = 0 → روز کاری فوق‌العاده
+                        $isWorkDay = $overrideByDate[$checkDate] === 0;
+                    } else {
+                        // بررسی وجود schedule برای این روز (هماهنگ با get_available_slots)
+                        try {
+                            $scheduleStmt = $pdo->prepare("
+                                SELECT id FROM schedules
+                                WHERE business_id = ? AND day_of_week = ? AND is_active = 1
+                                  AND start_time IS NOT NULL AND end_time IS NOT NULL
+                            ");
+                            $scheduleStmt->execute([$business_id, $dayOfWeek]);
+                        } catch (PDOException $e) {
+                            // پایگاه‌داده‌ی قدیمی که هنوز is_active ندارد — با is_working می‌سنجیم
+                            error_log("⚠️ ستون is_active در schedules نیست، بازگشت به is_working: " . $e->getMessage());
+                            $scheduleStmt = $pdo->prepare("
+                                SELECT id FROM schedules
+                                WHERE business_id = ? AND day_of_week = ? AND is_working = 1
+                                  AND start_time IS NOT NULL AND end_time IS NOT NULL
+                            ");
+                            $scheduleStmt->execute([$business_id, $dayOfWeek]);
+                        }
+                        $isWorkDay = $scheduleStmt->fetch() !== false;
+                    }
                     
-                    if ($scheduleStmt->fetch()) {
+                    if ($isWorkDay && !isset($datesSeen[$checkDate])) {
+                        $datesSeen[$checkDate] = true;
                         $dates[] = [
                             'date' => $checkDate,
                             'jalali_date' => to_jalali($checkDate),
@@ -1636,16 +1684,10 @@ function handle_post_request($pdo, $internal_user_id) {
     error_log("🌐 _GET['business_id']: " . ($_GET['business_id'] ?? 'NULL'));
     error_log("🌐 _GET['id']: " . ($_GET['id'] ?? 'NULL'));
     
-    // برای add_business نیازی به business_id نیست، چون کسب‌وکار جدید ایجاد می‌شود
-    // get_bot_info، get_subscription_plans، get_marketer_dashboard و get_user_bookings نیازی به business_id ندارند
-    $exempt_actions = ['add_business', 'get_bot_info', 'get_subscription_plans', 'get_marketer_dashboard', 'get_user_bookings'];
-    error_log("📝 اکشن‌های معاف از business_id: " . json_encode($exempt_actions, JSON_UNESCAPED_UNICODE));
-    error_log("✅ آیا action معاف است؟ " . (in_array($action, $exempt_actions) ? 'بله' : 'خیر'));
-    
-    if (!in_array($action, $exempt_actions) && !$business_id) {
-        error_log("❌ Business ID موجود نیست برای action: " . $action);
-        send_json_response('error', 'Business ID is required.', [], 400);
-    }
+    // فهرست «مثبت»: فقط اکشن‌های وابسته به کسب‌وکار شناسه لازم دارند.
+    // (add_business, cancel_booking, register_marketer, get_user_bookings, … بدون شناسه کار می‌کنند)
+    error_log("📝 آیا این action به business_id نیاز دارد؟ " . (action_requires_business_id($action) ? 'بله' : 'خیر'));
+    $business_id = require_business_id_if_needed($action, $business_id);
     
     // بررسی وجود اتصال دیتابیس
     if (!$pdo) {
@@ -1660,8 +1702,16 @@ function handle_post_request($pdo, $internal_user_id) {
             }
         }
     } else {
-        // برای add_business، create_booking، cancel_booking، get_bot_info، get_subscription_status، get_subscription_plans، get_marketer_dashboard و get_user_bookings نیازی به بررسی مالکیت نیست
-        if ($action !== 'add_business' && $action !== 'create_booking' && $action !== 'cancel_booking' && $action !== 'get_bot_info' && $action !== 'get_subscription_status' && $action !== 'get_subscription_plans' && $action !== 'get_marketer_dashboard' && $action !== 'get_user_bookings') {
+        // بررسی مالکیت فقط برای اکشن‌هایی که روی یک کسب‌وکار مشخص عمل می‌کنند.
+        // اکشن‌های بدون شناسه (ثبت‌نام بازاریاب، لغو رزرو، فهرست رزروها و …)
+        // نباید وارد این بررسی شوند؛ در غیر این صورت با شناسه‌ی خالی «Access Denied» می‌گرفتند.
+        $ownership_exempt = [
+            'add_business', 'create_booking', 'cancel_booking', 'get_bot_info',
+            'get_subscription_status', 'get_subscription_plans',
+            'get_marketer_dashboard', 'get_user_bookings',
+            'register_marketer', 'get_my_businesses'
+        ];
+        if ($business_id && !in_array($action, $ownership_exempt, true)) {
             try {
                 error_log("🔍 بررسی مالکیت کسب‌وکار...");
                 $checkStmt = $pdo->prepare("SELECT id FROM businesses WHERE id = ? AND owner_id = ?");
@@ -2024,14 +2074,18 @@ function handle_post_request($pdo, $internal_user_id) {
             $updateBusinessStmt = $pdo->prepare("UPDATE businesses SET slot_duration_minutes = ? WHERE id = ?");
             $updateBusinessStmt->execute([$formData['slot_duration_minutes'], $business_id]);
 
-            $upsertSql = "INSERT INTO schedules (business_id, day_of_week, start_time, end_time, is_active) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE start_time = VALUES(start_time), end_time = VALUES(end_time), is_active = VALUES(is_active)";
+            $upsertSql = "INSERT INTO schedules (business_id, day_of_week, start_time, end_time, is_working, is_active) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE start_time = VALUES(start_time), end_time = VALUES(end_time), is_working = VALUES(is_working), is_active = VALUES(is_active)";
             $upsertStmt = $pdo->prepare($upsertSql);
             foreach ($formData['schedules'] as $day) {
+                // is_working و is_active همیشه هم‌مقدار ذخیره می‌شوند تا پایگاه‌های قدیمی که
+                // هنوز با is_working کار می‌کنند هم پس از اولین ذخیره با is_active هماهنگ شوند.
+                $isWorking = $day['is_active'] ? 1 : 0;
                 $upsertStmt->execute([
                     $business_id, $day['day_of_week'],
                     $day['is_active'] ? $day['start_time'] : null,
                     $day['is_active'] ? $day['end_time'] : null,
-                    $day['is_active'] ? 1 : 0
+                    $isWorking,
+                    $isWorking
                 ]);
             }
 
@@ -2134,7 +2188,9 @@ function handle_post_request($pdo, $internal_user_id) {
                 error_log("❌ خطا در به‌روزرسانی مدت زمان اسلات");
             }
 
-            // حذف تمام تاریخ‌های خاص قبلی از هر دو جدول
+            // حذف تمام تاریخ‌های خاص قبلی (تقویمِ صفحه‌ی مالک همیشه مجموعه‌ی کامل را می‌فرستد؛
+            // بنابراین هر تاریخ/اسلاتی که دیگر در درخواست نیست باید از رزرو حذف شود وگرنه
+            // مشتری همچنان روزِ پاک‌شده را می‌بیند و می‌تواند رزرو کند.)
             error_log("🗑️ حذف تاریخ‌های خاص قبلی از schedule_overrides...");
             $deleteOverridesStmt = $pdo->prepare("DELETE FROM schedule_overrides WHERE business_id = ?");
             $deleteResult = $deleteOverridesStmt->execute([$business_id]);
@@ -2145,8 +2201,14 @@ function handle_post_request($pdo, $internal_user_id) {
             $deleteDailyResult = $deleteDailyStmt->execute([$business_id]);
             $deletedDailyRows = $deleteDailyStmt->rowCount();
             
+            error_log("🗑️ حذف تاریخ‌های خاص قبلی از specific_time_slots...");
+            $deleteSpecificStmt = $pdo->prepare("DELETE FROM specific_time_slots WHERE business_id = ?");
+            $deleteSpecificResult = $deleteSpecificStmt->execute([$business_id]);
+            $deletedSpecificRows = $deleteSpecificStmt->rowCount();
+            
             error_log("📊 تعداد ردیف‌های حذف شده از schedule_overrides: " . $deletedOverrideRows);
             error_log("📊 تعداد ردیف‌های حذف شده از daily_schedules: " . $deletedDailyRows);
+            error_log("📊 تعداد ردیف‌های حذف شده از specific_time_slots: " . $deletedSpecificRows);
 
             // پردازش تاریخ‌های خاص جدید
             if (isset($formData['specific_dates']) && is_array($formData['specific_dates'])) {
@@ -2162,8 +2224,11 @@ function handle_post_request($pdo, $internal_user_id) {
                     error_log("💼 وضعیت کاری: " . ($dateData['isWorking'] ? 'کاری' : 'تعطیل'));
                     
                     if (!$dateData['isWorking']) {
-                        // اگر روز تعطیل است - هیچ اسلاتی ذخیره نمی‌کنیم
-                        error_log("🚫 روز تعطیل - هیچ اسلاتی ذخیره نمی‌شود");
+                        // اگر روز تعطیل است - اسلات‌های قبلیِ همان تاریخ هم باید حذف شوند؛
+                        // وگرنه آن روز همچنان در لیست تاریخ‌های قابل رزرو مشتری می‌ماند.
+                        error_log("🚫 روز تعطیل - حذف اسلات‌های قبلی این تاریخ");
+                        $deleteOffStmt = $pdo->prepare("DELETE FROM specific_time_slots WHERE business_id = ? AND slot_date = ?");
+                        $deleteOffStmt->execute([$business_id, $gregorian_date]);
                     } else {
                         // اگر روز کاری است - تمام اسلات‌ها در specific_time_slots ذخیره می‌شوند
                         error_log("💼 پردازش روز کاری...");
@@ -2245,6 +2310,10 @@ function handle_post_request($pdo, $internal_user_id) {
 
             // اگر هیچ تاریخ خاصی وجود نداشت، یک پیام موفقیت‌آمیز ارسال کن
             if (empty($formData['specific_dates'])) {
+                // مالک تمام تاریخ‌های خاص را از تقویم پاک کرده است؛ برای بازگشت به حالت
+                // «برنامه‌ی هفتگی»، اسلات‌های خاصِ باقی‌مانده (کهنه) هم باید پاک شوند.
+                $clearAllStmt = $pdo->prepare("DELETE FROM specific_time_slots WHERE business_id = ?");
+                $clearAllStmt->execute([$business_id]);
                 $pdo->commit();
                 send_json_response('success', 'هیچ تاریخ خاصی برای ذخیره وجود نداشت.');
                 return;

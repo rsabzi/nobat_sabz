@@ -2,6 +2,8 @@ package ir.sabztime.app.ui.screens
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
+import android.content.Intent
+import android.net.Uri
 import ir.sabztime.app.ui.theme.LocalSabzDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,9 +25,11 @@ import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Storefront
@@ -49,6 +53,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -88,7 +93,8 @@ data class ProfileUiState(
     val errorKind: SabzException.Kind = SabzException.Kind.UNKNOWN,
     /** خطا رخ داده ولی آخرین پروفایل بارگذاری‌شده هنوز نمایش داده می‌شود */
     val offline: Boolean = false,
-    val logoutBusy: Boolean = false
+    val logoutBusy: Boolean = false,
+    val deleteBusy: Boolean = false
 )
 
 class ProfileViewModel(private val graph: AppGraph) : ViewModel() {
@@ -147,6 +153,33 @@ class ProfileViewModel(private val graph: AppGraph) : ViewModel() {
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch { graph.themeManager.setMode(mode) }
     }
+
+    /**
+     * حذف کامل حساب از سرور + پاک‌کردن نشست محلی.
+     * اگر سرور در دسترس نباشد، حساب محلی پاک نمی‌شود تا کاربر بعداً دوباره تلاش کند.
+     */
+    fun deleteAccount(onDone: () -> Unit) {
+        if (_state.value.deleteBusy) return
+        _state.value = _state.value.copy(deleteBusy = true)
+        viewModelScope.launch {
+            try {
+                graph.repository.deleteAccount()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val s = classify(e)
+                _state.value = _state.value.copy(
+                    deleteBusy = false,
+                    error = s.message,
+                    errorKind = s.kind
+                )
+                return@launch
+            }
+            graph.clearSession()
+            _state.value = _state.value.copy(deleteBusy = false)
+            onDone()
+        }
+    }
 }
 
 @Composable
@@ -155,6 +188,8 @@ fun ProfileScreen(graph: AppGraph, navController: NavHostController) {
     val state by viewModel.state.collectAsState()
     val themeMode by graph.themeManager.mode.collectAsState()
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     // مقادیر در val محلی: smart cast روی property دلیگیت‌شده ممکن نیست
     val error = state.error
@@ -281,6 +316,21 @@ fun ProfileScreen(graph: AppGraph, navController: NavHostController) {
                                     label = "راهنما",
                                     onClick = { navController.navigate(Routes.HELP) }
                                 )
+                                RowDivider()
+                                MenuRow(
+                                    icon = Icons.Filled.PrivacyTip,
+                                    label = "حریم خصوصی",
+                                    palette = TilePalette.BLUE,
+                                    onClick = {
+                                        // صفحه‌ی privacy.php کنار api.php روی سرور قرار دارد
+                                        val url = BuildConfig.API_BASE_URL.trimEnd('/') + "/privacy.php"
+                                        runCatching {
+                                            context.startActivity(
+                                                Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                            )
+                                        }
+                                    }
+                                )
                             }
 
                             // --- پوسته ---
@@ -295,13 +345,20 @@ fun ProfileScreen(graph: AppGraph, navController: NavHostController) {
                                 )
                             }
 
-                            // --- خروج ---
+                            // --- خروج و حذف حساب ---
                             GlassCard {
                                 MenuRow(
                                     icon = Icons.Filled.Logout,
                                     label = "خروج از حساب",
                                     palette = TilePalette.ERROR,
                                     onClick = { showLogoutDialog = true }
+                                )
+                                RowDivider()
+                                MenuRow(
+                                    icon = Icons.Filled.DeleteForever,
+                                    label = "حذف حساب کاربری",
+                                    palette = TilePalette.ERROR,
+                                    onClick = { showDeleteDialog = true }
                                 )
                             }
 
@@ -342,6 +399,45 @@ fun ProfileScreen(graph: AppGraph, navController: NavHostController) {
                 }
             },
             dismissButton = { TextButton(onClick = { showLogoutDialog = false }) { Text("منصرف شدم") } }
+        )
+    }
+
+    // --- دیالوگ حذف حساب (الزام گوگل‌پلی): تأیید صریح با هشدار برگشت‌ناپذیری ---
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!state.deleteBusy) showDeleteDialog = false },
+            shape = RoundedCornerShape(28.dp),
+            title = { Text("حذف حساب کاربری", fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    "حساب شما و همه‌ی داده‌هایتان (نوبت‌ها، کسب‌وکارها و امتیازها) برای همیشه از سرور حذف می‌شود.\n\nاین عمل قابل بازگشت نیست. مطمئن هستید؟"
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteAccount {
+                            showDeleteDialog = false
+                            navController.navigate(Routes.LOGIN) {
+                                popUpTo(0) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
+                    },
+                    enabled = !state.deleteBusy
+                ) {
+                    Text(
+                        if (state.deleteBusy) "در حال حذف…" else "بله، برای همیشه حذف کن",
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDeleteDialog = false },
+                    enabled = !state.deleteBusy
+                ) { Text("منصرف شدم") }
+            }
         )
     }
 }
