@@ -21,6 +21,7 @@ import ir.sabztime.app.ui.theme.LocalLuxPalette
 import ir.sabztime.app.ui.theme.LuxPaletteDark
 import ir.sabztime.app.ui.theme.LuxPaletteLight
 import ir.sabztime.app.ui.theme.SabzTheme
+import ir.sabztime.app.ui.theme.setLuxTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -36,6 +37,8 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.DARK -> true
             }
             val palette = if (dark) LuxPaletteDark else LuxPaletteLight
+            // توکن‌های سراسریِ رنگ (متن/سطح/زمینه) را با پوسته هماهنگ کن
+            setLuxTheme(dark)
             // جهت صفحه صریحاً راست‌به‌چپ (RTL) است
             CompositionLocalProvider(
                 LocalLayoutDirection provides LayoutDirection.Rtl,
