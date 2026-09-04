@@ -1,0 +1,89 @@
+name: Backend API tests (PHP + MySQL)
+
+on:
+  push:
+    branches: ["arena/**", "main"]
+    paths:
+      - "project/webapp/*.php"
+      - "project/config.example.php"
+  workflow_dispatch:
+
+jobs:
+  php-tests:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: sabztest
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping --silent"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: pdo, pdo_mysql, mbstring
+      - name: Build test config
+        run: |
+          cat > project/config.php <<'EOF'
+          <?php
+          date_default_timezone_set('Asia/Tehran');
+          define('BOT_TOKEN', 'TEST_TOKEN_NOT_A_REAL_TOKEN');
+          define('BOT_USERNAME', 'sabztime_bot');
+          define('BOT_API_URL', 'https://api.telegram.org/bot'.BOT_TOKEN.'/');
+          define('BASE_URL', 'http://127.0.0.1:8090');
+          define('WEBAPP_URL', BASE_URL . '/webapp/index.html?v=1.0');
+          define('WEBAPP_URL_EDIT', BASE_URL . '/webapp/edit.html?v=1.0');
+          define('WEBAPP_URL_SCHEDULE', BASE_URL . '/webapp/schedule.html?v=1.0');
+          define('WEBAPP_URL_SERVICES', BASE_URL . '/webapp/services.html?v=1.0');
+          define('WEBHOOK_URL', BASE_URL . '/bot/webhook.php');
+          define('DB_HOST', '127.0.0.1');
+          define('DB_NAME', 'sabztest');
+          define('DB_USER', 'root');
+          define('DB_PASS', 'root');
+          define('DB_CHARSET', 'utf8mb4');
+          define('DEV_MODE', true);
+          define('REQUIRED_CHANNEL_ID', 0);
+          define('REQUIRED_CHANNEL_USERNAME', 'sabztimebot');
+          define('ADMIN_USERNAME', 'admin');
+          define('ADMIN_PASSWORD', 'admin');
+          define('INTERNAL_API_SECRET', 'test-internal-secret');
+          $pdo = null;
+          try {
+              $pdo = new PDO('mysql:host=127.0.0.1;dbname=sabztest;charset=utf8mb4', 'root', 'root', [
+                  PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                  PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+              ]);
+          } catch (Exception $e) {
+              throw new Exception('DB connect failed: ' . $e->getMessage());
+          }
+          ?>
+          EOF
+      - name: PHP syntax check
+        run: |
+          for f in project/webapp/mobile_auth.php project/webapp/api.php project/webapp/search_api.php project/webapp/privacy.php; do
+            php -l "$f"
+          done
+      - name: Seed database and smoke test
+        run: |
+          mysql -h 127.0.0.1 -uroot -proot sabztest < project/create_tables.sql
+          php project/database_init.php > /dev/null
+          mysql -h 127.0.0.1 -uroot -proot sabztest <<'SQL'
+          INSERT INTO businesses (owner_id, name, business_type, province, city, address, phone, slot_duration_minutes, is_active)
+          VALUES (1, 'آرایشگاه تست', 'آرایشی و زیبایی', 'تهران', 'تهران', 'خیابان تست', '09120000000', 30, 1);
+          INSERT INTO services (business_id, name, price, duration_minutes, is_active)
+          VALUES (1, 'کوتاهی مو', 50000, 30, 1), (1, 'رنگ مو', 200000, 120, 1);
+          INSERT INTO schedules (business_id, day_of_week, start_time, end_time, is_working)
+          VALUES (1, 6, '09:00', '17:00', 1), (1, 0, '09:00', '17:00', 1), (1, 1, '09:00', '17:00', 1), (1, 2, '09:00', '17:00', 1),
+                 (1, 3, '09:00', '17:00', 1), (1, 4, '09:00', '17:00', 1), (1, 5, '09:00', '17:00', 1);
+          SQL
+          cd project && php -S 127.0.0.1:8090 > /tmp/phpserver.log 2>&1 &
+          sleep 3
+          bash tests/api_smoke.sh
