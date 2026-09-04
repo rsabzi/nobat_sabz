@@ -103,9 +103,8 @@ jobs:
       - name: Debug on smoke failure
         if: failure()
         run: |
-          echo "===== tail phpserver.log ====="
-          tail -80 /tmp/phpserver.log || true
-          echo "===== sample register curl ====="
-          curl -s -i -X POST "http://127.0.0.1:8090/webapp/mobile_auth.php" \
+          tail -80 /tmp/phpserver.log | sed 's/^/::error::php: /' || true
+          RESP=$(curl -s -i -X POST "http://127.0.0.1:8090/webapp/mobile_auth.php" \
             -H 'Content-Type: application/json' \
-            -d '{"action":"register","phone":"09123999999","password":"temp123456","name":"دیباگ","device":"ci"}' || true
+            -d '{"action":"register","phone":"09123999999","password":"temp123456","name":"دیباگ","device":"ci"}') || true
+          echo "$RESP" | sed 's/^/::error::register: /'

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # تست‌های دود API: احراز هویت موبایل + جستجو + رزرو + سوابق
 # پیش‌نیاز: سرور PHP روی 127.0.0.1:8090 با MySQL تستی و جداول اولیه
-set -euo pipefail
+# نکته: -e عمداً حذف شده تا شکست یک درخواست، بقیه‌ی چک‌ها را نکشد و همه در CI دیده شوند
+set -uo pipefail
 
 BASE="http://127.0.0.1:8090/webapp"
 PASS=0; FAIL=0
@@ -25,7 +26,7 @@ REG=$(curl -s -X POST "$BASE/mobile_auth.php" -H 'Content-Type: application/json
 check "ثبت‌نام موفق" "echo '$REG' | grep -q '\"success\"'"
 check "توکن دریافت شد" "echo '$REG' | grep -q '\"token\"'"
 TOKEN=$(echo "$REG" | json "d.get('token','')")
-[ -z "$TOKEN" ] && { echo "بدون توکن — توقف"; exit 1; }
+[ -z "$TOKEN" ] && { echo "::error::بدون توکن — ثبت‌نام شکست خورد"; exit 1; }
 
 AUTH=(-H "X-App-Token: $TOKEN" -H 'Content-Type: application/json')
 
