@@ -1,19 +1,26 @@
 package ir.sabztime.app.ui.components
 
-import androidx.compose.material.icons.materialIcon
 import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 
 /**
  * لوگوی اختصاصی نوبت‌سبز — برگ ساده و مدرن (هم‌راستا با آیکون لانچر).
  * جایگزین آیکون ژنریک «گل اسپا» در صفحات خوش‌آمد و ورود.
  *
- * نکته: materialPath پارامتر fillType ندارد؛ معادل آن در path سازنده‌ی
- * ImageVector پارامتر pathFillType است (حفظ رفتار even-odd برای حفره‌ی رگبرگ).
+ * نکته‌ی فنی: از توابع داخلی materialIcon/materialPath استفاده نمی‌کنیم
+ * (پارامتر fillType در آن‌ها وجود ندارد)؛ سازنده‌ی عمومی ImageVector.Builder
+ * و path(pathFillType=...) API پایدار و عمومی compose-ui است.
  */
-val SabzLeafIcon: ImageVector = materialIcon(name = "SabzLeaf") {
+val SabzLeafIcon: ImageVector = ImageVector.Builder(
+    name = "SabzLeaf",
+    defaultWidth = 24.dp,
+    defaultHeight = 24.dp,
+    viewportWidth = 24f,
+    viewportHeight = 24f
+).apply {
     path(pathFillType = PathFillType.EvenOdd) {
-        // بدنه‌ی برگ (عدسی عمودی با نوک بالا و پایین) + بریدگی رگبرگ به‌صورت برش‌خورده
+        // بدنه‌ی برگ (عدسی عمودی با نوک بالا و پایین)
         moveTo(12f, 2.2f)
         curveTo(5.6f, 6.8f, 4.2f, 13.6f, 12f, 21.8f)
         curveTo(19.8f, 13.6f, 18.4f, 6.8f, 12f, 2.2f)
@@ -46,4 +53,4 @@ val SabzLeafIcon: ImageVector = materialIcon(name = "SabzLeaf") {
         lineTo(13.6f, 13.6f)
         close()
     }
-}
+}.build()
