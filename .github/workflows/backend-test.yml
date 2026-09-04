@@ -100,6 +100,8 @@ jobs:
           curl -sS -o /dev/null -w '%{http_code}\n' "http://127.0.0.1:8090/webapp/search_api.php?action=search"
       - name: Run API smoke tests
         run: bash project/tests/api_smoke.sh
+      - name: Guard regression tests (HTTP)
+        run: bash project/tests/api_guard_http_test.sh
       - name: Debug on smoke failure
         if: failure()
         run: |

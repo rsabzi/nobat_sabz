@@ -88,6 +88,13 @@ fi
 # --- 7) کسب‌وکارهای من و اشتراک ---
 MYBIZ=$(curl -s "$BASE/api.php?action=get_my_businesses" "${AUTH[@]}")
 check "get_my_businesses" "echo '$MYBIZ' | grep -q 'آرایشگاه تست'"
+check "get_my_businesses بدون خطای Business ID" "! echo '$MYBIZ' | grep -q 'Business ID is required'"
+
+MARKETER=$(curl -s -X POST "$BASE/api.php" "${AUTH[@]}" -d '{"action":"register_marketer"}')
+check "register_marketer بدون خطای Business ID" "! echo '$MARKETER' | grep -q 'Business ID is required'"
+
+MKDASH=$(curl -s -X POST "$BASE/api.php" "${AUTH[@]}" -d '{"action":"get_marketer_dashboard"}')
+check "داشبورد بازاریاب بدون خطای Business ID" "! echo '$MKDASH' | grep -q 'Business ID is required'"
 
 PLANS=$(curl -s -X POST "$BASE/api.php" "${AUTH[@]}" -d '{"action":"get_subscription_plans"}')
 check "پلن‌های اشتراک" "echo '$PLANS' | grep -q '\"status\":\"success\"'"
