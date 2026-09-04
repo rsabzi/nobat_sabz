@@ -37,8 +37,6 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.DARK -> true
             }
             val palette = if (dark) LuxPaletteDark else LuxPaletteLight
-            // توکن‌های سراسریِ رنگ (متن/سطح/زمینه) را با پوسته هماهنگ کن
-            setLuxTheme(dark)
             // جهت صفحه صریحاً راست‌به‌چپ (RTL) است
             CompositionLocalProvider(
                 LocalLayoutDirection provides LayoutDirection.Rtl,
@@ -46,6 +44,8 @@ class MainActivity : ComponentActivity() {
             ) {
                 SabzTheme(darkTheme = dark) {
                     LaunchedEffect(dark) {
+                        // توکن‌های سراسریِ رنگ (متن/سطح/زمینه) را با پوسته هماهنگ کن
+                        setLuxTheme(dark)
                         // آیکون‌های نوار وضعیت متناسب با تم
                         val controller = WindowCompat.getInsetsController(window, window.decorView)
                         controller.isAppearanceLightStatusBars = !dark
