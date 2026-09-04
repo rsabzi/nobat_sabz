@@ -11,23 +11,25 @@ val apiBaseUrl: String = (project.findProperty("apiBaseUrl") as? String)?.trimEn
 
 android {
     namespace = "ir.sabztime.app"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "ir.sabztime.app"
         minSdk = 24
-        targetSdk = 34
+        // الزام گوگل‌پلی (پاییز ۲۰۲۵ به بعد): اپ‌های جدید/به‌روزشده باید targetSdk 35+ داشته باشند
+        targetSdk = 35
         // هر انتشار باید versionCode جدید داشته باشد؛ در غیر این صورت اندروید
         // APK تازه را به‌عنوان نسخه قدیمی رد می‌کند.
-        versionCode = 3
-        versionName = "1.2.0"
+        versionCode = 4
+        versionName = "1.3.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl/\"")
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // R8: کد کوچک‌تر و بهینه‌تر می‌شود؛ قوانین حفظ serialization در proguard-rules.pro آماده است
+            isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
