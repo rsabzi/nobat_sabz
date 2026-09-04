@@ -79,7 +79,7 @@ jobs:
         run: php project/database_init.php > /tmp/dbinit.log 2>&1 || (tail -40 /tmp/dbinit.log | sed 's/^/::error::/'; exit 1)
       - name: Start PHP server
         run: |
-          cd project && nohup php -S 127.0.0.1:8090 > /tmp/phpserver.log 2>&1 &
+          cd project && nohup php -d display_errors=1 -d error_reporting=E_ALL -S 127.0.0.1:8090 > /tmp/phpserver.log 2>&1 &
           disown || true
           sleep 3
           curl -sS -o /dev/null -w '%{http_code}\n' "http://127.0.0.1:8090/webapp/search_api.php?action=search"
@@ -90,9 +90,6 @@ jobs:
       - name: Debug on smoke failure
         if: failure()
         run: |
-          tail -6 /tmp/phpserver.log | sed 's/^/::error::php: /' || true
-          SEARCH=$(curl -s -i "http://127.0.0.1:8090/webapp/search_api.php?action=search&query=%D8%A2%D8%B1%D8%A7%DB%8C%D8%B4%DA%AF%D8%A7%D9%87") || true
-          echo "$SEARCH" | head -40 | sed 's/^/::error::search: /'
-          BID=$(mysql -N -h 127.0.0.1 -uroot -proot sabztest -e "SELECT id FROM businesses WHERE name='آرایشگاه تست' LIMIT 1" 2>/dev/null) || true
-          echo "::error::bid=$BID"
-          mysql -h 127.0.0.1 -uroot -proot sabztest -e "SELECT id,name,free_reservation_tokens,subscription_plan_id,is_active FROM businesses WHERE id=$BID" 2>&1 | sed 's/^/::error::biz: /' || true
+          grep -aiE "fatal|uncaught|sqlstate|exception|error in|خطا" /tmp/phpserver.log | tail -12 | sed 's/^/::error::php: /' || true
+          SBODY=$(curl -s "http://127.0.0.1:8090/webapp/search_api.php?action=search&query=%D8%A2%D8%B1%D8%A7%DB%8C%D8%B4%DA%AF%D8%A7%D9%87") || true
+          echo "search-body: ${SBODY:0:400}" | sed 's/^/::error::/'
