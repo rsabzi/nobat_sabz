@@ -1,9 +1,7 @@
 package ir.sabztime.app.ui.screens
-import ir.sabztime.app.ui.theme.SignalGreen
-import ir.sabztime.app.ui.theme.SignalGreenContainer
 
 import androidx.compose.foundation.background
-import ir.sabztime.app.ui.theme.LocalSabzDarkTheme
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -177,10 +175,10 @@ fun BookingsScreen(
                         contentPadding = PaddingValues(20.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(ui.data, key = { it.id }) { b ->
+                        items(ui.data) { b ->
                             BookingCard(b, onClick = { navController.navigate(Routes.booking(b.id)) })
                         }
-                        item { Spacer(Modifier.height(8.dp)) }
+                        item { ir.sabztime.app.ui.components.BottomBarSpacer() }
                     }
                 }
             }
@@ -190,16 +188,22 @@ fun BookingsScreen(
 
 @Composable
 fun BookingCard(b: BookingSummary, onClick: () -> Unit, badge: (@Composable () -> Unit)? = null) {
-    val dark = LocalSabzDarkTheme.current
     val parts = Jalali.parts(b.bookingDate)
-    GlassCard(onClick = onClick, shape = RoundedCornerShape(24.dp)) {
+    GlassCard(onClick = onClick, shape = RoundedCornerShape(26.dp), pattern = true) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             // بلوک تاریخ
             Box(
                 Modifier
                     .size(64.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(MaterialTheme.colorScheme.primaryContainer),
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(
+                        androidx.compose.ui.graphics.Brush.verticalGradient(
+                            listOf(
+                                ir.sabztime.app.ui.theme.GoldLight,
+                                ir.sabztime.app.ui.theme.GoldDim
+                            )
+                        )
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -207,12 +211,12 @@ fun BookingCard(b: BookingSummary, onClick: () -> Unit, badge: (@Composable () -
                         parts?.let { Jalali.persianDigits(it.third) } ?: "—",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = ir.sabztime.app.ui.theme.MidnightDeep
                     )
                     Text(
                         parts?.let { Jalali.monthName(it.second) } ?: "",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = ir.sabztime.app.ui.theme.MidnightDeep
                     )
                 }
             }
@@ -265,16 +269,16 @@ fun statusText(status: String): String = when (status) {
 
 @Composable
 fun statusColor(status: String): Color = when (status) {
-    "cancelled" -> MaterialTheme.colorScheme.error
-    "pending" -> MaterialTheme.colorScheme.tertiary
-    "completed" -> MaterialTheme.colorScheme.primary
-    else -> SignalGreen // confirmed → سبزِ سیگنال
+    "cancelled" -> ir.sabztime.app.ui.theme.DangerRose
+    "completed" -> ir.sabztime.app.ui.theme.InfoSapphire
+    "confirmed" -> ir.sabztime.app.ui.theme.SuccessEmerald
+    else -> ir.sabztime.app.ui.theme.Amber
 }
 
 @Composable
 fun statusContainer(status: String): Color = when (status) {
-    "cancelled" -> MaterialTheme.colorScheme.errorContainer
-    "pending" -> MaterialTheme.colorScheme.tertiaryContainer
-    "completed" -> MaterialTheme.colorScheme.primaryContainer
-    else -> SignalGreenContainer // confirmed
+    "cancelled" -> Color(0x24C02525)
+    "completed" -> Color(0x241E6FE0)
+    "confirmed" -> Color(0x2415803D)
+    else -> Color(0x26B45309)
 }

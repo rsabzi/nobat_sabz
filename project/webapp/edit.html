@@ -12,12 +12,12 @@
     :root{
         --ink:#111827;--ink-soft:#5B6472;
         --brand:#0B4F9E;--brand-dark:#08418A;--brand-light:#E2EDFB;
-        --gold:#B45309;--gold-soft:#FEF3C7;
+        --gold:#1E6FE0;--gold-soft:#EFF5FC;
         --bg:#F5F7FA;--surface:#FFFFFF;--surface-soft:#EDF1F6;
         --sage:#15803D;--sage-soft:#E7F4EC;
         --danger:#C02525;--danger-soft:#FDE8E8;
         --border:#D8DFE7;
-        --shadow-sm:0 2px 8px -4px rgba(17,24,39,.14);--shadow-md:0 10px 30px -14px rgba(17,24,39,.28);
+        --shadow-sm:0 2px 8px -4px rgba(36,27,34,.14);--shadow-md:0 10px 30px -14px rgba(36,27,34,.28);
         --radius-lg:20px;--radius-md:14px;--radius-sm:10px;
     }
     *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -81,7 +81,7 @@
     /* invitation link card */
     .link-active{background:var(--sage-soft);border:1.5px solid var(--sage);border-radius:var(--radius-md);padding:16px}
     .link-active .top-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-    .link-active .top-row b{font-size:.82rem;color:#08418A}
+    .link-active .top-row b{font-size:.82rem;color:#3D5940}
     .badge-live{font-size:.68rem;font-weight:700;color:#fff;background:var(--sage);padding:3px 10px;border-radius:999px}
     .link-value-row{display:flex;gap:8px;align-items:center}
     .link-value-row input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);
@@ -92,7 +92,7 @@
     .icon-btn.copy{background:var(--sage);color:#fff}
     .icon-btn.share{background:var(--brand);color:#fff}
     .link-feedback{font-size:.76rem;font-weight:700;margin-top:8px;min-height:16px;color:var(--sage)}
-    .link-hint{font-size:.74rem;color:#5B6472;margin-top:8px;line-height:1.6}
+    .link-hint{font-size:.74rem;color:#4B6B4E;margin-top:8px;line-height:1.6}
 
     .link-empty{text-align:center;padding:8px 4px}
     .link-empty p{font-size:.8rem;color:var(--ink-soft);margin-bottom:12px;line-height:1.6}
@@ -104,7 +104,7 @@
     .banner.error{background:var(--danger-soft);color:var(--danger)}
 
     .cta-bar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--border);
-        padding:14px 18px calc(14px + env(safe-area-inset-bottom));box-shadow:0 -6px 24px rgba(17,24,39,.08);z-index:30}
+        padding:14px 18px calc(14px + env(safe-area-inset-bottom));box-shadow:0 -6px 24px rgba(36,27,34,.08);z-index:30}
     .cta-inner{max-width:560px;margin:0 auto}
     .cta-btn{width:100%;background:linear-gradient(135deg,var(--brand),var(--brand-dark));color:#fff;border:none;
         border-radius:999px;padding:15px;font-size:.92rem;font-weight:800;cursor:pointer;

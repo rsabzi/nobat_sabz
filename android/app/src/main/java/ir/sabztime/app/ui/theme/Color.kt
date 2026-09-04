@@ -1,140 +1,205 @@
 package ir.sabztime.app.ui.theme
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 
-// ===========================================================================
-// سیستم طراحی «نوبت‌سبز» — نسخه ۳ (پالت برند واحد)
-// ---------------------------------------------------------------------------
-// قواعد:
-//  - آبی عمیق = برند، اعتماد، ناوبری و CTA اصلی  (زبان جهانی رزرو: Fresha/Booking)
-//  - سبز = فقط «سیگنال»: نوبت آزاد، تأیید، موفقیت
-//  - کهربایی = هشدار / اشتراک / امتیاز   |   قرمز = خطا / لغو
-//  - خنثی سرد ۶۰٪ + آبی ۳۰٪ + سیگنال ۱۰٪ (قاعده ۶۰-۳۰-۱۰)
-// ===========================================================================
+// ═══════════════════════════════════════════════════════════════════════════
+//  «نوبت‌سبز» — پالت برند آبی + سبز سیگنال (نسخه ۳)
+//  هویت بصری روشن: پس‌زمینه‌ی خنثی + هاله‌ی آبی، کارت‌های سفید/سطح‌نرم،
+//  دکمه‌ها و قرص‌ها/چیپ‌ها با گرادیان آبی برند؛ سبز سیگنال فقط برای
+//  «آزاد/تأیید/موفقیت»؛ کهربایی برای هشدار؛ قرمز برای خطا/لغو.
+//  این پالت تنها منبع حقیقت رنگ در کل اپلیکیشن است.
+//
+//  توکن‌هایی که با پوسته (روشن/تاریک) تغییر می‌کنند (متن/سطح/زمینه) به‌صورت
+//  متغیرهای «مشاهده‌شدنی» تعریف شده‌اند تا هر جایی که در UI خوانده می‌شوند،
+//  با تغییر پوسته خودکار به‌روز و re-compose شوند.
+// ═══════════════════════════════════════════════════════════════════════════
 
-// ---------------------------------------------------------------------------
-// توکن‌های برند
-// ---------------------------------------------------------------------------
-val BrandPrimary = Color(0xFF0B4F9E)       // آبی عمیق اعتماد — کنتراست سفید ≈ 8:1
-val BrandPrimaryDark = Color(0xFF08418A)   // حالت فشرده/گرادیان
-val BrandPrimaryBright = Color(0xFF1E6FE0) // هایلایت گرادیان (فقط دکمه‌های بزرگ)
-val BrandContainer = Color(0xFFE2EDFB)     // پس‌زمینه انتخاب/چیپ برند
-val OnBrandContainer = Color(0xFF062A54)
+// ── آبی برند (ثابت — در هر دو پوسته یکسان) ───────────────────────────────
+val BrandPrimary = Color(0xFF0B4F9E)
+val BrandDark = Color(0xFF08418A)
+val BrandLight = Color(0xFF1E6FE0)
+val BrandContainer = Color(0xFFE2EDFB)
+val BrandOnContainer = Color(0xFF062A54)
 
-// سبزِ سیگنال — فقط برای «نوبت آزاد / موفقیت / تأیید»
+// ── سبز سیگنال (ثابت) ────────────────────────────────────────────────────
 val SignalGreen = Color(0xFF15803D)
-val SignalGreenBright = Color(0xFF16A34A)
+val SignalGreenLight = Color(0xFF16A34A)
 val SignalGreenContainer = Color(0xFFE7F4EC)
-val OnSignalGreenContainer = Color(0xFF0A3B1E)
 
-// هشدار (کهربایی)
-val SignalAmber = Color(0xFFB45309)
-val SignalAmberContainer = Color(0xFFFEF3C7)
-val OnSignalAmberContainer = Color(0xFF5A3A00)
+// ── کهربایی (ثابت) ───────────────────────────────────────────────────────
+val Amber = Color(0xFFB45309)
+val AmberContainer = Color(0xFFFEF3C7)
+val BrownAmberDeep = Color(0xFF92400E)
 
-// خطا
-val SignalError = Color(0xFFC02525)
-val SignalErrorContainer = Color(0xFFFDE8E8)
-val OnSignalErrorContainer = Color(0xFF650D0D)
+// ── قرمز (ثابت) ──────────────────────────────────────────────────────────
+val RedError = Color(0xFFC02525)
+val RedErrorContainer = Color(0xFFFDE8E8)
 
-// ---------------------------------------------------------------------------
-// تم روشن
-// ---------------------------------------------------------------------------
-val LightPrimary = BrandPrimary
-val LightOnPrimary = Color(0xFFFFFFFF)
-val LightPrimaryContainer = BrandContainer
-val LightOnPrimaryContainer = OnBrandContainer
-val LightSecondary = Color(0xFF52606F)
-val LightOnSecondary = Color(0xFFFFFFFF)
-val LightSecondaryContainer = Color(0xFFDDE5F0)
-val LightOnSecondaryContainer = Color(0xFF1B2734)
-val LightTertiary = Color(0xFF8A5A00)
-val LightOnTertiary = Color(0xFFFFFFFF)
-val LightTertiaryContainer = Color(0xFFFFE3B3)
-val LightOnTertiaryContainer = Color(0xFF3B2700)
-val LightError = SignalError
-val LightOnError = Color(0xFFFFFFFF)
-val LightErrorContainer = SignalErrorContainer
-val LightOnErrorContainer = OnSignalErrorContainer
-val LightBackground = Color(0xFFF5F7FA)
-val LightOnBackground = Color(0xFF111827)
-val LightSurface = Color(0xFFFFFFFF)
-val LightOnSurface = Color(0xFF111827)
-val LightSurfaceVariant = Color(0xFFE7ECF2)
-val LightOnSurfaceVariant = Color(0xFF5B6472)
-val LightOutline = Color(0xFF7A8593)
-val LightOutlineVariant = Color(0xFFD3DAE3)
-val LightScrim = Color(0xFF000000)
-val LightInverseSurface = Color(0xFF1F2937)
-val LightInverseOnSurface = Color(0xFFF2F4F7)
-val LightInversePrimary = Color(0xFF9CC5FF)
+// ── خنثی (ثابت) ──────────────────────────────────────────────────────────
+val NeutralBg = Color(0xFFF5F7FA)
+val SurfaceWhite = Color(0xFFFFFFFF)
+val SurfaceSoft = Color(0xFFEDF1F6)
+val BorderColor = Color(0xFFD8DFE7)
+val TextPrimary = Color(0xFF111827)
+val TextSecondary = Color(0xFF5B6472)
 
-val LightSurfaceContainerLowest = Color(0xFFFFFFFF)
-val LightSurfaceContainerLow = Color(0xFFF7F9FC)
-val LightSurfaceContainer = Color(0xFFEEF2F7)
-val LightSurfaceContainerHigh = Color(0xFFE9EDF3)
-val LightSurfaceContainerHighest = Color(0xFFE3E8EF)
-
-// ---------------------------------------------------------------------------
-// تم تاریک
-// ---------------------------------------------------------------------------
-val DarkPrimary = Color(0xFF9CC5FF)
-val DarkOnPrimary = Color(0xFF06284D)
-val DarkPrimaryContainer = Color(0xFF0A3D77)
-val DarkOnPrimaryContainer = Color(0xFFD6E6FF)
-val DarkSecondary = Color(0xFFB8C4D2)
-val DarkOnSecondary = Color(0xFF24303D)
-val DarkSecondaryContainer = Color(0xFF3B4855)
-val DarkOnSecondaryContainer = Color(0xFFD3E0EE)
-val DarkTertiary = Color(0xFFFFC766)
-val DarkOnTertiary = Color(0xFF3B2A00)
-val DarkTertiaryContainer = Color(0xFF594200)
-val DarkOnTertiaryContainer = Color(0xFFFFE3B3)
-val DarkError = Color(0xFFFFB4AB)
-val DarkOnError = Color(0xFF690005)
-val DarkErrorContainer = Color(0xFF93000A)
-val DarkOnErrorContainer = Color(0xFFFFDAD6)
-val DarkBackground = Color(0xFF0B1220)
-val DarkOnBackground = Color(0xFFE6EBF2)
+// ── تم تاریک (ثابتِ مرجع) ────────────────────────────────────────────────
+val DarkBg = Color(0xFF0B1220)
 val DarkSurface = Color(0xFF121A29)
+val DarkPrimary = Color(0xFF9CC5FF)
 val DarkOnSurface = Color(0xFFE6EBF2)
-val DarkSurfaceVariant = Color(0xFF3D4756)
 val DarkOnSurfaceVariant = Color(0xFF9AA7B8)
-val DarkOutline = Color(0xFF8B96A5)
-val DarkOutlineVariant = Color(0xFF3D4756)
-val DarkScrim = Color(0xFF000000)
-val DarkInverseSurface = Color(0xFFE6EBF2)
-val DarkInverseOnSurface = Color(0xFF1E2530)
-val DarkInversePrimary = BrandPrimary
 
-val DarkSurfaceContainerLowest = Color(0xFF0A101D)
-val DarkSurfaceContainerLow = Color(0xFF151D2C)
-val DarkSurfaceContainer = Color(0xFF1A2333)
-val DarkSurfaceContainerHigh = Color(0xFF243043)
-val DarkSurfaceContainerHighest = Color(0xFF2D3A4E)
+// ── فلز/گرادیان آبی برند (ثابت) ──────────────────────────────────────────
+val MetalGoldTop = Color(0xFF1E6FE0)
+val MetalGoldBottom = Color(0xFF0B4F9E)
+val Gold = Color(0xFF0B4F9E)
+val RingGold = Color(0xFF1E6FE0)
+val GoldInk = Color(0xFF08418A)
 
-// ---------------------------------------------------------------------------
-// گرادیان‌های کامپوننت (کاشی‌های سه‌بعدی / دکمه‌ها)
-// ---------------------------------------------------------------------------
+// ── متنِ روشن روی پنل‌های رنگی (ثابت) ────────────────────────────────────
+val CreamLight = Color(0xFFFFFFFF)
+val PureWhite = Color(0xFFFFFFFF)
 
-/** گرادیان اصلی (برند آبی) — حالت روشن */
-val GlassGradientLight: List<Color> = listOf(Color(0xFF1E6FE0), Color(0xFF0B4F9E))
+// ── وضعیت (ثابت) ─────────────────────────────────────────────────────────
+val SuccessEmerald = Color(0xFF15803D)
+val SuccessEmeraldDeep = Color(0xFF0E5C2B)
+val DangerRose = Color(0xFFC02525)
+val DangerRoseDeep = Color(0xFF8E1630)
+val InfoSapphire = Color(0xFF1E6FE0)
+val InfoSapphireDeep = Color(0xFF0B4F9E)
 
-/** گرادیان اصلی — حالت تاریک */
-val GlassGradientDark: List<Color> = listOf(Color(0xFF5C9BFF), Color(0xFF1D53A8))
+// ── آبی برند (کاشی‌ها) ──────────────────────────────────────────────────
+val BurgundyLight = Color(0xFF1E6FE0)
+val Burgundy = Color(0xFF0B4F9E)
+val BurgundyDeep = Color(0xFF08418A)
 
-/** گرادیان غیرفعال / خنثی */
-val GlassGradientMutedLight: List<Color> = listOf(Color(0xFFAFC0D2), Color(0xFF8FA3B8))
-val GlassGradientMutedDark: List<Color> = listOf(Color(0xFF4A5563), Color(0xFF3A4452))
+// ═══════════════════════════════════════════════════════════════════════════
+//  توکن‌های «وابسته به پوسته» — مشاهده‌شدنی (مقدارهای پیش‌فرض = حالتِ روشن)
+// ═══════════════════════════════════════════════════════════════════════════
 
-/** گرادیان سیگنال سبز — فقط «نوبت آزاد / موفقیت / انتخاب» */
-val GlassGradientGreenLight: List<Color> = listOf(Color(0xFF43C37E), Color(0xFF15803D))
-val GlassGradientGreenDark: List<Color> = listOf(Color(0xFF6FDD9B), Color(0xFF1E8A50))
+// ── زمینه‌ی رادیال آبی ───────────────────────────────────────────────────
+/** روشن‌ترین نقطه‌ی آبی — بالای صفحه */
+var GoldBgTop: Color by mutableStateOf(Color(0xFFF3F7FC))
+/** آبی میانی رادیال */
+var GoldBgMid: Color by mutableStateOf(Color(0xFFCFE2F7))
+/** آبی عمیق رادیال */
+var GoldBgDeep: Color by mutableStateOf(Color(0xFF7FA8D9))
+/** لبه‌ی تیره‌ی رادیال (گوشه‌ها) */
+var GoldBgEdge: Color by mutableStateOf(Color(0xFF4A74AD))
 
-/** گرادیان آیکون‌های خطایی */
-val GlassGradientErrorLight: List<Color> = listOf(Color(0xFFF28B82), Color(0xFFC62828))
-val GlassGradientErrorDark: List<Color> = listOf(Color(0xFFEF9A93), Color(0xFFB3362B))
+// ── سفید/سطح ────────────────────────────────────────────────────────────
+/** آبی روشن حاشیه‌ی کارت */
+var GoldPale: Color by mutableStateOf(Color(0xFFE2EDFB))
+/** آبی روشن‌ترین (Gloss) */
+var GoldTint: Color by mutableStateOf(Color(0xFFEFF5FC))
+/** سطح دکمه‌های آیکون دایره‌ای — بالا */
+var IconCreamTop: Color by mutableStateOf(Color(0xFFFFFFFF))
+/** سطح دکمه‌های آیکون دایره‌ای — پایین */
+var IconCreamBottom: Color by mutableStateOf(Color(0xFFEDF1F6))
+/** سطح کارت‌های روشن */
+var NavyCard: Color by mutableStateOf(Color(0xFFFFFFFF))
+var NavyCardDeep: Color by mutableStateOf(Color(0xFFEDF1F6))
+/** سطحِ نرم (ظرف دیالوگ و…) */
+var MidnightSoft: Color by mutableStateOf(Color(0xFFEFF5FC))
 
-/** گرادیان آیکون‌های هشدار/امتیاز */
-val GlassGradientAmberLight: List<Color> = listOf(Color(0xFFFFB74D), Color(0xFFEF8C00))
-val GlassGradientAmberDark: List<Color> = listOf(Color(0xFFFFC766), Color(0xFFB26A00))
+// ── متن ──────────────────────────────────────────────────────────────────
+/** متن اصلی */
+var Cocoa: Color by mutableStateOf(Color(0xFF111827))
+/** متن ثانویه */
+var CocoaSoft: Color by mutableStateOf(Color(0xFF5B6472))
+/** متن محو */
+var TextMuted: Color by mutableStateOf(Color(0xFF5B6472))
+
+// ── گرادیان‌های آماده (getter تا با پوسته به‌روز شوند) ───────────────────
+/** گرادیان پس‌زمینه (نمای نزدیک از رادیال سراسری) */
+val ScreenGradient: List<Color>
+    get() = listOf(GoldBgTop, GoldBgMid, GoldBgDeep, GoldBgEdge)
+
+/** گرادیان آبی برند (قرص/دکمه/چیپ انتخاب‌شده) — ثابت */
+val MetalGoldGradient: List<Color> = listOf(MetalGoldTop, MetalGoldBottom)
+
+/** گرادیان کارت شیشه‌ای روشن — ثابت */
+val NavyCardGradient: List<Color> = listOf(
+    Color(0x40FFFFFF),
+    Color(0x591E6FE0)
+)
+
+/** گرادیان کارت آبی (پنل برند) — ثابت */
+val BurgundyGradient: List<Color> = listOf(BurgundyLight, BurgundyDeep)
+
+/** گرادیان آبی تزئینی — ثابت */
+val GoldGradient: List<Color> = listOf(MetalGoldTop, Gold, GoldInk)
+
+/** گرادیان آبی نرم برای حاشیه‌های مویی — پویا */
+val GoldHairline: List<Color>
+    get() = listOf(GoldPale, Gold.copy(alpha = 0.45f), GoldTint)
+
+/** گرادیان خاموش — ثابت */
+val MutedGradient: List<Color> = listOf(Color(0xFFAFC0D2), Color(0xFF8FA3B8))
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  سازگاری با کدهای قدیمی (Deprecated aliases) — getter تا پویا بمانند
+// ═══════════════════════════════════════════════════════════════════════════
+val MidnightDeep: Color get() = Cocoa
+val Midnight: Color get() = GoldBgTop
+val Charcoal: Color get() = GoldBgMid
+val CharcoalDeep: Color get() = GoldBgTop
+
+/** سطح کارت‌های روشن (alias) */
+val NavyInk: Color get() = IconCreamBottom
+
+// ── طلای قدیمی → جدید (ثابت) ─────────────────────────────────────────────
+val GoldLight = MetalGoldTop
+val GoldBright = MetalGoldBottom
+val GoldDim = RingGold
+val GoldDeep = GoldInk
+val GoldShadow: Color get() = GoldBgEdge
+
+// ── متن قدیمی → جدید (alias پویا) ───────────────────────────────────────
+val Cream: Color get() = Cocoa
+val CreamDim: Color get() = CocoaSoft
+val WhiteSoft: Color get() = GoldTint
+
+/** ظرف آبی برای برچسب‌ها */
+val GoldContainer: Color get() = GoldPale
+val RoseContainerText = Color(0xFFFDE8E8)
+val OutlineFaint = RingGold.copy(alpha = 0.22f)
+val ScrimDeep = Color(0x99000000)
+
+val GlassGradientDark: List<Color> = listOf(BrandLight, BrandPrimary)
+val GlassGradientLight: List<Color> = listOf(BrandLight, BrandPrimary)
+val GlassGradientMutedDark: List<Color> = MutedGradient
+val GlassGradientMutedLight: List<Color> = MutedGradient
+val GlassGradientErrorDark: List<Color> = listOf(DangerRose, DangerRoseDeep)
+val GlassGradientErrorLight: List<Color> = listOf(DangerRose, DangerRoseDeep)
+val GlassGradientAmberDark: List<Color> = listOf(Amber, BrownAmberDeep)
+val GlassGradientAmberLight: List<Color> = listOf(Amber, BrownAmberDeep)
+val GlassGradientGreenDark: List<Color> = listOf(SignalGreenLight, SignalGreen)
+val GlassGradientGreenLight: List<Color> = listOf(SignalGreenLight, SignalGreen)
+
+/**
+ * اعمالِ پوسته روی توکن‌های مشاهده‌شدنی. مقادیر از [LuxPaletteLight] / [LuxPaletteDark]
+ * خوانده می‌شوند تا یک منبعِ حقیقت داشته باشیم. هر جایی که این توکن‌ها در ترکیب
+ * (composition) خوانده شده باشند، با این تغییر خودکار دوباره ترکیب می‌شوند.
+ */
+fun setLuxTheme(dark: Boolean) {
+    val p = if (dark) LuxPaletteDark else LuxPaletteLight
+    GoldBgTop = p.bgTop
+    GoldBgMid = p.bgMid
+    GoldBgDeep = p.bgDeep
+    GoldBgEdge = p.bgEdge
+    GoldPale = p.GoldPale
+    GoldTint = p.GoldTint
+    IconCreamTop = p.IconCreamTop
+    IconCreamBottom = p.IconCreamBottom
+    NavyCard = p.NavyCard
+    NavyCardDeep = p.NavyCardDeep
+    MidnightSoft = p.MidnightSoft
+    Cocoa = p.Cocoa
+    CocoaSoft = p.CocoaSoft
+    TextMuted = p.TextMuted
+}

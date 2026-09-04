@@ -20,7 +20,7 @@ require_once __DIR__ . '/admin_guard.php';
         .brand{display:flex;gap:12px;align-items:center}
         .brand .title{font-weight:700;font-size:18px}
         .nav{display:flex;flex-wrap:wrap;gap:8px}
-        .nav button{background:#0c1a33;color:#cbd5e1;border:1px solid var(--border);padding:8px 12px;border-radius:8px;cursor:pointer}
+        .nav button{background:#0B1220;color:#cbd5e1;border:1px solid var(--border);padding:8px 12px;border-radius:8px;cursor:pointer}
         .nav button.active{background:var(--accent);color:#fff;border-color:transparent}
         main{padding:16px}
         .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px}
@@ -28,7 +28,7 @@ require_once __DIR__ . '/admin_guard.php';
         .table th,.table td{border-bottom:1px solid var(--border);padding:10px;text-align:right}
         .table th{color:#9fb3c8;font-weight:600;background:#0b1220}
         .actions{display:flex;gap:8px}
-        .btn{padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:#0c1a33;color:#cbd5e1;cursor:pointer}
+        .btn{padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:#0B1220;color:#cbd5e1;cursor:pointer}
         .btn.primary{background:var(--accent);color:#fff;border-color:transparent}
         .btn.success{background:var(--accent2);color:#052e16;border-color:transparent}
         .btn.danger{background:#1b0c0c;color:#fecaca;border-color:#3f1818}

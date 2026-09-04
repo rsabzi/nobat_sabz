@@ -88,7 +88,7 @@ $searchStats = $searchLogger->getSearchStats(30); // آمار 30 روز گذشت
         }
 
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1E6FE0 0%, #0B4F9E 100%);
             color: white;
             padding: 30px;
             border-radius: 15px;
@@ -117,7 +117,7 @@ $searchStats = $searchLogger->getSearchStats(30); // آمار 30 روز گذشت
         }
 
         .stat-card h3 {
-            color: #667eea;
+            color: #1E6FE0;
             margin-bottom: 15px;
             font-size: 1.1rem;
         }
@@ -154,7 +154,7 @@ $searchStats = $searchLogger->getSearchStats(30); // آمار 30 روز گذشت
         }
 
         .action-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1E6FE0 0%, #0B4F9E 100%);
             color: white;
             border: none;
             padding: 15px 20px;
@@ -225,7 +225,7 @@ $searchStats = $searchLogger->getSearchStats(30); // آمار 30 روز گذشت
         }
 
         .popular-count {
-            background: #667eea;
+            background: #1E6FE0;
             color: white;
             padding: 4px 8px;
             border-radius: 12px;
@@ -257,7 +257,7 @@ $searchStats = $searchLogger->getSearchStats(30); // آمار 30 روز گذشت
         .metric-value {
             font-size: 1.5rem;
             font-weight: bold;
-            color: #667eea;
+            color: #1E6FE0;
             margin-bottom: 5px;
         }
 

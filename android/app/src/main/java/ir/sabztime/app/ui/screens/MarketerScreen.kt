@@ -236,7 +236,7 @@ fun MarketerScreen(graph: AppGraph, navController: NavHostController) {
                                         )
                                     }
                                 }
-                                items(d.businesses, key = { it.id }) { b ->
+                                items(d.businesses) { b ->
                                     GlassCard(shape = RoundedCornerShape(24.dp)) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             IconTile(
@@ -346,8 +346,7 @@ private fun ActivationCard(
                 if (busy) {
                     CircularProgressIndicator(
                         modifier = Modifier.width(18.dp).height(18.dp),
-                        strokeWidth = 2.dp,
-                        color = Color.White
+                        strokeWidth = 2.dp
                     )
                     Spacer(Modifier.width(8.dp))
                 }

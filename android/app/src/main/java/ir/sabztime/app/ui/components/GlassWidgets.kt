@@ -15,155 +15,342 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import ir.sabztime.app.ui.theme.GlassGradientAmberDark
-import ir.sabztime.app.ui.theme.GlassGradientAmberLight
-import ir.sabztime.app.ui.theme.GlassGradientDark
-import ir.sabztime.app.ui.theme.GlassGradientErrorDark
-import ir.sabztime.app.ui.theme.GlassGradientErrorLight
-import ir.sabztime.app.ui.theme.GlassGradientGreenDark
-import ir.sabztime.app.ui.theme.GlassGradientGreenLight
-import ir.sabztime.app.ui.theme.GlassGradientLight
-import ir.sabztime.app.ui.theme.GlassGradientMutedDark
-import ir.sabztime.app.ui.theme.GlassGradientMutedLight
-import ir.sabztime.app.ui.theme.LocalSabzDarkTheme
+import ir.sabztime.app.ui.theme.BurgundyDeep
+import ir.sabztime.app.ui.theme.BurgundyGradient
+import ir.sabztime.app.ui.theme.Cocoa
+import ir.sabztime.app.ui.theme.CocoaSoft
+import ir.sabztime.app.ui.theme.CreamLight
+import ir.sabztime.app.ui.theme.DangerRose
+import ir.sabztime.app.ui.theme.DangerRoseDeep
+import ir.sabztime.app.ui.theme.Gold
+import ir.sabztime.app.ui.theme.GoldBgEdge
+import ir.sabztime.app.ui.theme.GoldInk
+import ir.sabztime.app.ui.theme.GoldPale
+import ir.sabztime.app.ui.theme.IconCreamBottom
+import ir.sabztime.app.ui.theme.IconCreamTop
+import ir.sabztime.app.ui.theme.InfoSapphire
+import ir.sabztime.app.ui.theme.InfoSapphireDeep
+import ir.sabztime.app.ui.theme.LuxCardShape
+import ir.sabztime.app.ui.theme.MetalGoldGradient
+import ir.sabztime.app.ui.theme.MetalGoldTop
+import ir.sabztime.app.ui.theme.PillShape
+import ir.sabztime.app.ui.theme.RingGold
+import ir.sabztime.app.ui.theme.SignalGreenLight
+import ir.sabztime.app.ui.theme.SuccessEmerald
+import ir.sabztime.app.ui.theme.SuccessEmeraldDeep
+import ir.sabztime.app.ui.theme.goldBorder
+import ir.sabztime.app.ui.theme.goldRing
+import ir.sabztime.app.ui.theme.luxPalette
+import ir.sabztime.app.ui.theme.metalPillBorder
+import ir.sabztime.app.ui.theme.topGloss
 
-// ---------------------------------------------------------------------------
-// پالت‌های آیکون سه‌بعدی
-//   BLUE  = برند/ناوبری/CTA   GREEN = سیگنال (نوبت آزاد، موفقیت، تأیید)
-// ---------------------------------------------------------------------------
+// ═══════════════════════════════════════════════════════════════════════════
+//  عناصر پایه‌ی طراحی «طلایی لوکس»: کاشی رنگی، دکمه‌ی فلزی، کارت شیشه‌ای، چیپ
+// ═══════════════════════════════════════════════════════════════════════════
 
-enum class TilePalette { BLUE, GREEN, MUTED, ERROR, AMBER }
+/** پالت رنگی کاشی‌های آیکون (نام‌های قدیمی برای سازگاری حفظ شده‌اند). */
+enum class TilePalette { GREEN, MUTED, ERROR, AMBER, GOLD, EMERALD, SAPPHIRE, ROYAL }
 
-private fun tileColors(palette: TilePalette, selected: Boolean, dark: Boolean): List<Color> = when {
-    !selected -> if (dark) GlassGradientMutedDark else GlassGradientMutedLight
-    palette == TilePalette.ERROR -> if (dark) GlassGradientErrorDark else GlassGradientErrorLight
-    palette == TilePalette.AMBER -> if (dark) GlassGradientAmberDark else GlassGradientAmberLight
-    palette == TilePalette.GREEN -> if (dark) GlassGradientGreenDark else GlassGradientGreenLight
-    else -> if (dark) GlassGradientDark else GlassGradientLight
+/** برس طلایی برس‌خورده — برای آیکون‌ها و متن‌های شاخص */
+val BrushedGold: Brush
+    get() = Brush.linearGradient(listOf(GoldPale, Gold, GoldInk))
+
+/**
+ * رنگ‌آمیزی محتوای یک Box با برس (برای آیکون‌های وکتور «طلاییِ برس‌خورده»).
+ * از BlendMode.SrcAtop استفاده می‌کند تا فقط پیکسل‌های خودِ آیکون رنگ شوند.
+ */
+fun Modifier.brushedGoldTint(brush: Brush): Modifier = this
+    .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+    .drawWithContent {
+        drawContent()
+        drawRect(brush = brush, blendMode = BlendMode.SrcAtop)
+    }
+
+/**
+ * سطح «قرص آبی برند» — گرادیان #1E6FE0→#0B4F9E با هایلایت بالا،
+ * قاب برجسته (بالا روشن/پایین تیره) و سایه‌ی گرم.
+ */
+fun Modifier.metalPill(shape: Shape): Modifier = this
+    .shadow(
+        elevation = 9.dp,
+        shape = shape,
+        ambientColor = GoldBgEdge.copy(alpha = 0.5f),
+        spotColor = GoldBgEdge.copy(alpha = 0.55f)
+    )
+    .clip(shape)
+    .background(Brush.verticalGradient(MetalGoldGradient))
+    .topGloss(0.32f)
+    .border(metalPillBorder(), shape)
+
+/** سطح «دکمه‌ی آیکون دایره‌ای روشن» — سفید→نرم آبی با حلقه‌ی آبی #1E6FE0 */
+fun Modifier.creamCircle(shape: Shape, ringWidth: Dp = 1.6.dp): Modifier = this
+    .shadow(
+        elevation = 6.dp,
+        shape = shape,
+        ambientColor = GoldBgEdge.copy(alpha = 0.4f),
+        spotColor = GoldBgEdge.copy(alpha = 0.45f)
+    )
+    .clip(shape)
+    .background(Brush.verticalGradient(listOf(IconCreamTop, IconCreamBottom)))
+    .topGloss(0.55f)
+    .goldRing(shape, ringWidth)
+
+private fun tileAccent(palette: TilePalette, selected: Boolean, dark: Boolean): List<Color> {
+    // رنگِ خنثیِ آیکون (حالتِ غیرانتخابی یا روی کاشی برند) — در تیره روشن‌تر
+    val neutral = if (dark) listOf(Color(0xFF9AA7B8), Color(0xFFE8EDF5)) else listOf(CocoaSoft, Cocoa)
+    return when {
+        !selected -> when (palette) {
+            TilePalette.ERROR -> listOf(DangerRose, DangerRoseDeep)
+            TilePalette.EMERALD -> listOf(SuccessEmerald, SuccessEmeraldDeep)
+            TilePalette.SAPPHIRE -> listOf(InfoSapphire, InfoSapphireDeep)
+            else -> neutral
+        }
+        palette == TilePalette.ERROR -> listOf(Color(0xFFFDE8E8), Color(0xFFFFFFFF))
+        palette == TilePalette.EMERALD -> listOf(Color(0xFFE7F4EC), Color(0xFFFFFFFF))
+        palette == TilePalette.SAPPHIRE -> listOf(Color(0xFFE2EDFB), Color(0xFFFFFFFF))
+        palette == TilePalette.ROYAL -> listOf(Color(0xFFE2EDFB), Color(0xFFA9C6EA))
+        else -> neutral
+    }
+}
+
+private fun tileBase(palette: TilePalette, selected: Boolean, dark: Boolean): List<Color> {
+    if (!selected) {
+        // دایره‌ی نیمه‌شفاف — در تیره، سرمه‌ایِ تیره
+        return if (dark) listOf(Color(0x8A1C2941), Color(0x8A101C2F))
+            else listOf(Color(0xE6FFFFFF), Color(0xD9EDF1F6))
+    }
+    return when (palette) {
+        TilePalette.ERROR -> listOf(DangerRose, DangerRoseDeep)
+        TilePalette.EMERALD -> listOf(SignalGreenLight, SuccessEmeraldDeep)
+        TilePalette.SAPPHIRE -> listOf(Color(0xFF3D76D6), InfoSapphireDeep)
+        TilePalette.ROYAL -> BurgundyGradient
+        TilePalette.MUTED -> listOf(Color(0xFFAFC0D2), Color(0xFF8FA3B8))
+        else -> listOf(MetalGoldTop, Color(0xFF0B4F9E)) // کاشی آبی برند
+    }
 }
 
 /**
- * آیکون «سه‌بعدی» — کاشی گرادیانی با جیغ (gloss) بالا و سایه.
- * پیش‌فرض: آبی برند؛ برای «نوبت آزاد/موفقیت» از [TilePalette.GREEN] استفاده کنید.
+ * کاشی آیکون لوکس — «کاشی رنگی برند» با حلقه‌ی طلایی:
+ * حالت فعال: سطح رنگی (طلا/زرشکی/زمردی/…) با آیکون متضاد؛
+ * حالت خنثی: دایره‌ی کرم شفاف با آیکون قهوه‌ایِ محو.
  */
 @Composable
 fun IconTile(
     icon: ImageVector,
     modifier: Modifier = Modifier,
-    tileSize: Dp = 44.dp,
+    tileSize: Dp = 46.dp,
     selected: Boolean = true,
-    palette: TilePalette = TilePalette.BLUE,
+    palette: TilePalette = TilePalette.GOLD,
     contentDescription: String? = null
 ) {
-    val dark = LocalSabzDarkTheme.current
-    val colors = tileColors(palette, selected, dark)
-    val shape = RoundedCornerShape(tileSize * 0.30f)
+    val shape = RoundedCornerShape(tileSize * 0.33f)
+    val p = luxPalette()
+    val base = tileBase(palette, selected, p.isDark)
+    val accent = tileAccent(palette, selected, p.isDark)
+
     Box(modifier = modifier.size(tileSize), contentAlignment = Alignment.Center) {
         Box(
             Modifier
                 .fillMaxSize()
-                .shadow(3.dp, shape)
-                .background(Brush.verticalGradient(colors), shape)
-        )
-        // لایه‌ی gloss (نور از بالا)
-        Box(
-            Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = if (dark) 0.14f else 0.30f),
-                            Color.White.copy(alpha = 0f)
+                .shadow(
+                    elevation = 7.dp,
+                    shape = shape,
+                    ambientColor = GoldBgEdge.copy(alpha = 0.45f),
+                    spotColor = GoldBgEdge.copy(alpha = 0.5f)
+                )
+                .clip(shape)
+                .background(Brush.verticalGradient(base))
+                .topGloss(if (selected) 0.22f else 0.5f)
+                .then(
+                    if (selected && base.first() == MetalGoldTop) {
+                        Modifier.border(metalPillBorder(), shape)
+                    } else {
+                        val ring = listOf(GoldPale, GoldInk, Gold, RingGold, GoldPale)
+                            .map { if (selected) it else it.copy(alpha = 0.45f) }
+                        Modifier.border(
+                            BorderStroke(if (selected) 1.4.dp else 1.dp, Brush.sweepGradient(ring)),
+                            shape
                         )
-                    ),
-                    shape = shape
+                    }
                 )
         )
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            modifier = Modifier.size(tileSize * 0.52f),
-            tint = Color.White
-        )
+        Box(
+            Modifier
+                .size(tileSize * 0.52f)
+                .brushedGoldTint(Brush.linearGradient(accent))
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                modifier = Modifier.fillMaxSize(),
+                tint = Color.White
+            )
+        }
     }
 }
 
-// ---------------------------------------------------------------------------
-// دکمه گرادیانی (CTA اصلی) — رنگ پیش‌فرض: آبی برند
-// ---------------------------------------------------------------------------
+// ───────────────────────────────────────────────────────────────────────────
+//  دکمه‌ها
+// ───────────────────────────────────────────────────────────────────────────
 
+/**
+ * دکمه‌ی اصلی (CTA) — قرص فلز طلای برجسته با متن قهوه‌ایِ تیره؛
+ * برای پالت‌های رنگی (خطا/زمرد/…) سطح رنگی با متن کرم روشن.
+ */
 @Composable
 fun GradientButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    palette: TilePalette = TilePalette.BLUE,
+    palette: TilePalette = TilePalette.GOLD,
     shape: Shape = MaterialTheme.shapes.medium,
     content: @Composable RowScope.() -> Unit
 ) {
-    val dark = LocalSabzDarkTheme.current
-    val colors = tileColors(palette, enabled, dark)
-    val textColor = if (enabled) Color.White else if (dark) Color(0xFF8B96A5) else Color(0xFF6B7686)
+    val p = luxPalette()
+    val (surface, border, contentColor) = when {
+        !enabled -> Triple(
+            if (p.isDark) listOf(Color(0xFF2C3750), Color(0xFF232E45))
+            else listOf(Color(0xFFE4ECF5), Color(0xFFD0DCE8)),
+            null as BorderStroke?,
+            p.Cocoa.copy(alpha = 0.45f)
+        )
+        palette == TilePalette.ERROR -> Triple(
+            listOf(Color(0xFFE05B5B), DangerRoseDeep),
+            null,
+            CreamLight
+        )
+        palette == TilePalette.EMERALD -> Triple(
+            listOf(SignalGreenLight, SuccessEmeraldDeep),
+            null,
+            CreamLight
+        )
+        palette == TilePalette.ROYAL -> Triple(
+            listOf(Color(0xFF1E6FE0), BurgundyDeep),
+            null,
+            CreamLight
+        )
+        else -> Triple(
+            MetalGoldGradient,
+            metalPillBorder(),
+            p.Cocoa
+        )
+    }
+    val finalBorder = border
     Box(
         modifier = modifier
-            .shadow(if (enabled) 5.dp else 0.dp, shape)
-            .background(Brush.verticalGradient(colors), shape)
+            .shadow(
+                elevation = if (enabled) 12.dp else 0.dp,
+                shape = shape,
+                ambientColor = RingGold.copy(alpha = 0.55f),
+                spotColor = GoldBgEdge.copy(alpha = 0.6f)
+            )
             .clip(shape)
+            .background(Brush.verticalGradient(surface))
+            .topGloss(if (enabled) 0.3f else 0f)
+            .then(if (finalBorder != null) Modifier.border(finalBorder, shape) else Modifier)
             .clickable(onClick = onClick, enabled = enabled),
         contentAlignment = Alignment.Center
     ) {
-        Row(
-            Modifier.padding(horizontal = 22.dp, vertical = 15.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            content()
+        CompositionLocalProvider(LocalContentColor provides contentColor) {
+            Row(
+                Modifier.padding(horizontal = 22.dp, vertical = 15.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                content()
+            }
         }
     }
 }
 
-// ---------------------------------------------------------------------------
-// کارت شیشه‌ای
-// ---------------------------------------------------------------------------
+/** دکمه‌ی ثانویه — کرمِ شفاف با حلقه‌ی طلایی و متن قهوه‌ای */
+@Composable
+fun OutlineGoldButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    shape: Shape = MaterialTheme.shapes.medium,
+    content: @Composable RowScope.() -> Unit
+) {
+    val p = luxPalette()
+    val bgColors = if (p.isDark) listOf(Color(0x66FFFFFF), Color(0x2EFFFFFF))
+        else listOf(Color(0x80FFFFFF), Color(0x59FFFFFF))
+    Box(
+        modifier = modifier
+            .clip(shape)
+            .background(Brush.verticalGradient(bgColors))
+            .topGloss(0.4f)
+            .border(goldBorder(if (enabled) 0.75f else 0.25f, 1.3.dp), shape)
+            .clickable(onClick = onClick, enabled = enabled),
+        contentAlignment = Alignment.Center
+    ) {
+        CompositionLocalProvider(
+            LocalContentColor provides if (enabled) p.Cocoa else p.CocoaSoft.copy(alpha = 0.45f)
+        ) {
+            Row(
+                Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) { content() }
+        }
+    }
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+//  کارت‌ها
+// ───────────────────────────────────────────────────────────────────────────
 
 /**
- * کارت شیشه‌ای اصلی رابط — شفاف، با خط دور نازک، جیغ محو و سایه‌ی نرم.
+ * کارت لوکس اصلی — شیشه‌ی روشنِ «سفید→کهربایی» با قاب گرادیانی طلایی،
+ * گوشه‌ی ۲۶dp و سایه‌ی گرم نرم.
+ * (نام GlassCard برای سازگاری با صفحه‌های موجود حفظ شده است.)
  */
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
-    shape: Shape = MaterialTheme.shapes.large,
+    shape: Shape = LuxCardShape,
     onClick: (() -> Unit)? = null,
+    pattern: Boolean = false,
+    gradient: List<Color> = emptyList(),
+    contentPadding: Dp = 16.dp,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val m = if (onClick != null) modifier.fillMaxWidth().clickable(onClick = onClick) else modifier.fillMaxWidth()
-    ir.sabztime.app.ui.theme.GlassSurface(modifier = m, shape = shape) {
-        Column(Modifier.padding(16.dp)) { content() }
+    val base = modifier.fillMaxWidth()
+    ir.sabztime.app.ui.theme.GlassSurface(
+        modifier = if (onClick != null) base.clip(shape).clickable(onClick = onClick) else base,
+        shape = shape,
+        pattern = pattern,
+        gradient = gradient
+    ) {
+        Column(Modifier.padding(contentPadding)) { content() }
     }
 }
 
-/**
- * «کنترل قطعه‌ای» (Segmented control) برای انتخاب‌های دو/چندتایی
- * مثل ورود/ثبت‌نام یا حالت پوسته — انتخاب‌شده با آبی برند.
- */
-@OptIn(ExperimentalMaterial3Api::class)
+// ───────────────────────────────────────────────────────────────────────────
+//  کنترل قطعه‌ای و چیپ‌ها
+// ───────────────────────────────────────────────────────────────────────────
+
 @Composable
 fun SegmentedControl(
     options: List<String>,
@@ -172,56 +359,58 @@ fun SegmentedControl(
     modifier: Modifier = Modifier,
     icons: List<ImageVector?> = emptyList()
 ) {
-    val dark = LocalSabzDarkTheme.current
-    val shape = RoundedCornerShape(14.dp)
-    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    val shape = RoundedCornerShape(18.dp)
+    val p = luxPalette()
+    val trackColors = if (p.isDark) listOf(Color(0x59FFFFFF), Color(0x2EFFFFFF))
+        else listOf(Color(0x73FFFFFF), Color(0x59EDF1F6))
+    Row(
+        modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(Brush.verticalGradient(trackColors))
+            .border(goldBorder(if (p.isDark) 0.5f else 0.3f), shape)
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
         options.forEachIndexed { i, label ->
             val sel = i == selected
-            val gradient = Brush.verticalGradient(if (dark) GlassGradientDark else GlassGradientLight)
-            Surface(
-                onClick = { onSelect(i) },
-                modifier = Modifier.weight(1f),
-                shape = shape,
-                color = when {
-                    sel -> Color.Transparent
-                    dark -> Color.White.copy(alpha = 0.06f)
-                    else -> Color.White.copy(alpha = 0.55f)
-                },
-                border = if (sel) BorderStroke(1.dp, Color.Transparent)
-                else BorderStroke(1.dp, if (dark) Color.White.copy(alpha = 0.16f) else Color(0xFFD3DAE3)),
-                tonalElevation = 0.dp,
-                contentColor = if (sel) Color.White else MaterialTheme.colorScheme.onSurface
+            val innerShape = RoundedCornerShape(14.dp)
+            Box(
+                Modifier
+                    .weight(1f)
+                    .clip(innerShape)
+                    .background(
+                        if (sel) Brush.verticalGradient(MetalGoldGradient)
+                        else Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
+                    )
+                    .clickable { onSelect(i) }
+                    .padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Box(Modifier.fillMaxWidth().padding(vertical = 10.dp), contentAlignment = Alignment.Center) {
-                    if (sel) Box(Modifier.matchParentSize().background(gradient, shape))
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                        icons.getOrNull(i)?.let { ic ->
-                            Icon(
-                                ic,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                                tint = if (sel) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            SpacerW(6)
-                        }
-                        Text(
-                            label,
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    icons.getOrNull(i)?.let { ic ->
+                        Icon(
+                            ic,
+                            contentDescription = null,
+                            modifier = Modifier.size(17.dp),
+                            tint = if (sel) p.Cocoa else p.CocoaSoft
                         )
+                        SpacerW(6)
                     }
+                    Text(
+                        label,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium,
+                        color = if (sel) p.Cocoa else p.CocoaSoft.copy(alpha = 0.85f)
+                    )
                 }
             }
         }
     }
 }
 
-// ---------------------------------------------------------------------------
-// چیپ شیشه‌ای (جایگزین FilterChip با کنترل کامل رنگ‌ها)
-// ---------------------------------------------------------------------------
-
 /**
- * چیپ انتخابی شیشه‌ای — حالت انتخاب‌شده با گرادیان آبی برند، غیرانتخاب‌شده شفاف.
+ * چیپ لوکس — انتخاب‌شده: قرص فلز طلاییِ برجسته؛ عادی: کرم شفاف با حلقه‌ی طلایی.
  */
 @Composable
 fun GlassChip(
@@ -230,43 +419,27 @@ fun GlassChip(
     modifier: Modifier = Modifier,
     content: @Composable RowScope.() -> Unit
 ) {
-    val dark = LocalSabzDarkTheme.current
-    val shape = RoundedCornerShape(50)
+    val p = luxPalette()
+    val idleColors = if (p.isDark) listOf(Color(0x66FFFFFF), Color(0x2EFFFFFF))
+        else listOf(Color(0x8CFFFFFF), Color(0x73EDF1F6))
     Box(
         modifier = modifier
-            .clip(shape)
-            .border(
-                width = if (selected) 0.dp else 1.dp,
-                color = when {
-                    selected -> Color.Transparent
-                    dark -> Color.White.copy(alpha = 0.18f)
-                    else -> Color(0xFFD3DAE3)
-                },
-                shape = shape
-            )
+            .clip(PillShape)
             .background(
-                if (selected) {
-                    Brush.verticalGradient(if (dark) GlassGradientDark else GlassGradientLight)
-                } else {
-                    Brush.verticalGradient(
-                        listOf(
-                            if (dark) Color.White.copy(alpha = 0.07f) else Color.White.copy(alpha = 0.7f),
-                            if (dark) Color.White.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.5f)
-                        )
-                    )
-                },
-                shape
+                if (selected) Brush.verticalGradient(MetalGoldGradient)
+                else Brush.verticalGradient(idleColors)
             )
+            .border(goldBorder(if (selected) 0f else 0.45f), PillShape)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Row(
-            Modifier.padding(horizontal = 16.dp, vertical = 9.dp),
-            verticalAlignment = Alignment.CenterVertically
+        CompositionLocalProvider(
+            LocalContentColor provides if (selected) p.Cocoa else p.CocoaSoft
         ) {
-            content()
+            Row(
+                Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) { content() }
         }
     }
 }
-
-/** فاصله‌ی افقی کوچک — از Common.kt (SpacerW(Int)) استفاده می‌شود */

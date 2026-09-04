@@ -270,7 +270,7 @@ function activateSubscription($paymentInfo, $refId) {
     <style>
         body {
             font-family: 'Tahoma', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1E6FE0 0%, #0B4F9E 100%);
             margin: 0;
             padding: 20px;
             min-height: 100vh;
@@ -315,7 +315,7 @@ function activateSubscription($paymentInfo, $refId) {
         .btn {
             display: inline-block;
             padding: 12px 30px;
-            background: #667eea;
+            background: #1E6FE0;
             color: white;
             text-decoration: none;
             border-radius: 25px;

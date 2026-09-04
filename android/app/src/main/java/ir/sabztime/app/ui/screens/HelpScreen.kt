@@ -220,7 +220,6 @@ fun HelpScreen(graph: AppGraph, navController: NavHostController) {
                                 androidx.compose.material3.Icon(
                                     Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = null,
-                                    tint = Color.White,
                                     modifier = Modifier.width(18.dp)
                                 )
                                 Spacer(Modifier.width(6.dp))
@@ -298,7 +297,7 @@ private fun QuickHelpList(modifier: Modifier = Modifier) {
                 }
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "از بخش «کسب‌وکارهای من» صف امروز را مدیریت کنید: مشاهده نوبت‌ها، فراخوانی نوبت بعدی، ثبت حضور/غیبت، ویرایش و حذف کسب‌وکار، برنامهٔ کاری، لینک اختصاصی و خدمات. خرید اشتراک هم از همان‌جا انجام می‌شود.",
+                    "از بخش «کسب‌وکارهای من» کسب‌وکار خود را مدیریت کنید: مشاهده نوبت‌ها و صف امروز، فراخوانی نوبت بعدی، ثبت حضور/غیبت، ویرایش و حذف کسب‌وکار، برنامهٔ کاری، لینک اختصاصی و خدمات.",
                     style = MaterialTheme.typography.bodyMedium
                 )
             }

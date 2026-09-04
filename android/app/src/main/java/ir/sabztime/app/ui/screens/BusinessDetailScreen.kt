@@ -1,6 +1,6 @@
 package ir.sabztime.app.ui.screens
 
-import ir.sabztime.app.ui.theme.LocalSabzDarkTheme
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,6 +41,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -91,9 +92,11 @@ data class BusinessDetailState(
     val business: UiState<BusinessDetails> = UiState.Loading,
     val dates: List<DateSlot> = emptyList(),
     val datesLoading: Boolean = false,
+    val datesError: String? = null,
     val selectedDate: DateSlot? = null,
     val slots: List<TimeSlot> = emptyList(),
     val slotsLoading: Boolean = false,
+    val slotsError: String? = null,
     val selectedSlot: TimeSlot? = null,
     val selectedServiceId: Int? = null,
     val submit: UiState<BookingCreatedResponse>? = null,
@@ -142,31 +145,57 @@ class BusinessDetailViewModel(private val graph: AppGraph, private val businessI
     }
 
     fun loadDates() {
-        _state.update { it.copy(datesLoading = true) }
+        _state.update { it.copy(datesLoading = true, datesError = null) }
         viewModelScope.launch {
             try {
                 val d = graph.repository.availableDates(businessId)
-                _state.update { it.copy(dates = d, datesLoading = false, selectedDate = null, slots = emptyList(), selectedSlot = null) }
+                _state.update {
+                    it.copy(
+                        dates = d,
+                        datesLoading = false,
+                        datesError = null,
+                        selectedDate = null,
+                        slots = emptyList(),
+                        slotsError = null,
+                        selectedSlot = null
+                    )
+                }
             } catch (e: CancellationException) {
                 throw e
-            } catch (_: Exception) {
-                _state.update { it.copy(datesLoading = false) }
+            } catch (e: Exception) {
+                val s = classify(e)
+                _state.update { it.copy(datesLoading = false, datesError = s.message) }
             }
         }
     }
 
     fun selectDate(date: DateSlot) {
-        _state.update { it.copy(selectedDate = date, selectedSlot = null, slotsLoading = true) }
+        _state.update {
+            it.copy(
+                selectedDate = date,
+                selectedSlot = null,
+                slots = emptyList(),
+                slotsLoading = true,
+                slotsError = null
+            )
+        }
         viewModelScope.launch {
             try {
                 val s = graph.repository.availableSlots(businessId, date.date)
-                _state.update { it.copy(slots = s, slotsLoading = false) }
+                _state.update { it.copy(slots = s, slotsLoading = false, slotsError = null) }
             } catch (e: CancellationException) {
                 throw e
-            } catch (_: Exception) {
-                _state.update { it.copy(slots = emptyList(), slotsLoading = false) }
+            } catch (e: Exception) {
+                val s = classify(e)
+                _state.update { it.copy(slots = emptyList(), slotsLoading = false, slotsError = s.message) }
             }
         }
+    }
+
+    /** تلاش دوباره برای دریافت ساعت‌های تاریخِ انتخاب‌شده (بدون پاک‌کردن انتخاب). */
+    fun retrySlots() {
+        val date = _state.value.selectedDate ?: return
+        selectDate(date)
     }
 
     fun selectSlot(slot: TimeSlot) {
@@ -218,7 +247,9 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
     val viewModel: BusinessDetailViewModel = viewModel(key = "biz-$businessId") {
         BusinessDetailViewModel(graph, businessId)
     }
-    val state = viewModel.state.value
+    // ⚠️ حتماً باید جمع‌آوری شود؛ خواندن state.value بدون collectAsState باعث می‌شود صفحه
+    // هنگام تغییر وضعیت (لود تاریخ/ساعت/نتیجه رزرو) هرگز ریکمپوز نشود و انتخاب تاریخ بی‌اثر بماند.
+    val state by viewModel.state.collectAsState()
     val submitState = state.submit
 
     var name by rememberSaveable { mutableStateOf("") }
@@ -320,7 +351,7 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
                         // --- خدمات ---
                         if (b.services.isNotEmpty()) {
                             item { SectionHeader(Icons.Filled.Work, "خدمات") }
-                            items(b.services, key = { "s${it.id}" }) { service ->
+                            items(b.services) { service ->
                                 ServiceRow(
                                     service,
                                     selected = state.selectedServiceId == service.id,
@@ -336,13 +367,23 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
                                 state.datesLoading -> Row(Modifier.padding(vertical = 8.dp)) {
                                     CircularProgressIndicator(Modifier.size(22.dp))
                                 }
+                                state.datesError != null -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text(
+                                        state.datesError ?: "",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                    OutlinedButton(onClick = viewModel::loadDates) {
+                                        Text("تلاش دوباره", fontWeight = FontWeight.SemiBold)
+                                    }
+                                }
                                 state.dates.isEmpty() -> Text(
                                     "برای این کسب‌وکار هنوز زمان رزرو ثبت نشده است.",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 else -> LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    items(state.dates, key = { it.date }) { d ->
+                                    items(state.dates) { d ->
                                         val sel = state.selectedDate?.date == d.date
                                         GlassChip(
                                             selected = sel,
@@ -352,12 +393,12 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
                                                 Text(
                                                     Jalali.format(d.date),
                                                     fontWeight = FontWeight.Bold,
-                                                    color = if (sel) Color.White else MaterialTheme.colorScheme.onSurface
+                                                    color = if (sel) ir.sabztime.app.ui.theme.Cocoa else MaterialTheme.colorScheme.onSurface
                                                 )
                                                 Text(
                                                     d.dayName ?: Jalali.weekdayName(d.date),
                                                     style = MaterialTheme.typography.labelSmall,
-                                                    color = if (sel) Color.White.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant
+                                                    color = if (sel) ir.sabztime.app.ui.theme.Cocoa.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
                                             }
                                         }
@@ -374,8 +415,18 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
                                     state.slotsLoading -> Row(Modifier.padding(vertical = 8.dp)) {
                                         CircularProgressIndicator(Modifier.size(22.dp))
                                     }
+                                    state.slotsError != null -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text(
+                                            state.slotsError ?: "",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.error
+                                        )
+                                        OutlinedButton(onClick = viewModel::retrySlots) {
+                                            Text("تلاش دوباره برای دریافت ساعت‌ها", fontWeight = FontWeight.SemiBold)
+                                        }
+                                    }
                                     state.slots.isEmpty() -> Text(
-                                        "زمان آزادی در این تاریخ وجود ندارد.",
+                                        "در این تاریخ زمان خالی وجود ندارد؛ تاریخ دیگری را انتخاب کنید.",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -390,15 +441,19 @@ fun BusinessDetailScreen(graph: AppGraph, businessId: Int, navController: NavHos
 
                         item { Spacer(Modifier.height(4.dp)) }
                         item {
+                            // این مقادیر باید به متغیرهای پایدار محلی کپی شوند تا هوشمندکست
+                            // (smart cast) بعد از بررسی null کار کند.
+                            val selectedDate = state.selectedDate
+                            val selectedSlot = state.selectedSlot
                             GradientButton(
-                                enabled = state.selectedDate != null && state.selectedSlot != null,
+                                enabled = selectedDate != null && selectedSlot != null,
                                 onClick = viewModel::openForm,
                                 modifier = Modifier.fillMaxWidth().height(54.dp)
                             ) {
                                 Text(
                                     when {
-                                        state.selectedSlot == null -> "زمان را انتخاب کنید"
-                                        else -> "ادامه رزرو — ساعت ${Jalali.persianDigits(state.selectedSlot.startTime)}"
+                                        selectedSlot == null -> "زمان را انتخاب کنید"
+                                        else -> "ادامه رزرو — ساعت ${Jalali.persianDigits(selectedSlot.startTime)}"
                                     },
                                     fontWeight = FontWeight.Bold
                                 )
@@ -449,7 +504,7 @@ private fun TimeSlotGrid(slots: List<TimeSlot>, selected: String?, onSelect: (Ti
                     Jalali.persianDigits(slot.startTime),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium,
-                    color = if (sel) Color.White else MaterialTheme.colorScheme.onSurface
+                    color = if (sel) ir.sabztime.app.ui.theme.Cocoa else MaterialTheme.colorScheme.onSurface
                 )
             }
         }
@@ -522,11 +577,11 @@ private fun BookingDialog(
     onDismiss: () -> Unit,
     onViewBookings: () -> Unit
 ) {
-    val dark = LocalSabzDarkTheme.current
+    val dark = isSystemInDarkTheme()
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh
+            color = ir.sabztime.app.ui.theme.MidnightSoft
         ) {
             Column(
                 Modifier
