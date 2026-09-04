@@ -256,9 +256,14 @@ if (!function_exists('initDatabase')) {
                         `booking_date` DATE NOT NULL,
                         `start_time` TIME NOT NULL,
                         `end_time` TIME,
+                        `duration_minutes` INT(11) DEFAULT 30,
                         `customer_name` VARCHAR(255),
                         `customer_phone` VARCHAR(20),
+                        `customer_notes` TEXT,
                         `status` VARCHAR(50) DEFAULT 'pending',
+                        `confirmation_code` VARCHAR(20) DEFAULT NULL,
+                        `queue_status` VARCHAR(30) DEFAULT 'waiting',
+                        `progress_updated_at` TIMESTAMP NULL DEFAULT NULL,
                         `notes` TEXT,
                         `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -266,12 +271,30 @@ if (!function_exists('initDatabase')) {
                         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
                         FOREIGN KEY (service_id) REFERENCES services(id) ON DELETE SET NULL,
                         KEY (booking_date),
-                        KEY (status)
+                        KEY (status),
+                        KEY (confirmation_code),
+                        KEY (queue_status)
                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
                 ");
                 if ($verbose) echo "  ✅ جدول bookings ایجاد شد\n";
             } else {
                 if ($verbose) echo "  ✓ جدول bookings وجود دارد\n";
+                // مهاجرت دفاعی: دیتابیس‌های قدیمی ستون‌های جدید bookings را ندارند
+                // (api.php در create_booking/get_user_bookings به آن‌ها وابسته است)
+                $bookingsCols = [
+                    'duration_minutes' => "ALTER TABLE bookings ADD COLUMN duration_minutes INT(11) DEFAULT 30 AFTER end_time",
+                    'customer_notes'   => "ALTER TABLE bookings ADD COLUMN customer_notes TEXT AFTER customer_phone",
+                    'confirmation_code'=> "ALTER TABLE bookings ADD COLUMN confirmation_code VARCHAR(20) DEFAULT NULL AFTER status",
+                    'queue_status'     => "ALTER TABLE bookings ADD COLUMN queue_status VARCHAR(30) DEFAULT 'waiting' AFTER confirmation_code",
+                    'progress_updated_at' => "ALTER TABLE bookings ADD COLUMN progress_updated_at TIMESTAMP NULL DEFAULT NULL AFTER queue_status"
+                ];
+                foreach ($bookingsCols as $col => $ddl) {
+                    if (!columnExists($pdo, 'bookings', $col)) {
+                        if ($verbose) echo "  🔄 اضافه کردن ستون {$col} به bookings...\n";
+                        $pdo->exec($ddl);
+                        if ($verbose) echo "  ✅ ستون {$col} اضافه شد\n";
+                    }
+                }
             }
             
             // =============== جدول customer_credits ===============
