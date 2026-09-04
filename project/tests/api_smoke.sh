@@ -7,13 +7,16 @@ set -uo pipefail
 BASE="http://127.0.0.1:8090/webapp"
 PASS=0; FAIL=0
 
+FAILDUMP=""
 check() {
-  local name="$1" cond="$2"
+  local name="$1" cond="$2" resp="${3:-}"
   if eval "$cond"; then PASS=$((PASS+1)); echo "✅ $name"
   else
     FAIL=$((FAIL+1)); echo "❌ $name"
     # در CI به‌صورت annotation نمایش داده می‌شود تا بدون دانلود لاگ هم دیده شود
     [ -n "${GITHUB_ACTIONS:-}" ] && echo "::error::❌ $name"
+    # جمع‌آوری پاسخ برای یک annotation واحد در پایان (سقف annotation گیت‌هاب ۱۰ است)
+    FAILDUMP+="⟨$name⟩ $(echo "$resp" | head -c 220 | tr '\n' ' ') "
   fi
 }
 
@@ -90,7 +93,7 @@ fi
 
 # --- 6) جستجو و جزئیات کسب‌وکار ---
 SEARCH=$(curl -s "$BASE/search_api.php?action=search&query=آرایشگاه")
-check "جستجو کار می‌کند" "echo '$SEARCH' | grep -q '\"success\":true'" "$SEARCH"
+check "جستجو کار می‌کند" "echo '$SEARCH' | grep -q '\"success\":true'" "$SEARCH" "$SEARCH"
 
 if [ -n "$BID" ] && [ "$BID" != "0" ]; then
   DETAILS=$(curl -s "$BASE/search_api.php?action=business_details&id=$BID")
@@ -110,11 +113,11 @@ if [ -n "$BID" ] && [ "$BID" != "0" ]; then
       \"start_time\":\"09:00\",\"end_time\":\"09:30\",
       \"customer_name\":\"کاربر تست\",\"customer_phone\":\"09121111111\",\"customer_notes\":\"تست CI\"
     }")
-    check "ایجاد رزرو" "echo '$BK' | grep -q '\"status\":\"success\"'" "$BK"
+    check "ایجاد رزرو" "echo '$BK' | grep -q '\"status\":\"success\"'" "$BK" "$BK"
     BKKID=$(echo "$BK" | json "d.get('booking_id',0)")
 
     MYBK=$(curl -s -X POST "$BASE/api.php" "${AUTH[@]}" -d '{"action":"get_user_bookings"}')
-    check "لیست رزروهای کاربر" "echo '$MYBK' | grep -q '\"status\":\"success\"'" "$MYBK"
+    check "لیست رزروهای کاربر" "echo '$MYBK' | grep -q '\"status\":\"success\"'" "$MYBK" "$MYBK"
     check "رزرو کاربر در پاسخ" "echo '$MYBK' | grep -q 'آرایشگاه تست'"
 
     if [ -n "$BKKID" ] && [ "$BKKID" != "0" ]; then
@@ -168,4 +171,5 @@ check "صفحه‌ی حریم خصوصی" "echo '$PRIV' | grep -q 'حریم خص
 
 echo "----------------------------------------"
 echo "PASS=$PASS FAIL=$FAIL"
+[ -n "${GITHUB_ACTIONS:-}" ] && [ -n "$FAILDUMP" ] && echo "::error::DUMP: ${FAILDUMP:0:1000}"
 [ "$FAIL" -eq 0 ]
