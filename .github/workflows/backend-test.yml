@@ -90,7 +90,7 @@ jobs:
       - name: Debug on smoke failure
         if: failure()
         run: |
-          tail -120 /tmp/phpserver.log | sed 's/^/::error::php: /' || true
+          tail -6 /tmp/phpserver.log | sed 's/^/::error::php: /' || true
           SEARCH=$(curl -s -i "http://127.0.0.1:8090/webapp/search_api.php?action=search&query=%D8%A2%D8%B1%D8%A7%DB%8C%D8%B4%DA%AF%D8%A7%D9%87") || true
           echo "$SEARCH" | head -40 | sed 's/^/::error::search: /'
           BID=$(mysql -N -h 127.0.0.1 -uroot -proot sabztest -e "SELECT id FROM businesses WHERE name='آرایشگاه تست' LIMIT 1" 2>/dev/null) || true

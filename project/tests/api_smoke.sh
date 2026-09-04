@@ -90,7 +90,7 @@ fi
 
 # --- 6) جستجو و جزئیات کسب‌وکار ---
 SEARCH=$(curl -s "$BASE/search_api.php?action=search&query=آرایشگاه")
-check "جستجو کار می‌کند" "echo '$SEARCH' | grep -q '\"success\":true'"
+check "جستجو کار می‌کند" "echo '$SEARCH' | grep -q '\"success\":true'" "$SEARCH"
 
 if [ -n "$BID" ] && [ "$BID" != "0" ]; then
   DETAILS=$(curl -s "$BASE/search_api.php?action=business_details&id=$BID")
@@ -110,11 +110,11 @@ if [ -n "$BID" ] && [ "$BID" != "0" ]; then
       \"start_time\":\"09:00\",\"end_time\":\"09:30\",
       \"customer_name\":\"کاربر تست\",\"customer_phone\":\"09121111111\",\"customer_notes\":\"تست CI\"
     }")
-    check "ایجاد رزرو" "echo '$BK' | grep -q '\"status\":\"success\"'"
+    check "ایجاد رزرو" "echo '$BK' | grep -q '\"status\":\"success\"'" "$BK"
     BKKID=$(echo "$BK" | json "d.get('booking_id',0)")
 
     MYBK=$(curl -s -X POST "$BASE/api.php" "${AUTH[@]}" -d '{"action":"get_user_bookings"}')
-    check "لیست رزروهای کاربر" "echo '$MYBK' | grep -q '\"status\":\"success\"'"
+    check "لیست رزروهای کاربر" "echo '$MYBK' | grep -q '\"status\":\"success\"'" "$MYBK"
     check "رزرو کاربر در پاسخ" "echo '$MYBK' | grep -q 'آرایشگاه تست'"
 
     if [ -n "$BKKID" ] && [ "$BKKID" != "0" ]; then
