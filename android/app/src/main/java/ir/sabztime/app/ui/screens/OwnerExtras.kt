@@ -256,7 +256,7 @@ fun LinkCard(
     onCopy: (String) -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
-    val fullLink = currentAlias?.let { "https://webnovo.ir/start/$it" }
+    val fullLink = currentAlias?.let { "https://t.me/Sabztime_bot?start=$it" }
     GlassCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -292,7 +292,7 @@ fun LinkCard(
                 maxLines = 1
             )
             Text(
-                "این لینک را با مشتری‌ها به اشتراک بگذارید؛ با باز کردن آن مستقیم به صفحهٔ رزرو شما می‌رسند.",
+                "این لینک را با مشتری‌ها به اشتراک بگذارید؛ با باز کردن آن در تلگرام، مستقیم به رزرو نوبت شما می‌رسند.",
                 style = MaterialTheme.typography.bodySmall,
                 color = cs.onSurfaceVariant
             )
@@ -514,7 +514,7 @@ fun LinkAliasDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
-                    "فقط حروف انگلیسی، اعداد و خط زیر (_)؛ بین ۳ تا ۵۰ کاراکتر.\nلینک نهایی: webnovo.ir/start/<نامک>",
+                    "فقط حروف انگلیسی، اعداد و خط زیر (_)؛ بین ۳ تا ۵۰ کاراکتر.\nلینک نهایی: t.me/Sabztime_bot?start=<نامک>",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

@@ -1,5 +1,7 @@
 package ir.sabztime.app.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -18,13 +20,18 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.Campaign
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -41,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -64,6 +72,7 @@ import ir.sabztime.app.ui.components.LoadingState
 import ir.sabztime.app.ui.components.LuxMenuRow
 import ir.sabztime.app.ui.components.ProfileHeroCard
 import ir.sabztime.app.ui.components.SectionTitle
+import ir.sabztime.app.ui.components.SegmentedControl
 import ir.sabztime.app.ui.components.SoftBanner
 import ir.sabztime.app.ui.components.TilePalette
 import ir.sabztime.app.ui.theme.CocoaSoft
@@ -93,7 +102,8 @@ data class ProfileUiState(
     val errorKind: SabzException.Kind = SabzException.Kind.UNKNOWN,
     /** خطا رخ داده ولی آخرین پروفایل بارگذاری‌شده هنوز نمایش داده می‌شود */
     val offline: Boolean = false,
-    val logoutBusy: Boolean = false
+    val logoutBusy: Boolean = false,
+    val deleteBusy: Boolean = false
 )
 
 class ProfileViewModel(private val graph: AppGraph) : ViewModel() {
@@ -151,6 +161,30 @@ class ProfileViewModel(private val graph: AppGraph) : ViewModel() {
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch { graph.themeManager.setMode(mode) }
     }
+
+    /** حذف کامل حساب از سرور + پاک‌کردن نشست محلی. در خطا حساب محلی پاک نمی‌شود. */
+    fun deleteAccount(onDone: () -> Unit) {
+        if (_state.value.deleteBusy) return
+        _state.value = _state.value.copy(deleteBusy = true)
+        viewModelScope.launch {
+            try {
+                graph.repository.deleteAccount()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val s = classify(e)
+                _state.value = _state.value.copy(
+                    deleteBusy = false,
+                    error = s.message,
+                    errorKind = s.kind
+                )
+                return@launch
+            }
+            graph.clearSession()
+            _state.value = _state.value.copy(deleteBusy = false)
+            onDone()
+        }
+    }
 }
 
 /**
@@ -162,7 +196,10 @@ class ProfileViewModel(private val graph: AppGraph) : ViewModel() {
 fun ProfileScreen(graph: AppGraph, navController: NavHostController) {
     val viewModel: ProfileViewModel = viewModel { ProfileViewModel(graph) }
     val state by viewModel.state.collectAsState()
+    val themeMode by graph.themeManager.mode.collectAsState()
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     val error = state.error
     val profile = state.profile
@@ -266,6 +303,29 @@ fun ProfileScreen(graph: AppGraph, navController: NavHostController) {
                         }
                     }
 
+                    // ── پوسته برنامه ──
+                    GlassCard(contentPadding = 16.dp) {
+                        Column {
+                            Text(
+                                "پوسته برنامه",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Cream
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            SegmentedControl(
+                                options = listOf("خودکار", "روشن", "تاریک"),
+                                selected = themeMode.ordinal,
+                                onSelect = { viewModel.setThemeMode(ThemeMode.values()[it]) },
+                                icons = listOf(
+                                    Icons.Filled.BrightnessAuto,
+                                    Icons.Filled.WbSunny,
+                                    Icons.Filled.DarkMode
+                                )
+                            )
+                        }
+                    }
+
                     // ── اعتبار و آمار ──
                     if (credit != null) {
                         GlassCard(pattern = true, contentPadding = 18.dp) {
@@ -314,10 +374,29 @@ fun ProfileScreen(graph: AppGraph, navController: NavHostController) {
                         )
                         GoldDivider()
                         LuxMenuRow(
+                            icon = Icons.Filled.PrivacyTip,
+                            label = "حریم خصوصی",
+                            onClick = {
+                                // صفحه‌ی privacy.php کنار api.php روی سرور قرار دارد
+                                val url = BuildConfig.API_BASE_URL.trimEnd('/') + "/privacy.php"
+                                runCatching {
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                                }
+                            }
+                        )
+                        GoldDivider()
+                        LuxMenuRow(
                             icon = Icons.Filled.Logout,
                             label = "خروج از حساب",
                             palette = TilePalette.ERROR,
                             onClick = { showLogoutDialog = true }
+                        )
+                        GoldDivider()
+                        LuxMenuRow(
+                            icon = Icons.Filled.DeleteForever,
+                            label = "حذف حساب کاربری",
+                            palette = TilePalette.ERROR,
+                            onClick = { showDeleteDialog = true }
                         )
                     }
 
@@ -359,6 +438,50 @@ fun ProfileScreen(graph: AppGraph, navController: NavHostController) {
             },
             dismissButton = {
                 TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("منصرف شدم", color = GoldDim)
+                }
+            }
+        )
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!state.deleteBusy) showDeleteDialog = false },
+            shape = LuxCardShape,
+            containerColor = MidnightSoft,
+            titleContentColor = Cream,
+            textContentColor = CreamDim,
+            title = { Text("حذف حساب کاربری", fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    "حساب شما و همه‌ی داده‌هایتان (نوبت‌ها، کسب‌وکارها و امتیازها) برای همیشه از سرور حذف می‌شود.\n\nاین عمل قابل بازگشت نیست. مطمئن هستید؟"
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteAccount {
+                            showDeleteDialog = false
+                            navController.navigate(Routes.LOGIN) {
+                                popUpTo(0) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
+                    },
+                    enabled = !state.deleteBusy
+                ) {
+                    Text(
+                        if (state.deleteBusy) "در حال حذف…" else "بله، برای همیشه حذف کن",
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDeleteDialog = false },
+                    enabled = !state.deleteBusy
+                ) {
                     Text("منصرف شدم", color = GoldDim)
                 }
             }
