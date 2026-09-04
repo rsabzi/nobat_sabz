@@ -89,6 +89,31 @@ check "پلن‌های اشتراک" "echo '$PLANS' | grep -q '\"status\":\"succ
 NOTIF=$(curl -s -X POST "$BASE/mobile_auth.php" "${AUTH[@]}" -d '{"action":"get_notifications"}')
 check "اعلان‌ها" "echo '$NOTIF' | grep -q '\"status\":\"success\"'"
 
+# --- 8) حذف حساب (الزام فروشگاه‌ها): کاربر موقت + حذف + تأیید مرگ حساب ---
+REG2=$(curl -s -X POST "$BASE/mobile_auth.php" -H 'Content-Type: application/json' -d '{
+  "action":"register","phone":"09123333333","password":"temp123456","name":"کاربر حذفی","device":"ci"
+}')
+check "ثبت‌نام کاربر موقت" "echo '$REG2' | grep -q '\"success\"'"
+TOKEN2=$(echo "$REG2" | json "d.get('token','')")
+
+if [ -n "$TOKEN2" ]; then
+  DEL=$(curl -s -X POST "$BASE/mobile_auth.php" -H "X-App-Token: $TOKEN2" -H 'Content-Type: application/json' \
+        -d '{"action":"delete_account"}')
+  check "حذف حساب موفق" "echo '$DEL' | grep -q '\"success\"'"
+  # توکن قدیمی باید مرده باشد
+  ME2=$(curl -s -X POST "$BASE/mobile_auth.php" -H "X-App-Token: $TOKEN2" -H 'Content-Type: application/json' -d '{"action":"me"}')
+  check "توکن پس از حذف بی‌اعتبار" "echo '$ME2' | grep -q '\"error\"'"
+  # ورود مجدد باید رد شود
+  LOGIN2=$(curl -s -X POST "$BASE/mobile_auth.php" -H 'Content-Type: application/json' -d '{
+    "action":"login","phone":"09123333333","password":"temp123456","device":"ci"
+  }')
+  check "ورود حساب حذف‌شده رد می‌شود" "echo '$LOGIN2' | grep -q '\"error\"'"
+fi
+
+# --- 9) صفحه‌ی حریم خصوصی در دسترس است ---
+PRIV=$(curl -s "$BASE/privacy.php")
+check "صفحه‌ی حریم خصوصی" "echo '$PRIV' | grep -q 'حریم خصوصی'"
+
 echo "----------------------------------------"
 echo "PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ]

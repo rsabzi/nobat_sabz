@@ -551,6 +551,66 @@ if ($__selfName === 'mobile_auth.php') {
             break;
         }
 
+        case 'delete_account': {
+            // الزام فروشگاه‌ها (گوگل‌پلی/کافه‌بازار): حذف کامل حساب + داده‌های وابسته.
+            // همه‌چیز در یک transaction است: یا همه پاک می‌شوند یا هیچ‌چیز (برگشت‌پذیری).
+            $user = mobile_auth_require();
+            $internalId = (int)$user['internal_user_id'];
+            $appUserId = (int)$user['app_user_id'];
+
+            try {
+                $pdo->beginTransaction();
+
+                // ۱) رزروهایی که این کاربر به‌عنوان مشتری ثبت کرده است
+                $pdo->prepare("DELETE FROM bookings WHERE user_id = ?")->execute([$internalId]);
+
+                // ۲) کسب‌وکارهایی که مالک آن‌هاست + همه‌ی داده‌های وابسته به آن‌ها
+                $bizStmt = $pdo->prepare("SELECT id FROM businesses WHERE owner_id = ?");
+                $bizStmt->execute([$internalId]);
+                $bizIds = $bizStmt->fetchAll(PDO::FETCH_COLUMN);
+                if (!empty($bizIds)) {
+                    $in = implode(',', array_fill(0, count($bizIds), '?'));
+                    // جداولی که business_id دارند؛ با try/catch چون ممکن است در دیتابیس‌های قدیمی نباشند
+                    foreach (['bookings', 'services', 'schedules', 'schedule_overrides',
+                              'daily_schedules', 'specific_time_slots', 'booking_attendance'] as $tbl) {
+                        try {
+                            $pdo->prepare("DELETE FROM {$tbl} WHERE business_id IN ({$in})")->execute($bizIds);
+                        } catch (Exception $e) {
+                            error_log("delete_account: جدول {$tbl} رد شد: " . $e->getMessage());
+                        }
+                    }
+                    try {
+                        $pdo->prepare("DELETE FROM BusinessReferrals WHERE business_id IN ({$in})")->execute($bizIds);
+                    } catch (Exception $e) {}
+                    $pdo->prepare("DELETE FROM businesses WHERE owner_id = ?")->execute([$internalId]);
+                }
+
+                // ۳) داده‌های مالی/امتیازی شخص کاربر
+                foreach (['customer_credits', 'credit_history', 'marketers'] as $tbl) {
+                    try {
+                        $pdo->prepare("DELETE FROM {$tbl} WHERE user_id = ?")->execute([$internalId]);
+                    } catch (Exception $e) {}
+                }
+                try {
+                    $pdo->prepare("DELETE FROM booking_attendance WHERE user_id = ?")->execute([$internalId]);
+                } catch (Exception $e) {}
+
+                // ۴) نشست‌ها، حساب اپ و رکورد کاربر
+                $pdo->prepare("DELETE FROM app_sessions WHERE app_user_id = ?")->execute([$appUserId]);
+                $pdo->prepare("DELETE FROM app_users WHERE id = ?")->execute([$appUserId]);
+                $pdo->prepare("DELETE FROM users WHERE id = ?")->execute([$internalId]);
+
+                $pdo->commit();
+                mobile_auth_json('success', 'حساب شما و همه‌ی داده‌های آن برای همیشه حذف شد.');
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) { $pdo->rollBack(); }
+                error_log('delete_account error: ' . $e->getMessage());
+                mobile_auth_json('error', 'حذف حساب انجام نشد. لطفاً دوباره تلاش کنید.', [], 500);
+            }
+            break;
+        }
+
+
         case 'me': {
             $user = mobile_auth_require();
             mobile_auth_json('success', 'اطلاعات کاربر دریافت شد.', mobile_auth_get_profile_aggregate($pdo, $user));
