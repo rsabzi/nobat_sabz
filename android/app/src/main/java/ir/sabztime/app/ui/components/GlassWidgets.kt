@@ -61,6 +61,7 @@ import ir.sabztime.app.ui.theme.SuccessEmerald
 import ir.sabztime.app.ui.theme.SuccessEmeraldDeep
 import ir.sabztime.app.ui.theme.goldBorder
 import ir.sabztime.app.ui.theme.goldRing
+import ir.sabztime.app.ui.theme.luxPalette
 import ir.sabztime.app.ui.theme.metalPillBorder
 import ir.sabztime.app.ui.theme.topGloss
 
@@ -115,28 +116,38 @@ fun Modifier.creamCircle(shape: Shape, ringWidth: Dp = 1.6.dp): Modifier = this
     .topGloss(0.55f)
     .goldRing(shape, ringWidth)
 
-private fun tileAccent(palette: TilePalette, selected: Boolean): List<Color> = when {
-    !selected -> when (palette) {
-        TilePalette.ERROR -> listOf(DangerRose, DangerRoseDeep)
-        TilePalette.EMERALD -> listOf(SuccessEmerald, SuccessEmeraldDeep)
-        TilePalette.SAPPHIRE -> listOf(InfoSapphire, InfoSapphireDeep)
-        else -> listOf(CocoaSoft, Cocoa)
+private fun tileAccent(palette: TilePalette, selected: Boolean, dark: Boolean): List<Color> {
+    // رنگِ خنثیِ آیکون (حالتِ غیرانتخابی یا روی کاشی برند) — در تیره روشن‌تر
+    val neutral = if (dark) listOf(Color(0xFF9AA7B8), Color(0xFFE8EDF5)) else listOf(CocoaSoft, Cocoa)
+    return when {
+        !selected -> when (palette) {
+            TilePalette.ERROR -> listOf(DangerRose, DangerRoseDeep)
+            TilePalette.EMERALD -> listOf(SuccessEmerald, SuccessEmeraldDeep)
+            TilePalette.SAPPHIRE -> listOf(InfoSapphire, InfoSapphireDeep)
+            else -> neutral
+        }
+        palette == TilePalette.ERROR -> listOf(Color(0xFFFDE8E8), Color(0xFFFFFFFF))
+        palette == TilePalette.EMERALD -> listOf(Color(0xFFE7F4EC), Color(0xFFFFFFFF))
+        palette == TilePalette.SAPPHIRE -> listOf(Color(0xFFE2EDFB), Color(0xFFFFFFFF))
+        palette == TilePalette.ROYAL -> listOf(Color(0xFFE2EDFB), Color(0xFFA9C6EA))
+        else -> neutral
     }
-    palette == TilePalette.ERROR -> listOf(Color(0xFFFDE8E8), Color(0xFFFFFFFF))
-    palette == TilePalette.EMERALD -> listOf(Color(0xFFE7F4EC), Color(0xFFFFFFFF))
-    palette == TilePalette.SAPPHIRE -> listOf(Color(0xFFE2EDFB), Color(0xFFFFFFFF))
-    palette == TilePalette.ROYAL -> listOf(Color(0xFFE2EDFB), Color(0xFFA9C6EA))
-    else -> listOf(CocoaSoft, Cocoa)
 }
 
-private fun tileBase(palette: TilePalette, selected: Boolean): List<Color> = when {
-    !selected -> listOf(Color(0xE6FFFFFF), Color(0xD9EDF1F6)) // سفیدِ نیمه‌شفاف
-    palette == TilePalette.ERROR -> listOf(DangerRose, DangerRoseDeep)
-    palette == TilePalette.EMERALD -> listOf(SignalGreenLight, SuccessEmeraldDeep)
-    palette == TilePalette.SAPPHIRE -> listOf(Color(0xFF3D76D6), InfoSapphireDeep)
-    palette == TilePalette.ROYAL -> BurgundyGradient
-    palette == TilePalette.MUTED -> listOf(Color(0xFFAFC0D2), Color(0xFF8FA3B8))
-    else -> listOf(MetalGoldTop, Color(0xFF0B4F9E)) // کاشی آبی برند
+private fun tileBase(palette: TilePalette, selected: Boolean, dark: Boolean): List<Color> {
+    if (!selected) {
+        // دایره‌ی نیمه‌شفاف — در تیره، سرمه‌ایِ تیره
+        return if (dark) listOf(Color(0x8A1C2941), Color(0x8A101C2F))
+            else listOf(Color(0xE6FFFFFF), Color(0xD9EDF1F6))
+    }
+    return when (palette) {
+        TilePalette.ERROR -> listOf(DangerRose, DangerRoseDeep)
+        TilePalette.EMERALD -> listOf(SignalGreenLight, SuccessEmeraldDeep)
+        TilePalette.SAPPHIRE -> listOf(Color(0xFF3D76D6), InfoSapphireDeep)
+        TilePalette.ROYAL -> BurgundyGradient
+        TilePalette.MUTED -> listOf(Color(0xFFAFC0D2), Color(0xFF8FA3B8))
+        else -> listOf(MetalGoldTop, Color(0xFF0B4F9E)) // کاشی آبی برند
+    }
 }
 
 /**
@@ -154,8 +165,9 @@ fun IconTile(
     contentDescription: String? = null
 ) {
     val shape = RoundedCornerShape(tileSize * 0.33f)
-    val base = tileBase(palette, selected)
-    val accent = tileAccent(palette, selected)
+    val p = luxPalette()
+    val base = tileBase(palette, selected, p.isDark)
+    val accent = tileAccent(palette, selected, p.isDark)
 
     Box(modifier = modifier.size(tileSize), contentAlignment = Alignment.Center) {
         Box(
@@ -215,11 +227,13 @@ fun GradientButton(
     shape: Shape = MaterialTheme.shapes.medium,
     content: @Composable RowScope.() -> Unit
 ) {
+    val p = luxPalette()
     val (surface, border, contentColor) = when {
         !enabled -> Triple(
-            listOf(Color(0xFFE4ECF5), Color(0xFFD0DCE8)),
+            if (p.isDark) listOf(Color(0xFF2C3750), Color(0xFF232E45))
+            else listOf(Color(0xFFE4ECF5), Color(0xFFD0DCE8)),
             null as BorderStroke?,
-            Cocoa.copy(alpha = 0.45f)
+            p.Cocoa.copy(alpha = 0.45f)
         )
         palette == TilePalette.ERROR -> Triple(
             listOf(Color(0xFFE05B5B), DangerRoseDeep),
@@ -239,7 +253,7 @@ fun GradientButton(
         else -> Triple(
             MetalGoldGradient,
             metalPillBorder(),
-            Cocoa
+            p.Cocoa
         )
     }
     val finalBorder = border
@@ -279,17 +293,20 @@ fun OutlineGoldButton(
     shape: Shape = MaterialTheme.shapes.medium,
     content: @Composable RowScope.() -> Unit
 ) {
+    val p = luxPalette()
+    val bgColors = if (p.isDark) listOf(Color(0x66FFFFFF), Color(0x2EFFFFFF))
+        else listOf(Color(0x80FFFFFF), Color(0x59FFFFFF))
     Box(
         modifier = modifier
             .clip(shape)
-            .background(Brush.verticalGradient(listOf(Color(0x80FFFFFF), Color(0x59FFFFFF))))
+            .background(Brush.verticalGradient(bgColors))
             .topGloss(0.4f)
             .border(goldBorder(if (enabled) 0.75f else 0.25f, 1.3.dp), shape)
             .clickable(onClick = onClick, enabled = enabled),
         contentAlignment = Alignment.Center
     ) {
         CompositionLocalProvider(
-            LocalContentColor provides if (enabled) Cocoa else CocoaSoft.copy(alpha = 0.45f)
+            LocalContentColor provides if (enabled) p.Cocoa else p.CocoaSoft.copy(alpha = 0.45f)
         ) {
             Row(
                 Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
@@ -315,7 +332,7 @@ fun GlassCard(
     shape: Shape = LuxCardShape,
     onClick: (() -> Unit)? = null,
     pattern: Boolean = false,
-    gradient: List<Color> = ir.sabztime.app.ui.theme.NavyCardGradient,
+    gradient: List<Color> = emptyList(),
     contentPadding: Dp = 16.dp,
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -343,12 +360,15 @@ fun SegmentedControl(
     icons: List<ImageVector?> = emptyList()
 ) {
     val shape = RoundedCornerShape(18.dp)
+    val p = luxPalette()
+    val trackColors = if (p.isDark) listOf(Color(0x59FFFFFF), Color(0x2EFFFFFF))
+        else listOf(Color(0x73FFFFFF), Color(0x59EDF1F6))
     Row(
         modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(Brush.verticalGradient(listOf(Color(0x73FFFFFF), Color(0x59EDF1F6))))
-            .border(goldBorder(0.3f), shape)
+            .background(Brush.verticalGradient(trackColors))
+            .border(goldBorder(if (p.isDark) 0.5f else 0.3f), shape)
             .padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
@@ -373,7 +393,7 @@ fun SegmentedControl(
                             ic,
                             contentDescription = null,
                             modifier = Modifier.size(17.dp),
-                            tint = if (sel) Cocoa else CocoaSoft
+                            tint = if (sel) p.Cocoa else p.CocoaSoft
                         )
                         SpacerW(6)
                     }
@@ -381,7 +401,7 @@ fun SegmentedControl(
                         label,
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium,
-                        color = if (sel) Cocoa else CocoaSoft.copy(alpha = 0.85f)
+                        color = if (sel) p.Cocoa else p.CocoaSoft.copy(alpha = 0.85f)
                     )
                 }
             }
@@ -399,19 +419,22 @@ fun GlassChip(
     modifier: Modifier = Modifier,
     content: @Composable RowScope.() -> Unit
 ) {
+    val p = luxPalette()
+    val idleColors = if (p.isDark) listOf(Color(0x66FFFFFF), Color(0x2EFFFFFF))
+        else listOf(Color(0x8CFFFFFF), Color(0x73EDF1F6))
     Box(
         modifier = modifier
             .clip(PillShape)
             .background(
                 if (selected) Brush.verticalGradient(MetalGoldGradient)
-                else Brush.verticalGradient(listOf(Color(0x8CFFFFFF), Color(0x73EDF1F6)))
+                else Brush.verticalGradient(idleColors)
             )
             .border(goldBorder(if (selected) 0f else 0.45f), PillShape)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         CompositionLocalProvider(
-            LocalContentColor provides if (selected) Cocoa else CocoaSoft
+            LocalContentColor provides if (selected) p.Cocoa else p.CocoaSoft
         ) {
             Row(
                 Modifier.padding(horizontal = 16.dp, vertical = 10.dp),

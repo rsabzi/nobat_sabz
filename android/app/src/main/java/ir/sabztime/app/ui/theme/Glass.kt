@@ -61,6 +61,12 @@ private fun cardBorderStroke(alpha: Float, width: Dp): BorderStroke =
         )
     )
 
+/** گرادیان سطح کارت در حالتِ تاریک — سرمه‌ایِ عمیق با عمق کم (بالا روشن‌تر) */
+private val DarkGlassGradient: List<Color> = listOf(
+    Color(0xFF1C2941),
+    Color(0xFF101C2F)
+)
+
 /** لبه‌ی برجسته‌ی فلز قرص‌ها: بالا روشن (هایلایت) → پایین تیره (سایه) */
 fun metalPillBorder(width: Dp = 1.dp): BorderStroke =
     BorderStroke(
@@ -84,17 +90,20 @@ fun GlassBackground(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
+    val p = luxPalette()
+    // در حالت تیره هاله‌ی مرکزی آبیِ ملایم‌تر و محوتر است تا خیره‌کننده نباشد
+    val glow = if (p.isDark) Color(0xFF24508F).copy(alpha = 0.28f) else GoldTint.copy(alpha = 0.35f)
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(GoldBgTop)
+            .background(p.bgTop)
             .drawBehind {
                 val cx = size.width * 0.30f
                 val cy = size.height * 0.15f
                 val r = hypot(size.width * 0.70f, size.height * 0.85f) * 1.18f
                 drawRect(
                     brush = Brush.radialGradient(
-                        colors = listOf(GoldBgTop, GoldBgMid, GoldBgDeep, GoldBgEdge),
+                        colors = listOf(p.bgTop, p.bgMid, p.bgDeep, p.bgEdge),
                         center = Offset(cx, cy),
                         radius = r
                     )
@@ -103,7 +112,7 @@ fun GlassBackground(
                 radialGlow(
                     center = Offset(size.width * 0.30f, size.height * 0.16f),
                     radius = size.width * 0.65f,
-                    color = GoldTint.copy(alpha = 0.35f)
+                    color = glow
                 )
             }
     ) {
@@ -214,21 +223,29 @@ fun GlassSurface(
     shape: Shape = LuxCardShape,
     tonalElevation: Dp = 0.dp,
     pattern: Boolean = false,
-    gradient: List<Color> = NavyCardGradient,
+    gradient: List<Color> = emptyList(),
     borderAlpha: Float = 0.9f,
     elevation: Dp = 10.dp,
     content: @Composable BoxScope.() -> Unit
 ) {
+    val p = luxPalette()
+    // اگر گرادیانی داده نشده بود، بر اساس حالتِ پوسته انتخاب می‌کنیم
+    val g = when {
+        gradient.isNotEmpty() -> gradient
+        p.isDark -> DarkGlassGradient
+        else -> NavyCardGradient
+    }
+    val shadow = if (p.isDark) Color(0xCC000000) else GoldBgEdge
     Box(
         modifier = modifier
             .shadow(
                 elevation = elevation,
                 shape = shape,
-                ambientColor = GoldBgEdge,
-                spotColor = GoldBgEdge
+                ambientColor = shadow,
+                spotColor = shadow
             )
             .clip(shape)
-            .background(Brush.verticalGradient(gradient))
+            .background(Brush.verticalGradient(g))
             .then(if (pattern) Modifier.goldLinePattern() else Modifier)
             .topGloss(0.14f)
             .goldRim(alpha = 0.7f)
