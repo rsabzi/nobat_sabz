@@ -94,7 +94,7 @@ fi
 # --- 6) جستجو و جزئیات کسب‌وکار ---
 # نکته: --data-urlencode چون بایت خام فارسی در URL مجاز نیست (پاسخ خالی می‌دهد)
 SEARCH=$(curl -s -G "$BASE/search_api.php" --data-urlencode "action=search" --data-urlencode "query=آرایشگاه")
-check "جستجو کار می‌کند" "echo '$SEARCH' | grep -q '\"success\":true'" "$SEARCH" "$SEARCH"
+check "جستجو کار می‌کند" "echo '\$SEARCH' | grep -qE '\"success\":[[:space:]]*true'" "\$SEARCH"
 
 if [ -n "$BID" ] && [ "$BID" != "0" ]; then
   DETAILS=$(curl -s "$BASE/search_api.php?action=business_details&id=$BID")
