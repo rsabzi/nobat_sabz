@@ -6,6 +6,8 @@ on:
     paths:
       - "project/webapp/*.php"
       - "project/config.example.php"
+      - "project/tests/*"
+      - ".github/workflows/backend-test.yml"
   workflow_dispatch:
 
 jobs:
