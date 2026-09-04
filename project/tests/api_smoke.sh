@@ -92,7 +92,8 @@ if [ -n "$BID" ] && [ "$BID" != "0" ]; then
 fi
 
 # --- 6) جستجو و جزئیات کسب‌وکار ---
-SEARCH=$(curl -s "$BASE/search_api.php?action=search&query=آرایشگاه")
+# نکته: --data-urlencode چون بایت خام فارسی در URL مجاز نیست (پاسخ خالی می‌دهد)
+SEARCH=$(curl -s -G "$BASE/search_api.php" --data-urlencode "action=search" --data-urlencode "query=آرایشگاه")
 check "جستجو کار می‌کند" "echo '$SEARCH' | grep -q '\"success\":true'" "$SEARCH" "$SEARCH"
 
 if [ -n "$BID" ] && [ "$BID" != "0" ]; then
