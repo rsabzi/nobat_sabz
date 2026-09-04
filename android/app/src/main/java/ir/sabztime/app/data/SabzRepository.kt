@@ -414,6 +414,15 @@ class SabzRepository(private val api: ApiClient) {
     }
 
     /**
+     * حذف کامل حساب و داده‌ها (الزام گوگل‌پلی/کافه‌بازار).
+     * سرور همه‌ی داده‌های وابسته را در یک transaction پاک می‌کند؛
+     * اگر خطا برگردد، ApiClient استثنا پرتاب می‌کند و فراخواننده به کاربر پیام می‌دهد.
+     */
+    suspend fun deleteAccount() {
+        api.post("mobile_auth.php", body = jsonBody { put("action", "delete_account") })
+    }
+
+    /**
      * پروفایل کاربر. هر بخش جداگانه و با محافظت دیکد می‌شود تا شکست در
      * ساختار هر فیلد (حتی اگر نسخه‌ی سرور متفاوت باشد) کل صفحه را نبرَد.
      */

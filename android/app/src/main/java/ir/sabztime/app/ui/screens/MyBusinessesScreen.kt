@@ -63,6 +63,7 @@ import ir.sabztime.app.ui.components.InfoRow
 import ir.sabztime.app.ui.components.StatusChip
 import ir.sabztime.app.ui.components.businessTypeIcon
 import ir.sabztime.app.util.Jalali
+import ir.sabztime.app.util.TextUtil
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -82,6 +83,13 @@ class MyBusinessesViewModel(private val graph: AppGraph) : ViewModel() {
     private val _messageError = MutableStateFlow(false)
     val messageError: StateFlow<Boolean> = _messageError.asStateFlow()
 
+    /** وضعیت فرم افزودن: تا موفقیت پنجره بسته نمی‌شود و خطای سرور داخل خود پنجره دیده می‌شود. */
+    private val _addBusy = MutableStateFlow(false)
+    val addBusy: StateFlow<Boolean> = _addBusy.asStateFlow()
+
+    private val _addError = MutableStateFlow<String?>(null)
+    val addError: StateFlow<String?> = _addError.asStateFlow()
+
     init {
         load()
     }
@@ -96,18 +104,26 @@ class MyBusinessesViewModel(private val graph: AppGraph) : ViewModel() {
         address: String,
         onCreated: (Int) -> Unit
     ) {
+        if (_addBusy.value) return
         viewModelScope.launch {
+            _addBusy.value = true
+            _addError.value = null
             try {
                 val result = graph.repository.addBusiness(name, type, phone, province, city, address)
+                _addBusy.value = false
                 result.businessId?.let(onCreated) ?: load()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // خطا در خود پنجره نمایش داده می‌شود؛ فرم پاک نمی‌شود
                 val s = classify(e)
-                _state.value = UiState.Error(s.message, s.kind)
+                _addError.value = s.message
+                _addBusy.value = false
             }
         }
     }
+
+    fun clearAddError() { _addError.value = null }
 
     /** حذف کامل یک کسب‌وکار (هم‌منطق ربات)؛ فهرست پس از موفقیت تازه می‌شود. */
     fun deleteBusiness(b: MyBusinessItem, onDone: () -> Unit) {
@@ -266,13 +282,23 @@ fun MyBusinessesScreen(graph: AppGraph, navController: NavHostController) {
             }
         }
         if (showAddDialog) {
+            val addBusy by viewModel.addBusy.collectAsState()
+            val addError by viewModel.addError.collectAsState()
             AddBusinessDialog(
-                onDismiss = { showAddDialog = false },
+                busy = addBusy,
+                serverError = addError,
+                onDismiss = {
+                    if (!addBusy) {
+                        viewModel.clearAddError()
+                        showAddDialog = false
+                    }
+                },
                 onSubmit = { name, type, phone, province, city, address ->
                     viewModel.addBusiness(name, type, phone, province, city, address) { id ->
+                        // پنجره فقط در موفقیت بسته می‌شود؛ در خطا مقادیر کاربر محفوظ می‌مانند
+                        showAddDialog = false
                         navController.navigate(Routes.owner(id))
                     }
-                    showAddDialog = false
                 }
             )
         }
@@ -303,6 +329,8 @@ fun MyBusinessesScreen(graph: AppGraph, navController: NavHostController) {
 
 @Composable
 private fun AddBusinessDialog(
+    busy: Boolean,
+    serverError: String?,
     onDismiss: () -> Unit,
     onSubmit: (String, String, String, String, String, String) -> Unit
 ) {
@@ -312,49 +340,79 @@ private fun AddBusinessDialog(
     var province by remember { mutableStateOf("") }
     var city by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
+
+    // «لمس‌شده» یعنی کاربر در این فیلد تایپ کرده؛ خطا فقط بعد از لمس نمایش داده می‌شود
+    var nameTouched by remember { mutableStateOf(false) }
+    var typeTouched by remember { mutableStateOf(false) }
+    var phoneTouched by remember { mutableStateOf(false) }
+    var provinceTouched by remember { mutableStateOf(false) }
+    var cityTouched by remember { mutableStateOf(false) }
+
+    // اعتبارسنجی زنده: با هر تایپ دوباره محاسبه می‌شود
+    val nameError = if (nameTouched && name.trim().length < 2) "نام کسب‌وکار را کامل وارد کنید (حداقل ۲ حرف)." else null
+    val typeError = if (typeTouched && type.isBlank()) "نوع کسب‌وکار را وارد کنید (مثلاً آرایشگاه)." else null
+    val phoneNorm = TextUtil.normalizeDigits(TextUtil.cleanMobileInput(phone))
+    val phoneError = if (phoneTouched && !TextUtil.isValidIranMobile(phoneNorm))
+        "شماره موبایل معتبر وارد کنید؛ ۱۱ رقم و با ۰۹ شروع شود." else null
+    val provinceError = if (provinceTouched && province.isBlank()) "استان را وارد کنید." else null
+    val cityError = if (cityTouched && city.isBlank()) "شهر را وارد کنید." else null
+
+    val formValid = name.trim().length >= 2 && type.isNotBlank() &&
+        TextUtil.isValidIranMobile(phoneNorm) && province.isNotBlank() && city.isNotBlank()
+
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!busy) onDismiss() },
         title = { Text("ثبت کسب‌وکار جدید", fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
                     value = name,
-                    onValueChange = { name = it },
+                    onValueChange = { name = it; nameTouched = true },
                     label = { Text("نام کسب‌وکار") },
                     singleLine = true,
+                    isError = nameError != null,
+                    supportingText = { nameError?.let { Text(it) } },
                     shape = RoundedCornerShape(18.dp),
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = type,
-                    onValueChange = { type = it },
-                    label = { Text("نوع کسب‌وکار") },
+                    onValueChange = { type = it; typeTouched = true },
+                    label = { Text("نوع کسب‌وکار (مثلاً آرایشگاه)") },
                     singleLine = true,
+                    isError = typeError != null,
+                    supportingText = { typeError?.let { Text(it) } },
                     shape = RoundedCornerShape(18.dp),
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = phone,
-                    onValueChange = { phone = it },
+                    onValueChange = { phone = it; phoneTouched = true },
                     label = { Text("شماره تماس (۰۹…)") },
                     singleLine = true,
+                    isError = phoneError != null,
+                    supportingText = { phoneError?.let { Text(it) } },
                     keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone),
                     shape = RoundedCornerShape(18.dp),
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = province,
-                    onValueChange = { province = it },
+                    onValueChange = { province = it; provinceTouched = true },
                     label = { Text("استان") },
                     singleLine = true,
+                    isError = provinceError != null,
+                    supportingText = { provinceError?.let { Text(it) } },
                     shape = RoundedCornerShape(18.dp),
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = city,
-                    onValueChange = { city = it },
+                    onValueChange = { city = it; cityTouched = true },
                     label = { Text("شهر") },
                     singleLine = true,
+                    isError = cityError != null,
+                    supportingText = { cityError?.let { Text(it) } },
                     shape = RoundedCornerShape(18.dp),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -366,14 +424,34 @@ private fun AddBusinessDialog(
                     shape = RoundedCornerShape(18.dp),
                     modifier = Modifier.fillMaxWidth()
                 )
+                // خطای سرور (مثلاً قطع اینترنت) — داخل پنجره، بدون پاک شدن فرم
+                serverError?.let { err ->
+                    Text(
+                        err,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
             }
         },
         confirmButton = {
             Button(
-                onClick = { onSubmit(name, type, phone, province, city, address) },
-                enabled = listOf(name, type, phone, province, city).all { it.isNotBlank() }
-            ) { Text("ثبت و مدیریت خدمات") }
+                onClick = { onSubmit(name.trim(), type.trim(), phoneNorm, province.trim(), city.trim(), address.trim()) },
+                enabled = formValid && !busy
+            ) {
+                if (busy) {
+                    androidx.compose.material3.CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = Color.White
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("در حال ثبت…")
+                } else {
+                    Text("ثبت و مدیریت خدمات")
+                }
+            }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("انصراف") } }
+        dismissButton = { TextButton(onClick = onDismiss, enabled = !busy) { Text("انصراف") } }
     )
 }
